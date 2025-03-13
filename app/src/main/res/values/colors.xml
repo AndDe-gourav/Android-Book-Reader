@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="gray">#282626</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="background_color">#fff1e6</color>
+    <color name="progress_bar_background_color">#fff8f4</color>
+    <color name="progress_bar_front_color">#827568</color>
+    <color name="shadow">#472603</color>
+    <color name="bottom_bar_color">#EDEBE7</color>
+    <color name="book_shelf_1">#D1A98C</color>
+    <color name="book_shelf_2">#F3EBDF</color>
+    <color name="book_shelf_3">#DEA54B</color>
+    <color name="border">#8C5013</color>
+    <color name="text_color">#CFC8C1</color>
+    <color name="Start_Screen_color">#48444D</color>
+    <color name="button_Top_Surface">#F3E4D3</color>
+    <color name="button_Side_Surface">#B9ABA0</color>
+    <color name="button_Shadow">#9D9993</color>
+    <color name="Icon_tint">#373C45</color>
+
+
+
+</resources>
