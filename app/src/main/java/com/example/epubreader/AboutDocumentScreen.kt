@@ -3,11 +3,9 @@ package com.example.epubreader
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,7 +14,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.core.net.toUri
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 
@@ -49,7 +48,7 @@ fun AboutDoucument(
     val context = LocalContext.current
     val selectedBook by bookDataViewModel.selectedBook.collectAsState()
     val time = selectedBook?.timestamp?.let { bookDataViewModel.convertMillisToDateTime(it) }
-    val fileSize = bookDataViewModel.getFileSize(context= context, Uri.parse(selectedBook?.uri))
+    val fileSize = selectedBook?.uri?.let { bookDataViewModel.getFileSize(context= context, it.toUri()) }
 
     val encodedUri = Uri.encode(selectedBook?.uri)
 
@@ -116,7 +115,8 @@ fun AboutDoucument(
                 AnimatedIconRow(
                     bookDataViewModel = bookDataViewModel,
                     navController = navController,
-                    currentScreen = currentScreen
+                    currentScreen = currentScreen,
+                    snackBarContent = {}
                 )
                 Box(
                     modifier = Modifier
@@ -157,73 +157,7 @@ fun AboutDoucument(
     }
 }
 
-@Composable
-fun AnimatedIconRow(
-    bookDataViewModel: BookDataViewModel,
-    navController: NavController,
-    currentScreen: String,
-) {
-    val selectedBook by bookDataViewModel.selectedBook.collectAsState()
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceAround
-    ) {
-
-        AnimatedIconButton(
-            isActive = selectedBook?.favourite == 1,
-            activeIcon = R.drawable.baseline_star_rate_24,
-            inactiveIcon = R.drawable.baseline_star_border_24,
-            contentDescription = "Favourites",
-            onClick = {
-                selectedBook?.let { bookDataViewModel.toggleFavorite(it) }
-            }
-        )
-
-        // To Read icon
-        AnimatedIconButton(
-            isActive = selectedBook?.toRead  == 1,
-            activeIcon = R.drawable.baseline_access_time_filled_24,
-            inactiveIcon = R.drawable.baseline_access_time_24,
-            contentDescription = "To Read",
-            onClick = {
-                selectedBook?.let { bookDataViewModel.toggleToRead(it) }
-                if (selectedBook?.doneReading == 1){
-                    selectedBook?.let { bookDataViewModel.toggleDoneReading(it) }
-                }
-            }
-        )
-
-        // Collection icon
-        AnimatedIconButton(
-            isActive = selectedBook?.collection == "",
-            activeIcon = R.drawable.baseline_folder_copy_24,
-            inactiveIcon = R.drawable.baseline_folder_open_24,
-            contentDescription = "Collection",
-            onClick = {
-            }
-        )
-
-        // Done Reading icon
-        AnimatedIconButton(
-            isActive = selectedBook?.doneReading == 1,
-            activeIcon = R.drawable.baseline_done_24,
-            inactiveIcon = R.drawable.baseline_done_outline_24,
-            contentDescription = "Done Reading",
-            onClick = {
-                selectedBook?.let { bookDataViewModel.toggleDoneReading(it) }
-                if (selectedBook?.toRead == 1){
-                    selectedBook?.let { bookDataViewModel.toggleToRead(it) }
-                }
-            }
-        )
-        OptionsDropDownMenu(
-            bookDataViewModel = bookDataViewModel,
-            navController = navController,
-            currentScreen = currentScreen
-        )
-    }
-}
 
 @Composable
 fun GerenalTopBar(
@@ -248,7 +182,7 @@ fun GerenalTopBar(
                 }
             ) {
                 Icon(
-                    imageVector = Icons.Filled.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
                     tint = MaterialTheme.colorScheme.inverseSurface,
                     modifier = Modifier.size(24.dp)

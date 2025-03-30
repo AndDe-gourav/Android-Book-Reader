@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -41,6 +42,15 @@ class BookDataViewModel(
     private val _toReadBooks = MutableStateFlow<List<Book>>(emptyList())
     val toReadBooks: StateFlow<List<Book>> = _toReadBooks.asStateFlow()
 
+    private val _allCollections = MutableStateFlow<List<Book>>(emptyList())
+    val allCollections: StateFlow<List<Book>> = _allCollections.asStateFlow()
+
+    private val _listOfCollections = MutableStateFlow<List<String>>(emptyList())
+    val listOfCollections: StateFlow<List<String>> = _listOfCollections.asStateFlow()
+
+    private val _particularCollection = MutableStateFlow<List<List<Book>>>(emptyList())
+    val particularCollection: StateFlow<List<List<Book>>> = _particularCollection.asStateFlow()
+
     private val _completedBooks = MutableStateFlow<List<Book>>(emptyList())
     val completedBooks: StateFlow<List<Book>> = _completedBooks.asStateFlow()
 
@@ -65,27 +75,39 @@ class BookDataViewModel(
     private val _lastPage = MutableStateFlow(0)
     val lastPage: StateFlow<Int> = _lastPage.asStateFlow()
 
+
     init {
         loadAllBooksData()
     }
 
     private fun loadAllBooksData() {
         viewModelScope.launch {
-            combine(
+            val booksFlow = combine(
                 repository.allBooks,
                 repository.favoriteBooks,
                 repository.toReadBooks,
-                repository.completedBooks,
-                repository.lastOpenedBook,
-                ) {  all, fav, toRead, completed, lastBook->
+                repository.completedBooks
+            ) { all, fav, toRead, completed ->
                 _allBooks.value = all
                 _favoriteBooks.value = fav
                 _toReadBooks.value = toRead
                 _completedBooks.value = completed
+            }
+
+            val otherDataFlow = combine(
+                repository.lastOpenedBook,
+                repository.allCollections
+            ) { lastBook, allCollections ->
                 _lastOpenedBook.value = lastBook
-            }.collectLatest { }
+                _allCollections.value = allCollections
+            }
+
+            launch { booksFlow.collectLatest {} }
+            launch { otherDataFlow.collectLatest {Log.d("update", "${allCollections.value}") } }
         }
     }
+
+
 
     private var selectBookJob: Job? = null
 
@@ -96,9 +118,6 @@ class BookDataViewModel(
             repository.getBookByUri(bookUri).collectLatest { book ->
                 if (book != null) {
                     _selectedBook.value = book
-                    Log.d("selectedBook", "Book selected: ${book.uri}")
-                } else {
-                    Log.e("selectedBook", "Book not found for URI: $bookUri")
                 }
             }
         }
@@ -110,7 +129,7 @@ class BookDataViewModel(
     private fun loadBookMetadata(bookUri: String) {
         viewModelScope.launch {
             try {
-                val metadata = metadataExtractor.extractPdfMetadata(Uri.parse(bookUri))
+                val metadata = metadataExtractor.extractPdfMetadata(bookUri.toUri())
 
                 _bookTitle.value = metadata.title
                 _bookAuthor.value = metadata.author
@@ -225,6 +244,63 @@ class BookDataViewModel(
         }
     }
 
+    fun updateCollection(bookUri: String, remove: String, collection: String) {
+        viewModelScope.launch {
+            val book = repository.getBookByUri(bookUri).firstOrNull()
+            val newCollection: String = if (!book?.collection?.contains(collection)!!) {
+                if (collection != "") book.collection.plus(",").plus(collection) else {
+                    book.collection.plus("")
+                }
+            }else{
+                book.collection.replace(",$remove", "")
+            }
+            repository.updateCollection(bookUri, newCollection)
+        }
+    }
+
+    fun collectionToList(){
+        viewModelScope.launch {
+            val listOfCollections: MutableList<String> = mutableListOf()
+            for (book in _allCollections.value) {
+                if (book.collection.contains(',')) {
+                    book.collection.split(",").forEach { collection ->
+                        if (!listOfCollections.contains(collection)) {
+                            listOfCollections.add(collection)
+                        }
+                    }
+                } else {
+                    if (!listOfCollections.contains(book.collection)) {
+                        listOfCollections.add(book.collection)
+                    }
+                }
+            }
+            val filteredList = listOfCollections.filter { it.isNotEmpty() }
+            val orderedList = filteredList.sorted()
+            _listOfCollections.value = orderedList
+            Log.d("allCollections", "${allCollections.value}")
+            bookOfCollection()
+        }
+    }
+
+    fun bookOfCollection() {
+        viewModelScope.launch {
+            val listOfBooksWithCollection: MutableList<List<Book>> = mutableListOf()
+            for (collection in _listOfCollections.value) {
+                val savedCollection = mutableListOf<Book>()
+                for (contains in _allBooks.value) {
+                    if (contains.collection.contains(collection)) {
+                        savedCollection.add(contains)
+                    }
+                }
+                listOfBooksWithCollection.add(savedCollection.toList())
+            }
+            _particularCollection.value = listOfBooksWithCollection.toList()
+            Log.d("strings", "${_listOfCollections.value}")
+            Log.d("collection", "${_particularCollection.value}")
+        }
+    }
+
+
     private var fetchLastPageJob: Job? = null
 
     fun fetchLastPage(bookUri: String) {
@@ -254,6 +330,9 @@ class BookDataViewModel(
             }
         }
     }
+
+
+
 
     fun sharePdf(
         context: Context,

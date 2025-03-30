@@ -9,7 +9,7 @@ class BookRepository(private val bookDao: BookDao) {
     val toReadBooks: Flow<List<Book>> = bookDao.getToReadBooks()
     val completedBooks: Flow<List<Book>> = bookDao.getCompletedBooks()
     val lastOpenedBook: Flow<Book> = bookDao.lastOpenedBook()
-
+    val allCollections: Flow<List<Book>> = bookDao.getAllCollections()
 
     fun getBookById(id: Int): Flow<Book> {
         return bookDao.getBookById(id)
@@ -59,9 +59,15 @@ class BookRepository(private val bookDao: BookDao) {
     suspend fun toggleToRead(bookUri: String, isToRead: Boolean) {
         bookDao.updateToReadStatus(bookUri, if (isToRead) 1 else 0)
     }
+
     suspend fun toggleDoneReading(bookUri: String, isDoneReading: Boolean) {
         bookDao.updateDoneReadingStatus(bookUri, if (isDoneReading) 1 else 0)
     }
+
+    suspend fun updateCollection(bookUri: String, collection: String) {
+        bookDao.updateCollection(bookUri, collection)
+    }
+
     suspend fun updateLastPage(bookUri: String, lastPage: Int) {
         bookDao.updateLastPage(bookUri, lastPage)
     }

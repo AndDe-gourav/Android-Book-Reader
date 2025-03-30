@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,7 +31,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -39,8 +40,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -78,6 +77,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
+import androidx.core.net.toUri
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.github.barteksc.pdfviewer.PDFView
@@ -162,7 +162,7 @@ fun HomeScreen(
                                     "Removed from \"Done Reading\" " -> selectedBook?.let { bookDataViewModel.toggleDoneReading(it) }
                                 }
                             },
-                            modifier = modifier.padding(bottom = 22.dp)
+                            modifier = modifier.padding(bottom = 28.dp)
                         )
                     }
                 )
@@ -170,6 +170,7 @@ fun HomeScreen(
             BottomBar(
                 navController = navController,
                 bookDataViewModel = bookDataViewModel,
+                drawerState = drawerState,
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
         }
@@ -196,7 +197,7 @@ fun BookInReading(
 
     val sliderProgress by animateFloatAsState(
         targetValue = if (totalPages != 0) lastPage.toFloat() / totalPages else 0f,
-        animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
         label = "Slider Animation"
     )
 
@@ -262,7 +263,7 @@ fun BookInReading(
                         }
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.baseline_menu_book_24),
+                            painter = painterResource(id = R.drawable.book),
                             contentDescription = "Read",
                             tint = MaterialTheme.colorScheme.inverseSurface,
                             modifier = Modifier
@@ -280,14 +281,11 @@ fun BookInReading(
                         )
                     }
                 }
-                Slider(
-                    value = sliderProgress,
-                    onValueChange = {},
-                    colors = SliderDefaults.colors(
-                        thumbColor = MaterialTheme.colorScheme.outline,
-                        activeTrackColor = MaterialTheme.colorScheme.outline,
-                        inactiveTrackColor = MaterialTheme.colorScheme.onBackground,
-                    ),
+                Spacer(
+                    modifier = Modifier.size(20.dp)
+                )
+                CustumSlideBar(
+                    value = sliderProgress
                 )
                 Text(
                     text = if (totalPages != 0) {
@@ -297,7 +295,9 @@ fun BookInReading(
                         " Completed (0%)"
                     },
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                    modifier = Modifier.align(Alignment.End).padding(vertical = 2.dp),
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(vertical = 2.dp),
                     color = MaterialTheme.colorScheme.inverseSurface
                 )
             }
@@ -319,7 +319,14 @@ fun AnimatedIconRow(
     snackBarContent: (String) -> Unit ,
     ) {
     val selectedBook by bookDataViewModel.selectedBook.collectAsState()
+    val listOfCollections by bookDataViewModel.listOfCollections.collectAsState()
 
+
+    var collectionValue by remember { mutableStateOf("") }
+    var openNewCollectionDialog by remember { mutableStateOf(false) }
+    var openCollectionDialog by remember { mutableStateOf(false) }
+
+    val coroutineScope = rememberCoroutineScope()
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -328,8 +335,8 @@ fun AnimatedIconRow(
 
         AnimatedIconButton(
             isActive = selectedBook?.favourite == 1,
-            activeIcon = R.drawable.baseline_star_rate_24,
-            inactiveIcon = R.drawable.baseline_star_border_24,
+            activeIcon = R.drawable.star_fill,
+            inactiveIcon = R.drawable.star,
             contentDescription = "Favourites",
             onClick = {
                 selectedBook?.let { bookDataViewModel.toggleFavorite(it) }
@@ -340,8 +347,8 @@ fun AnimatedIconRow(
         // To Read icon
         AnimatedIconButton(
             isActive = selectedBook?.toRead  == 1,
-            activeIcon = R.drawable.baseline_access_time_filled_24,
-            inactiveIcon = R.drawable.baseline_access_time_24,
+            activeIcon = R.drawable.clock_fill,
+            inactiveIcon = R.drawable.clock,
             contentDescription = "To Read",
             onClick = {
                 selectedBook?.let { bookDataViewModel.toggleToRead(it) }
@@ -354,19 +361,21 @@ fun AnimatedIconRow(
 
         // Collection icon
         AnimatedIconButton(
-            isActive = selectedBook?.collection == "",
-            activeIcon = R.drawable.baseline_folder_copy_24,
-            inactiveIcon = R.drawable.baseline_folder_open_24,
+            isActive = selectedBook?.collection != "",
+            activeIcon = R.drawable.folder_dublicate_fill,
+            inactiveIcon = R.drawable.folder_dublicate,
             contentDescription = "Collection",
             onClick = {
+                bookDataViewModel.collectionToList()
+                openCollectionDialog = true
             }
         )
 
         // Done Reading icon
         AnimatedIconButton(
             isActive = selectedBook?.doneReading == 1,
-            activeIcon = R.drawable.baseline_done_24,
-            inactiveIcon = R.drawable.baseline_done_outline_24,
+            activeIcon = R.drawable.check_round_fill,
+            inactiveIcon = R.drawable.check_ring_round,
             contentDescription = "Done Reading",
             onClick = {
                 selectedBook?.let { bookDataViewModel.toggleDoneReading(it) }
@@ -382,6 +391,52 @@ fun AnimatedIconRow(
             navController = navController,
             currentScreen = currentScreen
         )
+
+        if (openNewCollectionDialog) {
+            OnNotInCollectionsIconClicked(
+                value = collectionValue,
+                onValueChange = { collectionValue = it },
+                onDismiss = {
+                    collectionValue = ""
+                    openNewCollectionDialog = false
+                },
+                onCreateClicked = {
+                    if (!listOfCollections.map { it.lowercase() }.contains(collectionValue.lowercase())) {
+                        selectedBook?.let {
+                            bookDataViewModel.updateCollection(it.uri, remove = "", collectionValue)
+                        }
+                        coroutineScope.launch {
+                            delay(300)
+                            bookDataViewModel.collectionToList()
+                        }
+                        snackBarContent("Added to Collection \n\"$collectionValue\" ")
+                        collectionValue = ""
+                        openNewCollectionDialog = false
+                        openCollectionDialog = false
+
+                    } else {
+                        snackBarContent("Collection already exists")
+                        collectionValue = ""
+                        openNewCollectionDialog = false
+                        openCollectionDialog = false
+                    }
+                },
+
+                )
+        }
+
+        if (openCollectionDialog) {
+            OnInCollectionIconClicked(
+                bookDataViewModel = bookDataViewModel,
+                onDismiss = {
+                    bookDataViewModel.collectionToList()
+                    openCollectionDialog = false
+                            },
+                onCreateNewClicked = { openNewCollectionDialog = true },
+                snackBarContent = snackBarContent
+            )
+        }
+
     }
 }
 
@@ -456,7 +511,7 @@ fun ShelfNavigation(
                             )
                         )
                     )
-            ){}
+            )
         }
         LazyRow(
             contentPadding = PaddingValues(dimensionResource(id = R.dimen.padding_large)),
@@ -487,7 +542,7 @@ fun ShelfNavigation(
                             ) {
                             Text(
                                 text = item,
-                                style = TextStyle( textDecoration = if (currentBookShelf == item) TextDecoration.Underline else TextDecoration.None,),
+                                style = TextStyle(textDecoration = if (currentBookShelf == item) TextDecoration.Underline else TextDecoration.None),
                                 color = MaterialTheme.colorScheme.inverseSurface,
                             )
                         }
@@ -507,9 +562,12 @@ fun BookShelf(
     val recentBooks by bookDataViewModel.allBooks.collectAsState()
     val favouritesBooks by bookDataViewModel.favoriteBooks.collectAsState()
     val toReadBooks by bookDataViewModel.toReadBooks.collectAsState()
+    val particularCollection by bookDataViewModel.particularCollection.collectAsState()
     val completedBooks by bookDataViewModel.completedBooks.collectAsState()
+    val listOfCollections by bookDataViewModel.listOfCollections.collectAsState()
 
     val currentBookShelf by bookDataViewModel.currentBookShelf.collectAsState()
+
 
     val groupedBooks = when(currentBookShelf){
         "Recent" -> recentBooks.chunked(3)
@@ -532,64 +590,143 @@ fun BookShelf(
             verticalArrangement = Arrangement.spacedBy(32.dp),
             contentPadding = PaddingValues(top = 75.dp , bottom = 50.dp)
         ) {
-            items(
-                items = groupedBooks,
-                key = { row -> row.joinToString { it.uri } }
-            ) { rowBooks ->
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        rowBooks.forEach { book ->
-                            Surface(
-                                color = Color.White,
-                                tonalElevation = 8.dp,
-                                shadowElevation = 16.dp,
-                                modifier = Modifier
-                                    .height(100.dp)
-                                    .width(65.dp)
-                                    .clickable(
-                                        onClick = {
-                                            bookDataViewModel.selectBook(book.uri)
-                                        }
-                                    )
+            if ( currentBookShelf != "Collection") {
+                items(
+                    items = groupedBooks,
+                ) { rowBooks ->
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            rowBooks.forEach { book ->
+                                Surface(
+                                    color = Color.White,
+                                    tonalElevation = 8.dp,
+                                    shadowElevation = 16.dp,
+                                    modifier = Modifier
+                                        .height(100.dp)
+                                        .width(65.dp)
+                                        .clickable(
+                                            onClick = {
+                                                bookDataViewModel.selectBook(book.uri)
+                                            }
+                                        )
 
-                            ) {
-                                Image(
-                                    painter = rememberAsyncImagePainter(
-                                        model = book.bookCover
-                                    ),
-                                    contentDescription = "Shelf Book",
-                                    contentScale = ContentScale.FillBounds,
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                                ) {
+                                    Image(
+                                        painter = rememberAsyncImagePainter(
+                                            model = book.bookCover
+                                        ),
+                                        contentDescription = "Shelf Book",
+                                        contentScale = ContentScale.FillBounds,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
                             }
                         }
-                    }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(2.dp)
-                            .background(color = MaterialTheme.colorScheme.surfaceContainer)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(14.dp)
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        MaterialTheme.colorScheme.surfaceContainerHighest
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(2.dp)
+                                .background(color = MaterialTheme.colorScheme.surfaceContainer)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(14.dp)
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.surfaceContainerHigh,
+                                            MaterialTheme.colorScheme.surfaceContainerHighest
+                                        )
                                     )
                                 )
+                        )
+                        HorizontalDivider(
+                            thickness = 0.5.dp,
+                            color = colorResource(id = R.color.shadow)
+                        )
+                    }
+                }
+            }else {
+                bookDataViewModel.collectionToList()
+                items(
+                    items = particularCollection,
+                ){ rowBooks  ->
+                    val index = particularCollection.indexOf(rowBooks)
+                    Column {
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(42.dp),
+                            contentPadding = PaddingValues(horizontal = 32.dp)
+                        ) {
+                            items(
+                                items = rowBooks,
+                            ) { book ->
+                                Surface(
+                                    color = Color.White,
+                                    tonalElevation = 8.dp,
+                                    shadowElevation = 16.dp,
+                                    modifier = Modifier
+                                        .height(100.dp)
+                                        .width(65.dp)
+                                        .clickable(
+                                            onClick = {
+                                                bookDataViewModel.selectBook(book.uri)
+                                            }
+                                        )
+
+                                ) {
+                                    Image(
+                                        painter = rememberAsyncImagePainter(
+                                            model = book.bookCover
+                                        ),
+                                        contentDescription = "Shelf Book",
+                                        contentScale = ContentScale.FillBounds,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                            }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(2.dp)
+                                .background(color = MaterialTheme.colorScheme.surfaceContainer)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(14.dp)
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.surfaceContainerHigh,
+                                            MaterialTheme.colorScheme.surfaceContainerHighest
+                                        )
+                                    )
+                                )
+                        )
+                        HorizontalDivider(
+                            thickness = 0.5.dp,
+                            color = colorResource(id = R.color.shadow)
+                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.padding(start = 10.dp),
+                            shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
+                            shadowElevation = 4.dp
+                        ) {
+                            Text(
+                                text = listOfCollections[index],
+                                modifier = Modifier.padding(vertical = 2.dp, horizontal = 8.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp),
+                                color = Color.Black,
                             )
-                    )
-                    HorizontalDivider(
-                        thickness = 0.5.dp,
-                        color = colorResource(id = R.color.shadow)
-                    )
+                        }
+                    }
                 }
             }
         }
@@ -634,7 +771,7 @@ fun OptionsDropDownMenu(
             }
         ) {
             Icon(
-                painter = painterResource(R.drawable.dots),
+                painter = painterResource(R.drawable.meatballs_menu),
                 contentDescription = "Options",
                 tint = MaterialTheme.colorScheme.inverseSurface,
                 modifier = Modifier.size(24.dp),
@@ -660,7 +797,7 @@ fun OptionsDropDownMenu(
                     )
                 },
                 onClick = {
-                    bookDataViewModel.sharePdf( context = context, Uri.parse(selectedBook?.uri))
+                    selectedBook?.uri?.let { bookDataViewModel.sharePdf( context = context, it.toUri()) }
                     expanded = false
                 }
             )
@@ -683,24 +820,26 @@ fun OptionsDropDownMenu(
 
 @Composable
 fun SnackBar(
+    modifier: Modifier = Modifier,
     text: String ,
     onCancelClicked: () -> Unit = {},
-    modifier: Modifier = Modifier
 ) {
     Snackbar(
         shape = RoundedCornerShape(8.dp),
         containerColor = MaterialTheme.colorScheme.outline,
         contentColor = Color.Black,
         action = {
-            TextButton(
-                onClick = onCancelClicked
-            ) {
-                Text(
-                    text = "Cancel",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = colorResource(id = R.color.shadow),
-                    letterSpacing = 2.sp
-                )
+            if(!text.contains("Collection")) {
+                TextButton(
+                    onClick = onCancelClicked
+                ) {
+                    Text(
+                        text = "Cancel",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = colorResource(id = R.color.shadow),
+                        letterSpacing = 2.sp
+                    )
+                }
             }
         },
         modifier = modifier.padding(horizontal = 6.dp)
@@ -742,7 +881,7 @@ fun TopBar(
                 }
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.baseline_menu_24),
+                    painter = painterResource(id = R.drawable.menu),
                     contentDescription = "Menu",
                     tint = MaterialTheme.colorScheme.inverseSurface,
                     modifier = Modifier.size(24.dp)
@@ -759,7 +898,7 @@ fun TopBar(
                 onClick = {}
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.baseline_search_24),
+                    painter = painterResource(id = R.drawable.search_alt),
                     contentDescription = "Search",
                     tint = MaterialTheme.colorScheme.inverseSurface,
                     modifier = Modifier.size(24.dp)
@@ -775,83 +914,78 @@ fun TopBar(
 fun BottomBar(
     bookDataViewModel: BookDataViewModel,
     navController: NavController,
+    drawerState: DrawerState,
     modifier: Modifier = Modifier
 ) {
     val selectedBook by bookDataViewModel.selectedBook.collectAsState()
     val encodedUri = Uri.encode(selectedBook?.uri)
     Box(
-        modifier = modifier
+        modifier = modifier.height(80.dp)
     ) {
         Surface(
             color = MaterialTheme.colorScheme.onBackground,
             shape = RoundedCornerShape(8.dp),
             shadowElevation = 8.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(68.dp)
+                .align(Alignment.BottomCenter)
+        ) {}
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceAround,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(2.dp)
+                .align(Alignment.BottomCenter)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceAround,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(2.dp)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.bar_graph),
-                        contentDescription = "Report",
-                        tint = MaterialTheme.colorScheme.inverseSurface,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = "Report",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.inverseSurface
+                Icon(
+                    painter = painterResource(id = R.drawable.chart),
+                    contentDescription = "Report",
+                    tint = MaterialTheme.colorScheme.inverseSurface,
+                    modifier = Modifier.size(25.dp)
+                )
+                Text(
+                    text = "Report",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.inverseSurface
 
-                    )
-                }
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    IconButton(
-                        onClick = {
-                            selectedBook?.let {
-                                bookDataViewModel.updateBookTime(it)
-                            }
-                            navController.navigate("BookScreen/${encodedUri}")
-                        },
-                        modifier = Modifier.size(42.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.play_button),
-                            contentDescription = "Read",
-                            tint = MaterialTheme.colorScheme.inverseSurface,
-                            modifier = Modifier
-                                .size(35.dp)
-                        )
-                    }
-                    Text(
-                        text = "Read",
-                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 16.sp),
-                        color = MaterialTheme.colorScheme.inverseSurface
-                    )
-                }
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
+                )
+            }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                IconButton(
+                    onClick = {
+                        selectedBook?.let {
+                            bookDataViewModel.updateBookTime(it)
+                        }
+                        navController.navigate("BookScreen/${encodedUri}")
+                    },
+                    modifier = Modifier.size(42.dp)
                 ) {
                     Icon(
-                        painter = if (false) painterResource(id = R.drawable.baseline_nightlight_round_24) else painterResource(id = R.drawable.baseline_sunny_24),
-                        contentDescription = "light mode",
+                        painter = painterResource(id = R.drawable.play_button),
+                        contentDescription = "Read",
                         tint = MaterialTheme.colorScheme.inverseSurface,
-                        modifier = Modifier.clickable (onClick = { })
-                    )
-                    Text(
-                        text = if (false) "Dark" else "Light",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.inverseSurface
+                        modifier = Modifier
+                            .size(35.dp)
                     )
                 }
+                Text(
+                    text = "Read",
+                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 16.sp),
+                    color = MaterialTheme.colorScheme.inverseSurface
+                )
             }
+            QuickPdfSelection(
+                bookDataViewModel = bookDataViewModel,
+                navController = navController,
+                drawerState = drawerState,
+            )
         }
     }
 }
@@ -888,21 +1022,21 @@ fun Drawer(
             )
         }
         DrawerRow(
-            painter = painterResource(id = R.drawable.baseline_home_24),
+            painter = painterResource(id = R.drawable.home),
             text = "Home",
             currentScreen = currentScreen,
             label = "homeScreen",
             drawerState = drawerState
         )
         DrawerRow(
-            painter = painterResource(id = R.drawable.baseline_library_books_24),
+            painter = painterResource(id = R.drawable.notebook),
             text = "Books",
             currentScreen = currentScreen,
             drawerState = drawerState
 
         )
         DrawerRow(
-            painter = painterResource(id = R.drawable.baseline_people_24),
+            painter = painterResource(id = R.drawable.group),
             text = "Authors",
             currentScreen = currentScreen,
             drawerState = drawerState
@@ -914,13 +1048,13 @@ fun Drawer(
             drawerState = drawerState
         )
         DrawerRow(
-            painter = painterResource(id = R.drawable.baseline_settings_24),
+            painter = painterResource(id = R.drawable.setting_line),
             text = "Settings",
             currentScreen = currentScreen,
             drawerState = drawerState
         )
         DrawerRow(
-            painter = painterResource(id = R.drawable.baseline_feedback_24),
+            painter = painterResource(id = R.drawable.comment),
             text = "Feedback",
             currentScreen = currentScreen,
             drawerState = drawerState
@@ -931,13 +1065,13 @@ fun Drawer(
 
 @Composable
 fun DrawerRow(
+    modifier: Modifier = Modifier,
     painter: Painter,
     text: String,
     label: String = "",
     currentScreen: String,
     drawerState: DrawerState,
     onDrawerItemClick: () -> Unit = {},
-    modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
 
@@ -952,7 +1086,7 @@ fun DrawerRow(
             )
             .clickable {
                 onDrawerItemClick()
-                if (currentScreen == label){
+                if (currentScreen == label) {
                     scope.launch {
                         drawerState.close()
                     }
@@ -979,6 +1113,46 @@ fun DrawerRow(
     }
 }
 
+@Composable
+fun CustumSlideBar(
+    value: Float,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(16.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.onBackground,
+                    shape = RoundedCornerShape(4.dp)
+                )
+        )
+        Box(
+            modifier = Modifier
+                .height(16.dp)
+                .fillMaxWidth(value)
+                .padding(3.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(4.dp)
+                )
+
+        )
+        Box(
+            modifier = Modifier
+                .padding(end = 4.dp)
+                .align(Alignment.CenterEnd)
+                .size(3.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(8.dp)
+                )
+        )
+    }
+}
 
 @Composable
 fun PDFSelection(
@@ -1021,7 +1195,7 @@ fun PDFSelection(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.baseline_download_24),
+                painter = painterResource(id = R.drawable.load_circle_fill),
                 contentDescription = "Home",
             )
             Spacer(
@@ -1035,6 +1209,65 @@ fun PDFSelection(
     }
 }
 
+@Composable
+fun QuickPdfSelection(
+    navController: NavController,
+    bookDataViewModel: BookDataViewModel,
+    drawerState: DrawerState,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val contentResolver = context.contentResolver
+
+    val scope = rememberCoroutineScope()
+
+    val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+
+            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            contentResolver.takePersistableUriPermission(it, takeFlags)
+
+            val encodedUri = Uri.encode(it.toString())
+            bookDataViewModel.addBook(it)
+            navController.navigate("BookScreen/$encodedUri")
+        }
+    }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+    ) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = RoundedCornerShape(8.dp),
+            shadowElevation = 8.dp,
+            modifier = Modifier
+                .size(40.dp)
+                .offset(y = (-14).dp)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.add_round),
+                contentDescription = "Add new Book",
+                tint = MaterialTheme.colorScheme.inverseSurface,
+                modifier = Modifier
+                    .clickable(
+                        onClick = {
+                            pdfLauncher.launch(arrayOf("application/pdf"))
+                            scope.launch {
+                                drawerState.close()
+                            }
+                        }
+                    )
+                    .padding(4.dp)
+            )
+        }
+        Text(
+            text = "Add Book",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.inverseSurface,
+            modifier = Modifier.offset(y = (-4).dp)
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1044,7 +1277,7 @@ fun PDFViewerScreen(
     pdfUri: String?
 ) {
     val context = LocalContext.current
-    val uri = pdfUri?.let { Uri.parse(it) }
+    val uri = pdfUri?.toUri()
 
     val lastOpenedPageDB by bookDataViewModel.lastPage.collectAsState()
     var lastOpenedPageL by remember { mutableIntStateOf(0) }
@@ -1069,7 +1302,7 @@ fun PDFViewerScreen(
             title = { Text("PDF Viewer") },
             navigationIcon = {
                 IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
             },
             modifier = Modifier.zIndex(1f)
@@ -1097,7 +1330,4 @@ fun PDFViewerScreen(
         )
     }
 }
-
-
-
 

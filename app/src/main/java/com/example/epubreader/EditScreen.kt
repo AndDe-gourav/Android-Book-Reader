@@ -108,10 +108,10 @@ fun EditScreen(
 
 @Composable
 fun EditCell(
+    modifier: Modifier = Modifier,
     titleText: String = "",
     cellName: String = "",
     onCellClicked: () -> Unit = {},
-    modifier: Modifier = Modifier
 ) {
     Surface(
         color = MaterialTheme.colorScheme.onBackground,
@@ -147,12 +147,12 @@ fun EditCell(
 
 @Composable
 fun OnCellClicked(
+    modifier: Modifier = Modifier,
     cellName: String = "",
     value: String ,
     onValueChange: (String) -> Unit = {},
     onDismiss: () -> Unit = {},
     onSaveClicked: () -> Unit = {},
-    modifier: Modifier = Modifier
 ) {
     Dialog(
         onDismissRequest = { onDismiss() }
@@ -252,7 +252,7 @@ fun RemovePopUp(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.outline_cancel_24),
+                    painter = painterResource(id = R.drawable.close_ring),
                     contentDescription = "Remove",
                     tint = Color.Red,
                     modifier = Modifier.size(40.dp)
