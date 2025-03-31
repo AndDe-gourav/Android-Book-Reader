@@ -84,7 +84,7 @@ fun OnNotInCollectionsIconClicked(
                 OutlinedTextField(
                     value = value,
                     onValueChange = onValueChange,
-                    colors = TextFieldDefaults.colors(focusedContainerColor = MaterialTheme.colorScheme.onBackground , unfocusedContainerColor = MaterialTheme.colorScheme.onBackground,),
+                    colors = TextFieldDefaults.colors(focusedContainerColor = MaterialTheme.colorScheme.onBackground , unfocusedContainerColor = MaterialTheme.colorScheme.onBackground),
                     maxLines = 1,
                     placeholder = { Text(text = "Enter collection name") },
                     modifier = Modifier.focusRequester(focusRequester)
@@ -214,7 +214,7 @@ fun OnInCollectionIconClicked(
                                         onClick = {
                                             if (checked == true){
                                                 selectedBook?.let {
-                                                    bookDataViewModel.updateCollection(it.uri, remove = collection,   "")
+                                                    bookDataViewModel.updateCollection(bookUri = it.uri, remove = collection,   "")
                                                 }
                                             }else{
                                                 selectedBook?.let {
