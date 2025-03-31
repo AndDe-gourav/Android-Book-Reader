@@ -24,9 +24,6 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -46,7 +43,6 @@ import com.example.epubreader.model.BookRepository
 import com.example.epubreader.ui.theme.EPUBReaderTheme
 
 class MainActivity : ComponentActivity() {
-    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -71,9 +67,8 @@ class MainActivity : ComponentActivity() {
             WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
         )
         setContent {
-            val windowSize = calculateWindowSizeClass(this)
             EPUBReaderTheme {
-                App( windowSize = windowSize)
+                App()
             }
         }
     }
@@ -82,7 +77,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun App(
     modifier: Modifier = Modifier,
-    windowSize: WindowSizeClass
 ) {
     val context = LocalContext.current
 

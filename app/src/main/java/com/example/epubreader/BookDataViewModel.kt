@@ -306,7 +306,7 @@ class BookDataViewModel(
 
     private fun firstSelectedBook(){
         viewModelScope.launch {
-            selectBook(_lastOpenedBook.value?.uri!!)
+            selectBook(_lastOpenedBook.value?.uri ?: "")
         }
         Log.d("firstSelectedBook", "${selectedBook.value}")
     }

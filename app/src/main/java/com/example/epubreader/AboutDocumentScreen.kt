@@ -46,6 +46,7 @@ fun AboutDoucument(
 ) {
     val context = LocalContext.current
     val selectedBook by bookDataViewModel.selectedBook.collectAsState()
+    val listOfCollections by bookDataViewModel.listOfCollections.collectAsState()
     val time = selectedBook?.timestamp?.let { bookDataViewModel.convertMillisToDateTime(it)}
     val fileSize = selectedBook?.uri?.let { bookDataViewModel.getFileSize(context= context, it.toUri())}
 
@@ -115,7 +116,9 @@ fun AboutDoucument(
                     bookDataViewModel = bookDataViewModel,
                     navController = navController,
                     currentScreen = currentScreen,
-                    snackBarContent = {}
+                    selectedBook = selectedBook,
+                    listOfCollections = listOfCollections,
+                    snackBarContent = {},
                 )
                 Box(
                     modifier = Modifier

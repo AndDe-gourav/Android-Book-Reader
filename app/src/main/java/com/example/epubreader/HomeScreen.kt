@@ -80,6 +80,7 @@ import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.epubreader.model.Book
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import kotlinx.coroutines.CoroutineScope
@@ -99,7 +100,15 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
+    val recentBooks by bookDataViewModel.allBooks.collectAsState()
+    val favouritesBooks by bookDataViewModel.favoriteBooks.collectAsState()
+    val toReadBooks by bookDataViewModel.toReadBooks.collectAsState()
+    val particularCollection by bookDataViewModel.particularCollection.collectAsState()
+    val completedBooks by bookDataViewModel.completedBooks.collectAsState()
+    val listOfCollections by bookDataViewModel.listOfCollections.collectAsState()
     val selectedBook by bookDataViewModel.selectedBook.collectAsState()
+    val currentBookShelf by bookDataViewModel.currentBookShelf.collectAsState()
+
 
     Box(
         modifier = modifier.fillMaxSize()
@@ -120,6 +129,8 @@ fun HomeScreen(
                     bookDataViewModel = bookDataViewModel,
                     navController = navController,
                     currentScreen = currentScreen,
+                    selectedBook = selectedBook,
+                    listOfCollections = listOfCollections,
                     snackBarContent = { message ->
                         coroutineScope.launch {
                             snackbarHostState.currentSnackbarData?.dismiss()
@@ -147,6 +158,13 @@ fun HomeScreen(
                     ) {
                         BookShelf(
                             bookDataViewModel = bookDataViewModel,
+                            recentBooks = recentBooks,
+                            favouritesBooks = favouritesBooks,
+                            toReadBooks = toReadBooks,
+                            particularCollection = particularCollection,
+                            completedBooks = completedBooks,
+                            listOfCollections = listOfCollections,
+                            currentBookShelf = currentBookShelf
                         )
                     }
                     Column(
@@ -211,6 +229,7 @@ fun HomeScreen(
             navController = navController,
             bookDataViewModel = bookDataViewModel,
             drawerState = drawerState,
+            selectedBook = selectedBook,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
@@ -222,9 +241,10 @@ fun BookInReading(
     snackBarContent: (String) -> Unit,
     navController: NavController,
     currentScreen: String,
+    selectedBook: Book?,
+    listOfCollections: List<String>,
     modifier: Modifier = Modifier
 ) {
-    val selectedBook by bookDataViewModel.selectedBook.collectAsState()
 
     LaunchedEffect(selectedBook) {
         selectedBook?.let { bookDataViewModel.fetchTotalPages(it.uri) }
@@ -342,7 +362,9 @@ fun BookInReading(
             bookDataViewModel = bookDataViewModel,
             navController = navController,
             snackBarContent = snackBarContent,
-            currentScreen = currentScreen
+            currentScreen = currentScreen,
+            selectedBook = selectedBook,
+            listOfCollections = listOfCollections
         )
     }
 }
@@ -352,12 +374,10 @@ fun AnimatedIconRow(
     bookDataViewModel: BookDataViewModel,
     navController: NavController,
     currentScreen: String,
+    selectedBook: Book?,
+    listOfCollections: List<String>,
     snackBarContent: (String) -> Unit ,
     ) {
-    val selectedBook by bookDataViewModel.selectedBook.collectAsState()
-    val listOfCollections by bookDataViewModel.listOfCollections.collectAsState()
-
-
     var collectionValue by remember { mutableStateOf("") }
     var openNewCollectionDialog by remember { mutableStateOf(false) }
     var openCollectionDialog by remember { mutableStateOf(false) }
@@ -389,7 +409,7 @@ fun AnimatedIconRow(
             onClick = {
                 selectedBook?.let { bookDataViewModel.toggleToRead(it) }
                 if (selectedBook?.doneReading == 1){
-                    selectedBook?.let { bookDataViewModel.toggleDoneReading(it) }
+                    selectedBook.let { bookDataViewModel.toggleDoneReading(it) }
                 }
                 snackBarContent(if (selectedBook?.toRead  == 0) "Added to \"To Read\" " else "Removed from \"To Read\" ")
             }
@@ -416,7 +436,7 @@ fun AnimatedIconRow(
             onClick = {
                 selectedBook?.let { bookDataViewModel.toggleDoneReading(it) }
                 if (selectedBook?.toRead == 1){
-                    selectedBook?.let { bookDataViewModel.toggleToRead(it) }
+                    selectedBook.let { bookDataViewModel.toggleToRead(it) }
                 }
                 snackBarContent(if (selectedBook?.doneReading == 0) "Added to \"Done Reading\" " else "Removed from \"Done Reading\" ")
             }
@@ -425,7 +445,8 @@ fun AnimatedIconRow(
         OptionsDropDownMenu(
             bookDataViewModel = bookDataViewModel,
             navController = navController,
-            currentScreen = currentScreen
+            currentScreen = currentScreen,
+            selectedBook = selectedBook
         )
 
         if (openNewCollectionDialog) {
@@ -593,16 +614,15 @@ fun ShelfNavigation(
 @Composable
 fun BookShelf(
     bookDataViewModel: BookDataViewModel,
+    recentBooks: List<Book>,
+    favouritesBooks: List<Book>,
+    toReadBooks: List<Book>,
+    particularCollection: List<List<Book>>,
+    completedBooks: List<Book>,
+    listOfCollections: List<String>,
+    currentBookShelf: String,
     modifier: Modifier = Modifier
 ) {
-    val recentBooks by bookDataViewModel.allBooks.collectAsState()
-    val favouritesBooks by bookDataViewModel.favoriteBooks.collectAsState()
-    val toReadBooks by bookDataViewModel.toReadBooks.collectAsState()
-    val particularCollection by bookDataViewModel.particularCollection.collectAsState()
-    val completedBooks by bookDataViewModel.completedBooks.collectAsState()
-    val listOfCollections by bookDataViewModel.listOfCollections.collectAsState()
-
-    val currentBookShelf by bookDataViewModel.currentBookShelf.collectAsState()
 
 
     val groupedBooks = when(currentBookShelf){
@@ -775,12 +795,12 @@ fun OptionsDropDownMenu(
     navController: NavController,
     modifier: Modifier = Modifier,
     currentScreen: String,
+    selectedBook: Book?,
     bookDataViewModel: BookDataViewModel
 ) {
     var expanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    val selectedBook by bookDataViewModel.selectedBook.collectAsState()
 
     var openRemoveDialog by remember { mutableStateOf(false) }
 
@@ -832,7 +852,8 @@ fun OptionsDropDownMenu(
                     )
                 },
                 onClick = {
-                    selectedBook?.uri?.let { bookDataViewModel.sharePdf( context = context, Uri.parse(it)) }
+                    selectedBook?.uri?.let { bookDataViewModel.sharePdf( context = context,
+                        it.toUri()) }
                     expanded = false
                 }
             )
@@ -950,9 +971,9 @@ fun BottomBar(
     bookDataViewModel: BookDataViewModel,
     navController: NavController,
     drawerState: DrawerState,
+    selectedBook: Book?,
     modifier: Modifier = Modifier
 ) {
-    val selectedBook by bookDataViewModel.selectedBook.collectAsState()
     val encodedUri = Uri.encode(selectedBook?.uri)
     Box(
         modifier = modifier.height(80.dp)
