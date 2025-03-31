@@ -42,6 +42,7 @@ android {
 
 dependencies {
     implementation ("io.coil-kt:coil-compose:2.5.0")
+    implementation(libs.androidx.material3.window.size.class1.android)
     ksp ("androidx.room:room-compiler:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     implementation ("androidx.room:room-runtime:2.6.1")

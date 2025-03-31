@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,12 +33,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.delay
 
 @Composable
 fun OnNotInCollectionsIconClicked(
@@ -47,6 +52,8 @@ fun OnNotInCollectionsIconClicked(
     onDismiss: () -> Unit = {},
     onCreateClicked: () -> Unit,
 ) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusRequester = remember { FocusRequester() }
     Dialog(
         onDismissRequest = { onDismiss() }
     ) {
@@ -77,11 +84,10 @@ fun OnNotInCollectionsIconClicked(
                 OutlinedTextField(
                     value = value,
                     onValueChange = onValueChange,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.onBackground ,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.onBackground,
-                    ),
-                    maxLines = 1
+                    colors = TextFieldDefaults.colors(focusedContainerColor = MaterialTheme.colorScheme.onBackground , unfocusedContainerColor = MaterialTheme.colorScheme.onBackground,),
+                    maxLines = 1,
+                    placeholder = { Text(text = "Enter collection name") },
+                    modifier = Modifier.focusRequester(focusRequester)
                 )
                 Spacer(
                     modifier = modifier.padding(8.dp)
@@ -107,6 +113,11 @@ fun OnNotInCollectionsIconClicked(
 
         }
     }
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+        delay(100)
+        keyboardController?.show()
+    }
 }
 
 @Composable
@@ -120,7 +131,6 @@ fun OnInCollectionIconClicked(
     val allCollectionsList by bookDataViewModel.listOfCollections.collectAsState()
 
     val selectedBook by bookDataViewModel.selectedBook.collectAsState()
-
     Dialog(
         onDismissRequest = { onDismiss() }
     ) {

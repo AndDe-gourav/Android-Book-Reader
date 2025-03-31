@@ -10,15 +10,23 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -38,6 +46,7 @@ import com.example.epubreader.model.BookRepository
 import com.example.epubreader.ui.theme.EPUBReaderTheme
 
 class MainActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -62,8 +71,9 @@ class MainActivity : ComponentActivity() {
             WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
         )
         setContent {
+            val windowSize = calculateWindowSizeClass(this)
             EPUBReaderTheme {
-                App()
+                App( windowSize = windowSize)
             }
         }
     }
@@ -71,7 +81,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun App(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    windowSize: WindowSizeClass
 ) {
     val context = LocalContext.current
 
@@ -105,18 +116,23 @@ fun App(
                 drawerContentColor = MaterialTheme.colorScheme.inverseSurface,
                 modifier = Modifier.width(290.dp)
             ) {
-                Drawer(
-                    navController = navController,
-                    bookDataViewModel = bookDataViewModel,
-                    drawerState = drawerState,
-                    currentScreen = currentScreen
-                )
+                Column(
+                    modifier = Modifier.verticalScroll(state = rememberScrollState())
+                ) {
+                    Drawer(
+                        navController = navController,
+                        bookDataViewModel = bookDataViewModel,
+                        drawerState = drawerState,
+                        currentScreen = currentScreen
+                    )
+                }
             }
         },
     ) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
-            modifier = modifier
+            modifier = modifier,
+            contentWindowInsets = WindowInsets.safeDrawing,
         ) { innerPadding ->
             NavHost(
                 navController = navController,
@@ -162,6 +178,7 @@ fun App(
                         bookDataViewModel = bookDataViewModel,
                         navController = navController,
                         currentScreen = currentScreen,
+                        modifier = Modifier.padding(innerPadding)
                     )
                 }
                 composable(
@@ -179,7 +196,8 @@ fun App(
                 ){
                     EditScreen(
                         navController = navController,
-                        bookDataViewModel = bookDataViewModel
+                        bookDataViewModel = bookDataViewModel,
+                        modifier = Modifier.padding(innerPadding)
                     )
                 }
 

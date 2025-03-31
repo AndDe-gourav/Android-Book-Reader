@@ -101,79 +101,118 @@ fun HomeScreen(
 
     val selectedBook by bookDataViewModel.selectedBook.collectAsState()
 
-    Column(
-        modifier = modifier
+    Box(
+        modifier = modifier.fillMaxSize()
     ) {
         TopBar(
             drawerState = drawerState,
-            scope = CoroutineScope(coroutineScope.coroutineContext)
+            scope = CoroutineScope(coroutineScope.coroutineContext),
+            modifier = Modifier.zIndex(1f)
         )
-        BookInReading(
-            bookDataViewModel = bookDataViewModel,
-            navController = navController,
-            currentScreen = currentScreen,
-            snackBarContent = { message  ->
-                coroutineScope.launch {
-                    snackbarHostState.currentSnackbarData?.dismiss()
-
-                    val job = launch {
-                        snackbarHostState.showSnackbar(message = message)
-                    }
-                    delay(2000)
-                    job.cancel() 
-                }
-            }
-        )
-        HorizontalDivider(
-            thickness = (0.5).dp,
-            color = colorResource(id = R.color.progress_bar_front_color)
-        )
-        Box {
-            ShelfNavigation(
-                modifier = Modifier.zIndex(1f),
-                bookDataViewModel = bookDataViewModel
-            )
-            Column(
-                modifier = Modifier
-                    .zIndex(0f)
-            ) {
-                BookShelf(
-                    bookDataViewModel = bookDataViewModel,
+        LazyColumn(
+            modifier = Modifier
+        ) {
+            item {
+                Spacer(
+                    modifier = Modifier.size(60.dp)
                 )
-            }
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 6.dp)
-            ) {
-                SnackbarHost(
-                    hostState = snackbarHostState,
-                    snackbar = { snackBarData ->
-                        SnackBar(
-                            text = snackBarData.visuals.message,
-                            onCancelClicked = {
-                                snackBarData.dismiss()
-                                when (snackBarData.visuals.message){
-                                    "Added to \"Favourites\" " -> selectedBook?.let { bookDataViewModel.toggleFavorite(it) }
-                                    "Added to \"To Read\" " -> selectedBook?.let { bookDataViewModel.toggleToRead(it) }
-                                    "Added to \"Done Reading\" " -> selectedBook?.let { bookDataViewModel.toggleDoneReading(it) }
-                                    "Removed from \"Favourites\" " -> selectedBook?.let { bookDataViewModel.toggleFavorite(it) }
-                                    "Removed from \"To Read\" " -> selectedBook?.let { bookDataViewModel.toggleToRead(it) }
-                                    "Removed from \"Done Reading\" " -> selectedBook?.let { bookDataViewModel.toggleDoneReading(it) }
-                                }
-                            },
-                            modifier = modifier.padding(bottom = 28.dp)
+                BookInReading(
+                    bookDataViewModel = bookDataViewModel,
+                    navController = navController,
+                    currentScreen = currentScreen,
+                    snackBarContent = { message ->
+                        coroutineScope.launch {
+                            snackbarHostState.currentSnackbarData?.dismiss()
+
+                            val job = launch {
+                                snackbarHostState.showSnackbar(message = message)
+                            }
+                            delay(2000)
+                            job.cancel()
+                        }
+                    }
+                )
+                HorizontalDivider(
+                    thickness = (0.5).dp,
+                    color = colorResource(id = R.color.progress_bar_front_color)
+                )
+                Box {
+                    ShelfNavigation(
+                        modifier = Modifier.zIndex(1f),
+                        bookDataViewModel = bookDataViewModel
+                    )
+                    Column(
+                        modifier = Modifier
+                            .zIndex(0f)
+                    ) {
+                        BookShelf(
+                            bookDataViewModel = bookDataViewModel,
                         )
                     }
-                )
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 6.dp)
+                    ) {
+                        SnackbarHost(
+                            hostState = snackbarHostState,
+                            snackbar = { snackBarData ->
+                                SnackBar(
+                                    text = snackBarData.visuals.message,
+                                    onCancelClicked = {
+                                        snackBarData.dismiss()
+                                        when (snackBarData.visuals.message) {
+                                            "Added to \"Favourites\" " -> selectedBook?.let {
+                                                bookDataViewModel.toggleFavorite(
+                                                    it
+                                                )
+                                            }
+
+                                            "Added to \"To Read\" " -> selectedBook?.let {
+                                                bookDataViewModel.toggleToRead(
+                                                    it
+                                                )
+                                            }
+
+                                            "Added to \"Done Reading\" " -> selectedBook?.let {
+                                                bookDataViewModel.toggleDoneReading(
+                                                    it
+                                                )
+                                            }
+
+                                            "Removed from \"Favourites\" " -> selectedBook?.let {
+                                                bookDataViewModel.toggleFavorite(
+                                                    it
+                                                )
+                                            }
+
+                                            "Removed from \"To Read\" " -> selectedBook?.let {
+                                                bookDataViewModel.toggleToRead(
+                                                    it
+                                                )
+                                            }
+
+                                            "Removed from \"Done Reading\" " -> selectedBook?.let {
+                                                bookDataViewModel.toggleDoneReading(
+                                                    it
+                                                )
+                                            }
+                                        }
+                                    },
+                                    modifier = modifier.padding(bottom = 6.dp)
+                                )
+                            }
+                        )
+                    }
+                }
             }
-            BottomBar(
-                navController = navController,
-                bookDataViewModel = bookDataViewModel,
-                drawerState = drawerState,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
         }
+        BottomBar(
+            navController = navController,
+            bookDataViewModel = bookDataViewModel,
+            drawerState = drawerState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -246,9 +285,9 @@ fun BookInReading(
                 ) {
                     LazyColumn{
                         item{
-                            selectedBook?.let {
+                            selectedBook?.title?.let {
                                 Text(
-                                    text = it.title,
+                                    text = it,
                                     style = MaterialTheme.typography.titleLarge.copy(fontSize = 14.sp),
                                     color = MaterialTheme.colorScheme.inverseSurface,
                                     modifier = Modifier.width(180.dp)
@@ -258,9 +297,6 @@ fun BookInReading(
                     }
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.clickable {
-
-                        }
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.book),
@@ -340,13 +376,13 @@ fun AnimatedIconRow(
             contentDescription = "Favourites",
             onClick = {
                 selectedBook?.let { bookDataViewModel.toggleFavorite(it) }
-                snackBarContent(if (selectedBook?.favourite == 0)"Added to \"Favourites\" " else "Removed from \"Favourites\" ")
+                snackBarContent(if ((selectedBook?.favourite) == 0)"Added to \"Favourites\" " else "Removed from \"Favourites\" ")
             }
         )
 
         // To Read icon
         AnimatedIconButton(
-            isActive = selectedBook?.toRead  == 1,
+            isActive = selectedBook?.toRead == 1,
             activeIcon = R.drawable.clock_fill,
             inactiveIcon = R.drawable.clock,
             contentDescription = "To Read",
@@ -355,13 +391,13 @@ fun AnimatedIconRow(
                 if (selectedBook?.doneReading == 1){
                     selectedBook?.let { bookDataViewModel.toggleDoneReading(it) }
                 }
-                snackBarContent(if (selectedBook?.toRead == 0) "Added to \"To Read\" " else "Removed from \"To Read\" ")
+                snackBarContent(if (selectedBook?.toRead  == 0) "Added to \"To Read\" " else "Removed from \"To Read\" ")
             }
         )
 
         // Collection icon
         AnimatedIconButton(
-            isActive = selectedBook?.collection != "",
+            isActive = (selectedBook?.collection) != "",
             activeIcon = R.drawable.folder_dublicate_fill,
             inactiveIcon = R.drawable.folder_dublicate,
             contentDescription = "Collection",
@@ -373,7 +409,7 @@ fun AnimatedIconRow(
 
         // Done Reading icon
         AnimatedIconButton(
-            isActive = selectedBook?.doneReading == 1,
+            isActive = (selectedBook?.doneReading) == 1,
             activeIcon = R.drawable.check_round_fill,
             inactiveIcon = R.drawable.check_ring_round,
             contentDescription = "Done Reading",
@@ -586,7 +622,7 @@ fun BookShelf(
             .padding(vertical = dimensionResource(id = R.dimen.padding_large))
     ) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.height(400.dp),
             verticalArrangement = Arrangement.spacedBy(32.dp),
             contentPadding = PaddingValues(top = 75.dp , bottom = 50.dp)
         ) {
@@ -745,7 +781,6 @@ fun OptionsDropDownMenu(
     val context = LocalContext.current
 
     val selectedBook by bookDataViewModel.selectedBook.collectAsState()
-    val lastOpenedBook by bookDataViewModel.lastOpenedBook.collectAsState()
 
     var openRemoveDialog by remember { mutableStateOf(false) }
 
@@ -797,14 +832,14 @@ fun OptionsDropDownMenu(
                     )
                 },
                 onClick = {
-                    selectedBook?.uri?.let { bookDataViewModel.sharePdf( context = context, it.toUri()) }
+                    selectedBook?.uri?.let { bookDataViewModel.sharePdf( context = context, Uri.parse(it)) }
                     expanded = false
                 }
             )
             DropdownMenuItem(
                 text = {
                     Text(
-                        "Remove",
+                        text = "Remove",
                         style = MaterialTheme.typography.bodyLarge
                     )
                 },
@@ -952,7 +987,6 @@ fun BottomBar(
                     text = "Report",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.inverseSurface
-
                 )
             }
             Column(

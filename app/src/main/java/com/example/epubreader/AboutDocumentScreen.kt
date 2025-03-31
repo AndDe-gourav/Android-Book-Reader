@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -47,13 +46,13 @@ fun AboutDoucument(
 ) {
     val context = LocalContext.current
     val selectedBook by bookDataViewModel.selectedBook.collectAsState()
-    val time = selectedBook?.timestamp?.let { bookDataViewModel.convertMillisToDateTime(it) }
-    val fileSize = selectedBook?.uri?.let { bookDataViewModel.getFileSize(context= context, it.toUri()) }
+    val time = selectedBook?.timestamp?.let { bookDataViewModel.convertMillisToDateTime(it)}
+    val fileSize = selectedBook?.uri?.let { bookDataViewModel.getFileSize(context= context, it.toUri())}
 
     val encodedUri = Uri.encode(selectedBook?.uri)
 
     Box(
-        modifier = modifier.statusBarsPadding()
+        modifier = modifier
     ) {
         GerenalTopBar(
             titleText = "About Book",
@@ -102,9 +101,9 @@ fun AboutDoucument(
                 Box(
                     modifier = Modifier.padding(horizontal = 12.dp)
                 ) {
-                    selectedBook?.let {
+                    (selectedBook?.title)?.let {
                         Text(
-                            text = it.title,
+                            text = it,
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.inverseSurface,
                             textAlign = TextAlign.Center,
@@ -122,17 +121,16 @@ fun AboutDoucument(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
                         .fillMaxWidth()
+
                 ) {
                     Column {
-                        selectedBook?.let {
-                            Text(
-                                text = "$time",
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.inverseSurface,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(top = 16.dp, bottom = 1.dp)
-                            )
-                        }
+                        Text(
+                            text = "$time",
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.inverseSurface,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 1.dp)
+                        )
                         Text(
                             text = "Last read time",
                             style = MaterialTheme.typography.bodyMedium,

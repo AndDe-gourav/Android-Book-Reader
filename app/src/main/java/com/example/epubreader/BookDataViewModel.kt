@@ -14,6 +14,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.epubreader.model.Book
 import com.example.epubreader.model.BookRepository
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -77,7 +78,11 @@ class BookDataViewModel(
 
 
     init {
-        loadAllBooksData()
+        viewModelScope.launch {
+            loadAllBooksData()
+            delay(300)
+            firstSelectedBook()
+        }
     }
 
     private fun loadAllBooksData() {
@@ -100,10 +105,11 @@ class BookDataViewModel(
             ) { lastBook, allCollections ->
                 _lastOpenedBook.value = lastBook
                 _allCollections.value = allCollections
+                Log.d("lastOpenedBook", "${lastOpenedBook.value}")
             }
 
             launch { booksFlow.collectLatest {} }
-            launch { otherDataFlow.collectLatest {Log.d("update", "${allCollections.value}") } }
+            launch { otherDataFlow.collectLatest {} }
         }
     }
 
@@ -121,6 +127,7 @@ class BookDataViewModel(
                 }
             }
         }
+        Log.d("selectedBook", "${selectedBook.value}")
     }
 
 
@@ -277,12 +284,11 @@ class BookDataViewModel(
             val filteredList = listOfCollections.filter { it.isNotEmpty() }
             val orderedList = filteredList.sorted()
             _listOfCollections.value = orderedList
-            Log.d("allCollections", "${allCollections.value}")
             bookOfCollection()
         }
     }
 
-    fun bookOfCollection() {
+    private fun bookOfCollection() {
         viewModelScope.launch {
             val listOfBooksWithCollection: MutableList<List<Book>> = mutableListOf()
             for (collection in _listOfCollections.value) {
@@ -295,9 +301,14 @@ class BookDataViewModel(
                 listOfBooksWithCollection.add(savedCollection.toList())
             }
             _particularCollection.value = listOfBooksWithCollection.toList()
-            Log.d("strings", "${_listOfCollections.value}")
-            Log.d("collection", "${_particularCollection.value}")
         }
+    }
+
+    private fun firstSelectedBook(){
+        viewModelScope.launch {
+            selectBook(_lastOpenedBook.value?.uri!!)
+        }
+        Log.d("firstSelectedBook", "${selectedBook.value}")
     }
 
 
