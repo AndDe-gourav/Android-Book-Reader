@@ -200,11 +200,11 @@ fun OnCellClicked(
                     value = value,
                     onValueChange = onValueChange,
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.onBackground ,
+                        focusedContainerColor = MaterialTheme.colorScheme.onBackground,
                         unfocusedContainerColor = MaterialTheme.colorScheme.onBackground,
                     ),
                     maxLines = 3,
-                    placeholder = {Text(text = "Author's name") },
+                    label = {Text(text = if(cellName == "Author")"Author's name" else "Title") },
                     modifier = Modifier.focusRequester(focusRequester)
                 )
                 Spacer(

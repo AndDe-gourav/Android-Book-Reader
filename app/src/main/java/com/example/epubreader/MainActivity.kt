@@ -95,7 +95,7 @@ fun App(
 
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentScreen = backStackEntry?.destination?.route ?: "homeScreen"
+    val currentScreen = backStackEntry?.destination?.route ?: "SignUpScreen"
 
     ModalNavigationDrawer(
         gesturesEnabled = drawerState.isOpen,
@@ -134,14 +134,19 @@ fun App(
             ) {
                 val enterTransitionSpec = tween<IntOffset>(250)
                 val exitTransitionSpec = tween<IntOffset>(250)
-
                 composable(
                     route = "homeScreen",
                     exitTransition = {
-                        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, exitTransitionSpec)
+                        slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Left,
+                            exitTransitionSpec
+                        )
                     },
                     popEnterTransition = {
-                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, enterTransitionSpec)
+                        slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Right,
+                            enterTransitionSpec
+                        )
                     }
                 ) {
                     HomeScreen(
@@ -149,45 +154,30 @@ fun App(
                         navController = navController,
                         drawerState = drawerState,
                         modifier = Modifier.padding(innerPadding),
-                        currentScreen = currentScreen
-                    )
-                }
-                composable(
-                    route = "aboutDocument",
-                    enterTransition = {
-                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, enterTransitionSpec)
-                    },
-                    exitTransition = {
-                        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, exitTransitionSpec)
-                    },
-                    popEnterTransition = {
-                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, enterTransitionSpec)
-                    },
-                    popExitTransition = {
-                        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, exitTransitionSpec)
-                    }
-
-                ){
-                    AboutDoucument(
-                        bookDataViewModel = bookDataViewModel,
-                        navController = navController,
-                        currentScreen = currentScreen,
-                        modifier = Modifier.padding(innerPadding)
                     )
                 }
                 composable(
                     route = "EditScreen",
                     enterTransition = {
-                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, enterTransitionSpec)
+                        slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Left,
+                            enterTransitionSpec
+                        )
                     },
                     exitTransition = {
-                        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, exitTransitionSpec)
+                        slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Left,
+                            exitTransitionSpec
+                        )
                     },
                     popExitTransition = {
-                        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, exitTransitionSpec)
+                        slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Right,
+                            exitTransitionSpec
+                        )
                     }
 
-                ){
+                ) {
                     EditScreen(
                         navController = navController,
                         bookDataViewModel = bookDataViewModel,
@@ -200,12 +190,18 @@ fun App(
                     route = "BookScreen/{pdfUri}",
                     arguments = listOf(navArgument("pdfUri") { type = NavType.StringType }),
                     enterTransition = {
-                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, enterTransitionSpec)
+                        slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Left,
+                            enterTransitionSpec
+                        )
                     },
                     exitTransition = {
-                        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, exitTransitionSpec)
+                        slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Right,
+                            exitTransitionSpec
+                        )
                     },
-                ){ backStackEntry ->
+                ) { backStackEntry ->
 
                     val pdfUri = backStackEntry.arguments?.getString("pdfUri")
                     PDFViewerScreen(
@@ -213,7 +209,7 @@ fun App(
                         navController,
                         pdfUri
                     )
-                    }
+                }
             }
         }
     }

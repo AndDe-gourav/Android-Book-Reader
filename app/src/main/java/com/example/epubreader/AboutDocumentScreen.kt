@@ -1,6 +1,11 @@
 package com.example.epubreader
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -37,11 +42,15 @@ import androidx.core.net.toUri
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun AboutDoucument(
     bookDataViewModel: BookDataViewModel,
     navController: NavController,
-    currentScreen: String,
+    showAboutDocument: Boolean,
+    onAboutDocumentClicked: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -52,13 +61,17 @@ fun AboutDoucument(
 
     val encodedUri = Uri.encode(selectedBook?.uri)
 
+    BackHandler {
+        onAboutDocumentClicked()
+    }
+
     Box(
         modifier = modifier
     ) {
         GerenalTopBar(
             titleText = "About Book",
             onBackClicked = {
-                navController.navigateUp()
+                onAboutDocumentClicked()
             },
             modifier = Modifier.zIndex(1f)
         )
@@ -69,34 +82,48 @@ fun AboutDoucument(
         ) {
             item {
                 Spacer(modifier = Modifier.padding(top = 70.dp))
-                Box{
-                    Surface(
-                        color = Color.White,
-                        shape = MaterialTheme.shapes.extraSmall,
+                with(sharedTransitionScope) {
+                    Box(
                         modifier = Modifier
-                            .size(
-                                200.dp,
-                                300.dp
-                            )
-                            .shadow(
-                                elevation = 8.dp,
-                                shape = MaterialTheme.shapes.small,
-                                spotColor = colorResource(R.color.shadow)
-                            )
-                            .clickable {
-                                selectedBook?.let {
-                                    bookDataViewModel.updateBookTime(it)
+                            .sharedElement(
+                                state = rememberSharedContentState(key = "bookCover"),
+                                animatedVisibilityScope = animatedVisibilityScope,
+                                boundsTransform = { initial, target ->
+                                    spring(
+                                        dampingRatio = 0.9f,
+                                        stiffness = 380f
+                                    )
                                 }
-                                navController.navigate("BookScreen/${encodedUri}")
-                            }
+                            )
                     ) {
-                        Image(
-                            painter = rememberAsyncImagePainter(
-                                model = selectedBook?.bookCover
-                            ),
-                            contentDescription = "Book_cover_1",
-                            contentScale = ContentScale.FillBounds
-                        )
+                        Surface(
+                            color = Color.White,
+                            shape = MaterialTheme.shapes.extraSmall,
+                            modifier = Modifier
+                                .size(
+                                    200.dp,
+                                    300.dp
+                                )
+                                .shadow(
+                                    elevation = 8.dp,
+                                    shape = MaterialTheme.shapes.small,
+                                    spotColor = colorResource(R.color.shadow)
+                                )
+                                .clickable {
+                                    selectedBook?.let {
+                                        bookDataViewModel.updateBookTime(it)
+                                    }
+                                    navController.navigate("BookScreen/${encodedUri}")
+                                }
+                        ) {
+                            Image(
+                                painter = rememberAsyncImagePainter(
+                                    model = selectedBook?.bookCover
+                                ),
+                                contentDescription = "Book_cover_1",
+                                contentScale = ContentScale.FillBounds
+                            )
+                        }
                     }
                 }
                 Box(
@@ -114,8 +141,10 @@ fun AboutDoucument(
                 }
                 AnimatedIconRow(
                     bookDataViewModel = bookDataViewModel,
+                    showAboutDocument = showAboutDocument,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
                     navController = navController,
-                    currentScreen = currentScreen,
                     selectedBook = selectedBook,
                     listOfCollections = listOfCollections,
                     snackBarContent = {},

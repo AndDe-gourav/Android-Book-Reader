@@ -4,9 +4,15 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntOffsetAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -56,6 +62,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,9 +77,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -89,11 +95,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun HomeScreen(
     bookDataViewModel: BookDataViewModel,
     navController: NavController,
-    currentScreen: String,
     drawerState: DrawerState,
     modifier: Modifier = Modifier
 ) {
@@ -109,140 +115,168 @@ fun HomeScreen(
     val selectedBook by bookDataViewModel.selectedBook.collectAsState()
     val currentBookShelf by bookDataViewModel.currentBookShelf.collectAsState()
 
+    var showAboutDocument by rememberSaveable{ mutableStateOf(false) }
 
-    Box(
-        modifier = modifier.fillMaxSize()
-    ) {
-        TopBar(
-            drawerState = drawerState,
-            scope = CoroutineScope(coroutineScope.coroutineContext),
-            modifier = Modifier.zIndex(1f)
-        )
-        LazyColumn(
-            modifier = Modifier
-        ) {
-            item {
-                Spacer(
-                    modifier = Modifier.size(60.dp)
-                )
-                BookInReading(
-                    bookDataViewModel = bookDataViewModel,
-                    navController = navController,
-                    currentScreen = currentScreen,
-                    selectedBook = selectedBook,
-                    listOfCollections = listOfCollections,
-                    snackBarContent = { message ->
-                        coroutineScope.launch {
-                            snackbarHostState.currentSnackbarData?.dismiss()
+    SharedTransitionLayout {
+        AnimatedContent(
+            targetState = showAboutDocument,
+        ) { aboutDocument ->
+            if (!aboutDocument) {
+                Box(
+                    modifier = modifier.fillMaxSize()
+                ) {
+                    TopBar(
+                        drawerState = drawerState,
+                        scope = CoroutineScope(coroutineScope.coroutineContext),
+                        modifier = Modifier.zIndex(1f)
+                    )
+                    LazyColumn(
+                        modifier = Modifier
+                    ) {
+                        item {
+                            Spacer(
+                                modifier = Modifier.size(60.dp)
+                            )
+                            BookInReading(
+                                bookDataViewModel = bookDataViewModel,
+                                showAboutDocument = showAboutDocument,
+                                onAboutDocumentClicked = { showAboutDocument = true },
+                                navController = navController,
+                                selectedBook = selectedBook,
+                                listOfCollections = listOfCollections,
+                                sharedTransitionScope = this@SharedTransitionLayout,
+                                animatedVisibilityScope = this@AnimatedContent,
+                                snackBarContent = { message ->
+                                    coroutineScope.launch {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
 
-                            val job = launch {
-                                snackbarHostState.showSnackbar(message = message)
+                                        val job = launch {
+                                            snackbarHostState.showSnackbar(message = message)
+                                        }
+                                        delay(2000)
+                                        job.cancel()
+                                    }
+                                }
+                            )
+                            HorizontalDivider(
+                                thickness = (0.5).dp,
+                                color = colorResource(id = R.color.progress_bar_front_color)
+                            )
+                            Box {
+                                ShelfNavigation(
+                                    modifier = Modifier.zIndex(1f),
+                                    bookDataViewModel = bookDataViewModel
+                                )
+                                Box {
+                                    Column(
+                                        modifier = Modifier
+                                            .zIndex(0f)
+                                    ) {
+                                        BookShelf(
+                                            bookDataViewModel = bookDataViewModel,
+                                            recentBooks = recentBooks,
+                                            favouritesBooks = favouritesBooks,
+                                            toReadBooks = toReadBooks,
+                                            particularCollection = particularCollection,
+                                            completedBooks = completedBooks,
+                                            listOfCollections = listOfCollections,
+                                            currentBookShelf = currentBookShelf
+                                        )
+                                    }
+                                }
+                                Column(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 6.dp)
+                                ) {
+                                    SnackbarHost(
+                                        hostState = snackbarHostState,
+                                        snackbar = { snackBarData ->
+                                            SnackBar(
+                                                text = snackBarData.visuals.message,
+                                                onCancelClicked = {
+                                                    snackBarData.dismiss()
+                                                    when (snackBarData.visuals.message) {
+                                                        "Added to \"Favourites\" " -> selectedBook?.let {
+                                                            bookDataViewModel.toggleFavorite(
+                                                                it
+                                                            )
+                                                        }
+
+                                                        "Added to \"To Read\" " -> selectedBook?.let {
+                                                            bookDataViewModel.toggleToRead(
+                                                                it
+                                                            )
+                                                        }
+
+                                                        "Added to \"Done Reading\" " -> selectedBook?.let {
+                                                            bookDataViewModel.toggleDoneReading(
+                                                                it
+                                                            )
+                                                        }
+
+                                                        "Removed from \"Favourites\" " -> selectedBook?.let {
+                                                            bookDataViewModel.toggleFavorite(
+                                                                it
+                                                            )
+                                                        }
+
+                                                        "Removed from \"To Read\" " -> selectedBook?.let {
+                                                            bookDataViewModel.toggleToRead(
+                                                                it
+                                                            )
+                                                        }
+
+                                                        "Removed from \"Done Reading\" " -> selectedBook?.let {
+                                                            bookDataViewModel.toggleDoneReading(
+                                                                it
+                                                            )
+                                                        }
+                                                    }
+                                                },
+                                                modifier = modifier.padding(bottom = 6.dp)
+                                            )
+                                        }
+                                    )
+                                }
                             }
-                            delay(2000)
-                            job.cancel()
                         }
                     }
-                )
-                HorizontalDivider(
-                    thickness = (0.5).dp,
-                    color = colorResource(id = R.color.progress_bar_front_color)
-                )
-                Box {
-                    ShelfNavigation(
-                        modifier = Modifier.zIndex(1f),
-                        bookDataViewModel = bookDataViewModel
+                    BottomBar(
+                        navController = navController,
+                        bookDataViewModel = bookDataViewModel,
+                        drawerState = drawerState,
+                        selectedBook = selectedBook,
+                        modifier = Modifier.align(Alignment.BottomCenter)
                     )
-                    Column(
-                        modifier = Modifier
-                            .zIndex(0f)
-                    ) {
-                        BookShelf(
-                            bookDataViewModel = bookDataViewModel,
-                            recentBooks = recentBooks,
-                            favouritesBooks = favouritesBooks,
-                            toReadBooks = toReadBooks,
-                            particularCollection = particularCollection,
-                            completedBooks = completedBooks,
-                            listOfCollections = listOfCollections,
-                            currentBookShelf = currentBookShelf
-                        )
-                    }
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 6.dp)
-                    ) {
-                        SnackbarHost(
-                            hostState = snackbarHostState,
-                            snackbar = { snackBarData ->
-                                SnackBar(
-                                    text = snackBarData.visuals.message,
-                                    onCancelClicked = {
-                                        snackBarData.dismiss()
-                                        when (snackBarData.visuals.message) {
-                                            "Added to \"Favourites\" " -> selectedBook?.let {
-                                                bookDataViewModel.toggleFavorite(
-                                                    it
-                                                )
-                                            }
-
-                                            "Added to \"To Read\" " -> selectedBook?.let {
-                                                bookDataViewModel.toggleToRead(
-                                                    it
-                                                )
-                                            }
-
-                                            "Added to \"Done Reading\" " -> selectedBook?.let {
-                                                bookDataViewModel.toggleDoneReading(
-                                                    it
-                                                )
-                                            }
-
-                                            "Removed from \"Favourites\" " -> selectedBook?.let {
-                                                bookDataViewModel.toggleFavorite(
-                                                    it
-                                                )
-                                            }
-
-                                            "Removed from \"To Read\" " -> selectedBook?.let {
-                                                bookDataViewModel.toggleToRead(
-                                                    it
-                                                )
-                                            }
-
-                                            "Removed from \"Done Reading\" " -> selectedBook?.let {
-                                                bookDataViewModel.toggleDoneReading(
-                                                    it
-                                                )
-                                            }
-                                        }
-                                    },
-                                    modifier = modifier.padding(bottom = 6.dp)
-                                )
-                            }
-                        )
-                    }
                 }
+            } else {
+                AboutDoucument(
+                    bookDataViewModel = bookDataViewModel,
+                    navController = navController,
+                    showAboutDocument = showAboutDocument,
+                    onAboutDocumentClicked = {showAboutDocument = false},
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@AnimatedContent,
+                    modifier = modifier
+                )
             }
         }
-        BottomBar(
-            navController = navController,
-            bookDataViewModel = bookDataViewModel,
-            drawerState = drawerState,
-            selectedBook = selectedBook,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun BookInReading(
     bookDataViewModel: BookDataViewModel,
+    showAboutDocument: Boolean,
+    onAboutDocumentClicked: () -> Unit,
     snackBarContent: (String) -> Unit,
     navController: NavController,
-    currentScreen: String,
     selectedBook: Book?,
     listOfCollections: List<String>,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier
 ) {
 
@@ -268,27 +302,40 @@ fun BookInReading(
                 bottom = dimensionResource(id = R.dimen.padding_small)
             )
         ) {
-            Surface(
-                color = Color.White,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier
-                    .size(
-                        dimensionResource(id = R.dimen.book_cover_width),
-                        dimensionResource(id = R.dimen.book_cover_height)
+            with(sharedTransitionScope) {
+                Surface(
+                    color = Color.White,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier
+                        .sharedElement(
+                            state = rememberSharedContentState(key = "bookCover"),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            boundsTransform = { initial, target ->
+                                spring(
+                                    dampingRatio = 0.8f,
+                                    stiffness = 380f
+                                )
+                            }
+                        )
+                        .size(
+                            dimensionResource(id = R.dimen.book_cover_width),
+                            dimensionResource(id = R.dimen.book_cover_height)
+                        )
+                        .shadow(
+                            elevation = 4.dp,
+                            shape = MaterialTheme.shapes.small,
+                            spotColor = colorResource(R.color.shadow)
+                        )
+
+                ) {
+                    Image(
+                        painter = rememberAsyncImagePainter(
+                            model = selectedBook?.bookCover
+                        ),
+                        contentDescription = "Book_cover_1",
+                        contentScale = ContentScale.FillBounds,
                     )
-                    .shadow(
-                        elevation = 8.dp,
-                        shape = MaterialTheme.shapes.small,
-                        spotColor = colorResource(R.color.shadow)
-                    )
-            ) {
-                Image(
-                    painter = rememberAsyncImagePainter(
-                        model = selectedBook?.bookCover
-                    ),
-                    contentDescription = "Book_cover_1",
-                    contentScale = ContentScale.FillBounds
-                )
+                }
             }
             Column(
                 modifier = Modifier.padding(
@@ -326,7 +373,7 @@ fun BookInReading(
                                 .size(26.dp)
                                 .clickable(
                                     onClick = {
-                                        navController.navigate("aboutDocument")
+                                        onAboutDocumentClicked()
                                     }
                                 ),
                         )
@@ -360,20 +407,25 @@ fun BookInReading(
         }
         AnimatedIconRow(
             bookDataViewModel = bookDataViewModel,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope,
+            showAboutDocument = showAboutDocument,
             navController = navController,
             snackBarContent = snackBarContent,
-            currentScreen = currentScreen,
             selectedBook = selectedBook,
             listOfCollections = listOfCollections
         )
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun AnimatedIconRow(
     bookDataViewModel: BookDataViewModel,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    showAboutDocument: Boolean,
     navController: NavController,
-    currentScreen: String,
     selectedBook: Book?,
     listOfCollections: List<String>,
     snackBarContent: (String) -> Unit ,
@@ -385,7 +437,8 @@ fun AnimatedIconRow(
     val coroutineScope = rememberCoroutineScope()
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceAround
     ) {
 
@@ -396,7 +449,7 @@ fun AnimatedIconRow(
             contentDescription = "Favourites",
             onClick = {
                 selectedBook?.let { bookDataViewModel.toggleFavorite(it) }
-                snackBarContent(if ((selectedBook?.favourite) == 0)"Added to \"Favourites\" " else "Removed from \"Favourites\" ")
+                snackBarContent(if ((selectedBook?.favourite) == 0) "Added to \"Favourites\" " else "Removed from \"Favourites\" ")
             }
         )
 
@@ -408,10 +461,10 @@ fun AnimatedIconRow(
             contentDescription = "To Read",
             onClick = {
                 selectedBook?.let { bookDataViewModel.toggleToRead(it) }
-                if (selectedBook?.doneReading == 1){
+                if (selectedBook?.doneReading == 1) {
                     selectedBook.let { bookDataViewModel.toggleDoneReading(it) }
                 }
-                snackBarContent(if (selectedBook?.toRead  == 0) "Added to \"To Read\" " else "Removed from \"To Read\" ")
+                snackBarContent(if (selectedBook?.toRead == 0) "Added to \"To Read\" " else "Removed from \"To Read\" ")
             }
         )
 
@@ -435,7 +488,7 @@ fun AnimatedIconRow(
             contentDescription = "Done Reading",
             onClick = {
                 selectedBook?.let { bookDataViewModel.toggleDoneReading(it) }
-                if (selectedBook?.toRead == 1){
+                if (selectedBook?.toRead == 1) {
                     selectedBook.let { bookDataViewModel.toggleToRead(it) }
                 }
                 snackBarContent(if (selectedBook?.doneReading == 0) "Added to \"Done Reading\" " else "Removed from \"Done Reading\" ")
@@ -444,8 +497,8 @@ fun AnimatedIconRow(
 
         OptionsDropDownMenu(
             bookDataViewModel = bookDataViewModel,
+            showAboutDocument = showAboutDocument,
             navController = navController,
-            currentScreen = currentScreen,
             selectedBook = selectedBook
         )
 
@@ -458,9 +511,14 @@ fun AnimatedIconRow(
                     openNewCollectionDialog = false
                 },
                 onCreateClicked = {
-                    if (!listOfCollections.map { it.lowercase() }.contains(collectionValue.lowercase())) {
+                    if (!listOfCollections.map { it.lowercase() }
+                            .contains(collectionValue.lowercase())) {
                         selectedBook?.let {
-                            bookDataViewModel.updateCollection(it.uri, remove = "", collectionValue)
+                            bookDataViewModel.updateCollection(
+                                it.uri,
+                                remove = "",
+                                collectionValue
+                            )
                         }
                         coroutineScope.launch {
                             delay(300)
@@ -488,7 +546,7 @@ fun AnimatedIconRow(
                 onDismiss = {
                     bookDataViewModel.collectionToList()
                     openCollectionDialog = false
-                            },
+                },
                 onCreateNewClicked = { openNewCollectionDialog = true },
                 snackBarContent = snackBarContent
             )
@@ -575,10 +633,17 @@ fun ShelfNavigation(
             horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_small)),
         ) {
             items(shelfNavigationItems) { item ->
+
+                val offset by animateIntOffsetAsState(
+                    targetValue = if (currentBookShelf == item) IntOffset(0, 20) else IntOffset.Zero,
+                    animationSpec = tween( durationMillis = 100, easing = FastOutSlowInEasing),
+                )
+
                 Surface(
                     shape = MaterialTheme.shapes.small,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier
+                        .offset { offset }
                         .width(140.dp)
                         .height(36.dp)
                         .shadow(
@@ -599,7 +664,7 @@ fun ShelfNavigation(
                             ) {
                             Text(
                                 text = item,
-                                style = TextStyle(textDecoration = if (currentBookShelf == item) TextDecoration.Underline else TextDecoration.None),
+                                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.sp),
                                 color = MaterialTheme.colorScheme.inverseSurface,
                             )
                         }
@@ -635,7 +700,6 @@ fun BookShelf(
             recentBooks.chunked(3)
         }
     }
-
 
     Column(
         modifier = modifier
@@ -793,8 +857,8 @@ fun BookShelf(
 @Composable
 fun OptionsDropDownMenu(
     navController: NavController,
+    showAboutDocument: Boolean,
     modifier: Modifier = Modifier,
-    currentScreen: String,
     selectedBook: Book?,
     bookDataViewModel: BookDataViewModel
 ) {
@@ -810,8 +874,8 @@ fun OptionsDropDownMenu(
             onRemoveClicked = {
                 selectedBook?.let { bookDataViewModel.deleteBook(it) }
                 openRemoveDialog = false
-                if (currentScreen == "aboutDocument"){
-                    navController.navigateUp()
+                if (showAboutDocument){
+                    navController.navigate("homeScreen")
                 }
                               },
         )
@@ -1114,6 +1178,7 @@ fun Drawer(
             currentScreen = currentScreen,
             drawerState = drawerState
         )
+
 
     }
 }
