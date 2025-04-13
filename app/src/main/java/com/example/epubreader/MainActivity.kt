@@ -9,26 +9,35 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.exponentialDecay
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.DraggableAnchors
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.anchoredDraggable
+import androidx.compose.foundation.gestures.animateTo
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -74,6 +83,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun App(
     modifier: Modifier = Modifier,
@@ -91,41 +102,69 @@ fun App(
 
     val bookDataViewModel: BookDataViewModel = viewModel(factory = factory)
 
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    var drawerState = remember { mutableStateOf(false) }
 
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentScreen = backStackEntry?.destination?.route ?: "SignUpScreen"
+    val currentScreen = backStackEntry?.destination?.route ?: "homeScreen"
 
-    ModalNavigationDrawer(
-        gesturesEnabled = drawerState.isOpen,
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet(
-                drawerShape = RoundedCornerShape(
-                    topEnd = dimensionResource(id = R.dimen.padding_small),
-                    bottomEnd = dimensionResource(id = R.dimen.padding_small)
-                ),
-                drawerContainerColor = MaterialTheme.colorScheme.onBackground,
-                drawerContentColor = MaterialTheme.colorScheme.inverseSurface,
-                modifier = Modifier.width(290.dp)
-            ) {
-                Column(
-                    modifier = Modifier.verticalScroll(state = rememberScrollState())
-                ) {
-                    Drawer(
-                        navController = navController,
-                        bookDataViewModel = bookDataViewModel,
-                        drawerState = drawerState,
-                        currentScreen = currentScreen
-                    )
-                }
-            }
-        },
+    val density = LocalDensity.current
+    val drawerWidthPx  =  with(density) { 250.dp.toPx() }
+
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
+        val anchors = DraggableAnchors {
+            DrawerValue.Open at drawerWidthPx
+            DrawerValue.Closed at 0f
+        }
+
+        val draggableState = remember {
+            AnchoredDraggableState(
+                initialValue = DrawerValue.Closed,
+                anchors = anchors,
+                positionalThreshold = { distance: Float -> distance * 0.5f },
+                velocityThreshold = { with(density) { 80.dp.toPx() } },
+                snapAnimationSpec = spring(dampingRatio = 0.8f, stiffness = 380f),
+                decayAnimationSpec = exponentialDecay( )
+            )
+        }
+
+        LaunchedEffect(drawerState.value) {
+            val target = if (drawerState.value) DrawerValue.Open else DrawerValue.Closed
+            draggableState.animateTo(
+                targetValue = target,
+            )
+        }
+
+        LaunchedEffect(draggableState.currentValue) {
+            drawerState.value = draggableState.currentValue == DrawerValue.Open
+        }
+
+
+        Drawer(
+            bookDataViewModel = bookDataViewModel,
+            navController = navController,
+            toCloseDrawer = { drawerState.value = false },
+            currentScreen = currentScreen,
+            modifier = Modifier.align(Alignment.CenterStart)
+        )
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
-            modifier = modifier,
+            modifier = modifier
+                .graphicsLayer {
+                    this.translationX = draggableState.requireOffset()
+                    val scale = androidx.compose.ui.util.lerp(
+                        1f,
+                        0.8f,
+                        draggableState.requireOffset() / drawerWidthPx
+                    )
+                    this.scaleX = scale
+                    this.scaleY = scale
+                    this.shape = RoundedCornerShape(if (drawerState.value) 16.dp else 0.dp)
+                    this.clip = true
+                }
+                .anchoredDraggable(draggableState, Orientation.Horizontal),
             contentWindowInsets = WindowInsets.safeDrawing,
         ) { innerPadding ->
             NavHost(
@@ -152,8 +191,13 @@ fun App(
                     HomeScreen(
                         bookDataViewModel = bookDataViewModel,
                         navController = navController,
-                        drawerState = drawerState,
-                        modifier = Modifier.padding(innerPadding),
+                        drawerState = drawerState.value,
+                        toCloseDrawer = { drawerState.value = false },
+                        toOpenDrawer = { drawerState.value = true },
+                        modifier = Modifier
+                            .padding(innerPadding)
+                            .clickable(onClick ={ if (draggableState.currentValue == DrawerValue.Open) drawerState.value = false})
+
                     )
                 }
                 composable(

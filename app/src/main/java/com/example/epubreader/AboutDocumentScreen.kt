@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -142,8 +141,6 @@ fun AboutDoucument(
                 AnimatedIconRow(
                     bookDataViewModel = bookDataViewModel,
                     showAboutDocument = showAboutDocument,
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = animatedVisibilityScope,
                     navController = navController,
                     selectedBook = selectedBook,
                     listOfCollections = listOfCollections,
@@ -202,22 +199,21 @@ fun GerenalTopBar(
     ) {
         Surface(
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.align(Alignment.TopStart),
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .clickable{
+                    onBackClicked()
+                }
+            ,
             shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
             shadowElevation = 4.dp,
         ) {
-            IconButton(
-                onClick = {
-                    onBackClicked()
-                }
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.inverseSurface,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = MaterialTheme.colorScheme.inverseSurface,
+                modifier = Modifier.size(24.dp)
+            )
         }
         Surface(
             color = MaterialTheme.colorScheme.onBackground,

@@ -6,7 +6,6 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
-import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -44,7 +43,6 @@ class BookDataViewModel(
     val toReadBooks: StateFlow<List<Book>> = _toReadBooks.asStateFlow()
 
     private val _allCollections = MutableStateFlow<List<Book>>(emptyList())
-    val allCollections: StateFlow<List<Book>> = _allCollections.asStateFlow()
 
     private val _listOfCollections = MutableStateFlow<List<String>>(emptyList())
     val listOfCollections: StateFlow<List<String>> = _listOfCollections.asStateFlow()
@@ -63,12 +61,6 @@ class BookDataViewModel(
 
     private val _currentBookShelf =  MutableStateFlow("")
     val currentBookShelf: StateFlow<String> = _currentBookShelf.asStateFlow()
-
-    private val _bookTitle = MutableStateFlow<String>("")
-    val bookTitle: StateFlow<String> = _bookTitle.asStateFlow()
-
-    private val _bookAuthor = MutableStateFlow<String>("")
-    val bookAuthor: StateFlow<String> = _bookAuthor.asStateFlow()
 
     private val _totalPages = MutableStateFlow(0)
     val totalPages: StateFlow<Int> = _totalPages.asStateFlow()
@@ -130,24 +122,6 @@ class BookDataViewModel(
         Log.d("selectedBook", "${selectedBook.value}")
     }
 
-
-
-
-    private fun loadBookMetadata(bookUri: String) {
-        viewModelScope.launch {
-            try {
-                val metadata = metadataExtractor.extractPdfMetadata(bookUri.toUri())
-
-                _bookTitle.value = metadata.title
-                _bookAuthor.value = metadata.author
-            } catch (e: Exception) {
-                _bookTitle.value = "Unknown"
-                _bookAuthor.value = "Unknown"
-
-            }
-        }
-    }
-
     fun addBook(uri: Uri) {
         viewModelScope.launch {
             try {
@@ -171,27 +145,6 @@ class BookDataViewModel(
             } catch (_: Exception) {
 
             }
-        }
-    }
-
-    fun addBook(name: String, uri: String) {
-
-        val newBook = Book(
-            title = name,
-            uri = uri,
-            author = "",
-            bookCover = null,
-            favourite = 0,
-            toRead = 0,
-            collection = "",
-            doneReading = 0,
-            lastPage = 0,
-            totalPages = 0,
-            timestamp = System.currentTimeMillis()
-        )
-
-        viewModelScope.launch {
-            repository.insertBook(newBook)
         }
     }
 

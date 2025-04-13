@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.google.gms.google.services)
 }
 
 android {
@@ -42,14 +41,13 @@ android {
 }
 
 dependencies {
-    implementation ("io.coil-kt:coil-compose:2.5.0")
+    implementation (libs.coil.compose)
     implementation(libs.androidx.material3.window.size.class1.android)
-    implementation(libs.firebase.auth)
     implementation(libs.androidx.runtime.livedata)
-    ksp ("androidx.room:room-compiler:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    implementation ("androidx.room:room-runtime:2.6.1")
-    implementation ("com.github.mhiew:android-pdf-viewer:3.2.0-beta.3")
+    ksp (libs.androidx.room.compiler)
+    implementation(libs.androidx.room.ktx)
+    implementation (libs.androidx.room.runtime)
+    implementation (libs.android.pdf.viewer)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

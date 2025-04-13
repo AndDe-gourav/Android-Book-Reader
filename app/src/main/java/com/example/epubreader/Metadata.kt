@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
+import androidx.core.graphics.createBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -68,11 +69,7 @@ class MetadataExtractor(private val context: Context) {
 
                 if (pageCount > 0) {
                     pdfRenderer.openPage(0).use { page ->
-                        val bitmap = Bitmap.createBitmap(
-                            page.width,
-                            page.height,
-                            Bitmap.Config.ARGB_8888
-                        )
+                        val bitmap = createBitmap(page.width, page.height)
                         page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                         coverImage = saveBitmapToFile( context, bitmap, title)
                     }
