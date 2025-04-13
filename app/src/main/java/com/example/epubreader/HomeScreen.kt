@@ -76,7 +76,8 @@ fun HomeScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clickable{toCloseDrawer}
+                .zIndex(1f)
+                .clickable { toCloseDrawer() }
         )
     }
     SharedTransitionLayout {
@@ -277,17 +278,22 @@ fun TopBar(
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .clickable{ toOpenDrawer()}
+                .clickable { toOpenDrawer() }
+
             ,
             shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
             shadowElevation = 4.dp,
             ) {
-            Icon(
-                painter = painterResource(id = R.drawable.menu),
-                contentDescription = "Menu",
-                tint = MaterialTheme.colorScheme.inverseSurface,
-                modifier = Modifier.size(24.dp)
-            )
+            IconButton(
+                onClick = { toOpenDrawer() }
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.menu),
+                    contentDescription = "Menu",
+                    tint = MaterialTheme.colorScheme.inverseSurface,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
         Surface(
             color = MaterialTheme.colorScheme.onBackground,

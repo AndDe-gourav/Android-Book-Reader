@@ -41,13 +41,13 @@ android {
 }
 
 dependencies {
-    implementation (libs.coil.compose)
+    implementation ("io.coil-kt:coil-compose:2.5.0")
     implementation(libs.androidx.material3.window.size.class1.android)
     implementation(libs.androidx.runtime.livedata)
-    ksp (libs.androidx.room.compiler)
-    implementation(libs.androidx.room.ktx)
-    implementation (libs.androidx.room.runtime)
-    implementation (libs.android.pdf.viewer)
+    ksp ("androidx.room:room-compiler:2.7.0")
+    implementation("androidx.room:room-ktx:2.7.0")
+    implementation ("androidx.room:room-runtime:2.7.0")
+    implementation ("com.github.mhiew:android-pdf-viewer:3.2.0-beta.3")
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
