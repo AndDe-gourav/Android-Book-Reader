@@ -16,15 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -35,12 +31,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
 import androidx.navigation.NavController
 import com.github.barteksc.pdfviewer.PDFView
@@ -89,6 +85,7 @@ fun PDFSelection(
             Icon(
                 painter = painterResource(id = R.drawable.load_circle_fill),
                 contentDescription = "Home",
+                tint = Color.Black
             )
             Spacer(
                 Modifier.width(dimensionResource(id = R.dimen.padding_large))
@@ -96,6 +93,7 @@ fun PDFSelection(
             Text(
                 text = "Downloads",
                 style = MaterialTheme.typography.bodyLarge,
+                color = Color.Black
             )
         }
     }
@@ -169,7 +167,7 @@ fun PDFViewerScreen(
     val uri = pdfUri?.toUri()
 
     val lastOpenedPageDB by bookDataViewModel.lastPage.collectAsState()
-    var lastOpenedPageL by remember { mutableIntStateOf(0) }
+    var lastOpenedPage by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
         if (pdfUri != null) {
@@ -180,22 +178,13 @@ fun PDFViewerScreen(
         onDispose {
             pdfUri?.let {
                 CoroutineScope(Dispatchers.IO).launch {
-                    bookDataViewModel.updateLastPage(pdfUri, lastOpenedPageL)
+                    bookDataViewModel.updateLastPage(pdfUri, lastOpenedPage)
                 }
             }
         }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("PDF Viewer") },
-            navigationIcon = {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
-            },
-            modifier = Modifier.zIndex(1f)
-        )
         AndroidView(
             factory = { ctx -> PDFView(ctx, null) },
             update = { pdfView ->
@@ -207,10 +196,11 @@ fun PDFViewerScreen(
                     .enableAnnotationRendering(false)
                     .scrollHandle(DefaultScrollHandle(context))
                     .spacing(10)
+                    .enableAntialiasing(true)
                     .nightMode(false)
-                    .pageSnap(true)
+                    .pageSnap(false)
                     .onPageChange { page, _ ->
-                        lastOpenedPageL = page
+                        lastOpenedPage = page
                     }
                     .load()
 

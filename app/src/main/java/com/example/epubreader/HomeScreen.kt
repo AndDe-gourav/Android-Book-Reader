@@ -40,6 +40,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -54,7 +56,6 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     bookDataViewModel: BookDataViewModel,
     navController: NavController,
-    drawerState: Boolean,
     toOpenDrawer: () -> Unit,
     toCloseDrawer: () -> Unit,
     modifier: Modifier = Modifier
@@ -72,14 +73,7 @@ fun HomeScreen(
     val currentBookShelf by bookDataViewModel.currentBookShelf.collectAsState()
 
     var showAboutDocument by rememberSaveable{ mutableStateOf(false) }
-    if (drawerState){
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .zIndex(1f)
-                .clickable { toCloseDrawer() }
-        )
-    }
+
     SharedTransitionLayout {
         AnimatedContent(
             targetState = showAboutDocument,
@@ -88,8 +82,9 @@ fun HomeScreen(
                 Box(
                     modifier = modifier.fillMaxSize()
                 ) {
-                    TopBar(
+                    GernealDrawerTopBar(
                         toOpenDrawer = toOpenDrawer,
+                        text = "Home",
                         modifier = Modifier.zIndex(1f)
                     )
                     LazyColumn(
@@ -265,8 +260,9 @@ fun SnackBar(
 
 
 @Composable
-fun TopBar(
+fun GernealDrawerTopBar(
     toOpenDrawer: () -> Unit,
+    text: String,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -278,9 +274,7 @@ fun TopBar(
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .clickable { toOpenDrawer() }
-
-            ,
+                .clickable { toOpenDrawer() },
             shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
             shadowElevation = 4.dp,
             ) {
@@ -297,21 +291,18 @@ fun TopBar(
         }
         Surface(
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.align(Alignment.TopEnd),
+            modifier = Modifier
+                .align(Alignment.TopEnd),
             shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp),
-            shadowElevation = 4.dp
+            shadowElevation = 4.dp,
         ) {
-            IconButton(
-                onClick = {}
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.search_alt),
-                    contentDescription = "Search",
-                    tint = MaterialTheme.colorScheme.inverseSurface,
-                    modifier = Modifier.size(24.dp)
-                )
-
-            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.inverseSurface,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(vertical = 13.dp, horizontal = 34.dp)
+            )
         }
     }
 }

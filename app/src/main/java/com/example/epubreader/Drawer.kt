@@ -1,5 +1,6 @@
 package com.example.epubreader
 
+import android.content.Intent
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -16,10 +17,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.navigation.NavController
+
 
 @Composable
 fun Drawer(
@@ -29,29 +33,23 @@ fun Drawer(
     currentScreen: String,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+
     Column(
         modifier = modifier,
     ) {
+        Spacer(
+            modifier = Modifier.padding(40.dp)
+        )
         DrawerRow(
             painter = painterResource(id = R.drawable.home),
             text = "Home",
             currentScreen = currentScreen,
             label = "homeScreen",
-            toCloseDrawer = toCloseDrawer
-        )
-        DrawerRow(
-            painter = painterResource(id = R.drawable.notebook),
-            text = "Books",
-            currentScreen = currentScreen,
-            toCloseDrawer = toCloseDrawer
-
-        )
-        DrawerRow(
-            painter = painterResource(id = R.drawable.group),
-            text = "Authors",
-            currentScreen = currentScreen,
-            toCloseDrawer = toCloseDrawer
-
+            toCloseDrawer = toCloseDrawer,
+            onDrawerItemClick = {
+                navController.navigate("homeScreen")
+            }
         )
         PDFSelection(
             navController = navController,
@@ -59,19 +57,19 @@ fun Drawer(
             toCloseDrawer = toCloseDrawer
         )
         DrawerRow(
-            painter = painterResource(id = R.drawable.setting_line),
-            text = "Settings",
-            currentScreen = currentScreen,
-            toCloseDrawer = toCloseDrawer
-        )
-        DrawerRow(
             painter = painterResource(id = R.drawable.comment),
             text = "Feedback",
             currentScreen = currentScreen,
-            toCloseDrawer = toCloseDrawer
+            toCloseDrawer = toCloseDrawer,
+            onDrawerItemClick = {
+                val intent = Intent(Intent.ACTION_SENDTO).apply {
+                    data = "mailto:gourav.and.de@gmail.com".toUri()
+                    putExtra(Intent.EXTRA_SUBJECT, "App Feedback")
+                    putExtra(Intent.EXTRA_TEXT, "Hey, I wanted to share some feedback...")
+                }
+                context.startActivity(intent)
+            }
         )
-
-
     }
 }
 

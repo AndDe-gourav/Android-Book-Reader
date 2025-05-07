@@ -80,7 +80,7 @@ fun ShelfNavigation(
 
                 Surface(
                     shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.onBackground,
+                    color = if( currentBookShelf == item )MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier
                         .offset { offset }
                         .width(140.dp)
@@ -98,15 +98,12 @@ fun ShelfNavigation(
                         )
                 ) {
                     Box {
-                        Column(
-                            modifier = Modifier.align(Alignment.Center),
-                        ) {
-                            Text(
-                                text = item,
-                                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.sp),
-                                color = MaterialTheme.colorScheme.inverseSurface,
-                            )
-                        }
+                        Text(
+                            text = item,
+                            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.sp),
+                            color = if( currentBookShelf == item ) Color.White else MaterialTheme.colorScheme.inverseSurface,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
                     }
                 }
             }
