@@ -41,6 +41,7 @@ import androidx.core.net.toUri
 import androidx.navigation.NavController
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
+import com.github.barteksc.pdfviewer.util.FitPolicy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -163,7 +164,7 @@ fun PDFViewerScreen(
     navController: NavController,
     pdfUri: String?
 ) {
-    val context = LocalContext.current
+
     val uri = pdfUri?.toUri()
 
     val lastOpenedPageDB by bookDataViewModel.lastPage.collectAsState()
@@ -174,6 +175,8 @@ fun PDFViewerScreen(
             bookDataViewModel.fetchLastPage(pdfUri)
         }
     }
+
+
     DisposableEffect(Unit) {
         onDispose {
             pdfUri?.let {
@@ -185,27 +188,39 @@ fun PDFViewerScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+
         AndroidView(
-            factory = { ctx -> PDFView(ctx, null) },
+            factory = { ctx -> PDFView(ctx, null).apply {
+                setBackgroundColor(0xFFFFF1E5.toInt())
+                }
+            },
             update = { pdfView ->
                 pdfView.fromUri(uri)
+                    .pageFitPolicy(FitPolicy.BOTH)
                     .enableSwipe(true)
                     .swipeHorizontal(false)
                     .enableDoubletap(true)
                     .defaultPage(lastOpenedPageDB)
                     .enableAnnotationRendering(false)
-                    .scrollHandle(DefaultScrollHandle(context))
-                    .spacing(10)
+                    .scrollHandle(DefaultScrollHandle(pdfView.context))
+                    .spacing(20)
                     .enableAntialiasing(true)
                     .nightMode(false)
                     .pageSnap(false)
                     .onPageChange { page, _ ->
                         lastOpenedPage = page
                     }
+                    .onLoad {
+                        pdfView.useBestQuality(true)
+
+                    }
                     .load()
+
 
             },
             modifier = Modifier.fillMaxSize()
         )
+
     }
+
 }

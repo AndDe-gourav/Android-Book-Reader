@@ -16,9 +16,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven {
-            url = uri("https://my.nutrient.io/maven")
-        }
+        maven("https://jitpack.io")
+        jcenter()
     }
 }
 

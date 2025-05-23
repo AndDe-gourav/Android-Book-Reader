@@ -8,7 +8,7 @@ class BookRepository(private val bookDao: BookDao) {
     val favoriteBooks: Flow<List<Book>> = bookDao.getFavoriteBooks()
     val toReadBooks: Flow<List<Book>> = bookDao.getToReadBooks()
     val completedBooks: Flow<List<Book>> = bookDao.getCompletedBooks()
-    val lastOpenedBook: Flow<Book> = bookDao.lastOpenedBook()
+    val lastOpenedBook: Flow<Book?> = bookDao.lastOpenedBook()
     val allCollections: Flow<List<Book>> = bookDao.getAllCollections()
 
     fun getBookById(id: Int): Flow<Book> {

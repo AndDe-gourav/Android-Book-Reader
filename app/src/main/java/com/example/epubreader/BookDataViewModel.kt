@@ -53,13 +53,13 @@ class BookDataViewModel(
     private val _completedBooks = MutableStateFlow<List<Book>>(emptyList())
     val completedBooks: StateFlow<List<Book>> = _completedBooks.asStateFlow()
 
-    private val _selectedBook = MutableStateFlow<Book?>( null)
+    private val _selectedBook = MutableStateFlow<Book?>(null)
     val selectedBook: StateFlow<Book?> = _selectedBook.asStateFlow()
 
     private val _lastOpenedBook = MutableStateFlow<Book?>(null)
     val lastOpenedBook: StateFlow<Book?> = _lastOpenedBook.asStateFlow()
 
-    private val _currentBookShelf =  MutableStateFlow("")
+    private val _currentBookShelf =  MutableStateFlow("Recent")
     val currentBookShelf: StateFlow<String> = _currentBookShelf.asStateFlow()
 
     private val _totalPages = MutableStateFlow(0)
@@ -128,9 +128,9 @@ class BookDataViewModel(
                 val metadata = metadataExtractor.extractPdfMetadata(uri)
 
                 val newBook = Book(
-                    title = metadata.title,
+                    title = "Untitled",
                     uri = uri.toString(),
-                    author = "",
+                    author = "Unknown Author",
                     bookCover = metadata.coverImage,
                     favourite = 0,
                     toRead = 0,
@@ -240,6 +240,7 @@ class BookDataViewModel(
             bookOfCollection()
         }
     }
+
 
     private fun bookOfCollection() {
         viewModelScope.launch {

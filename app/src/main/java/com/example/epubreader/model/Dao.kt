@@ -26,7 +26,7 @@ interface BookDao {
     fun getToReadBooks(): Flow<List<Book>>
 
     @Query("SELECT * FROM book ORDER BY timestamp DESC LIMIT 1")
-    fun lastOpenedBook(): Flow<Book>
+    fun lastOpenedBook(): Flow<Book?>
 
     @Query("SELECT * FROM book WHERE collection = :collection")
     fun getBooksInCollection(collection: String): Flow<List<Book>>

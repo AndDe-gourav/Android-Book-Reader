@@ -113,6 +113,11 @@ fun App(
                 Drawer(
                     bookDataViewModel = bookDataViewModel,
                     navController = navController,
+                    onBackPressed = {
+                        scope.launch {
+                            drawerState.close()
+                        }
+                    },
                     toCloseDrawer = {
                         scope.launch {
                             drawerState.close()

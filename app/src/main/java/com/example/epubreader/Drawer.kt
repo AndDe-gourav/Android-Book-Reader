@@ -1,6 +1,7 @@
 package com.example.epubreader
 
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -29,12 +30,15 @@ import androidx.navigation.NavController
 fun Drawer(
     navController: NavController,
     bookDataViewModel: BookDataViewModel,
+    onBackPressed: () -> Unit,
     toCloseDrawer: () -> Unit,
     currentScreen: String,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-
+    BackHandler {
+        onBackPressed()
+    }
     Column(
         modifier = modifier,
     ) {
