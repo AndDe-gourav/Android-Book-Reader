@@ -1,7 +1,11 @@
 package com.example.epubreader
 
+import android.app.Activity
+import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -27,7 +31,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -157,6 +163,17 @@ fun QuickPdfSelection(
     }
 }
 
+@Composable
+fun getActivity(): Activity? {
+    var context = LocalContext.current
+    while (context is ContextWrapper) {
+        if (context is Activity) return context
+        context = context.baseContext
+    }
+    return null
+}
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PDFViewerScreen(
@@ -167,8 +184,20 @@ fun PDFViewerScreen(
 
     val uri = pdfUri?.toUri()
 
+    val activity = getActivity()
+
+    val scope = rememberCoroutineScope()
+
     val lastOpenedPageDB by bookDataViewModel.lastPage.collectAsState()
     var lastOpenedPage by remember { mutableIntStateOf(0) }
+
+    var isSystemUIVisible by remember { mutableStateOf(true) }
+
+    BackHandler {
+        showSystemBars(activity!!)
+        navController.navigate("homeScreen")
+    }
+
 
     LaunchedEffect(Unit) {
         if (pdfUri != null) {
@@ -210,8 +239,46 @@ fun PDFViewerScreen(
                     .onPageChange { page, _ ->
                         lastOpenedPage = page
                     }
+                    .onTap {
+                        if (!isSystemUIVisible) {
+                            showSystemBars(activity!!)
+                            isSystemUIVisible = true
+                        }else {
+                            hideSystemBars(activity!!)
+                            isSystemUIVisible = false
+                        }
+                        true
+                    }
+                    .scrollHandle(
+                        DefaultScrollHandle(pdfView.context)
+                    )
                     .onLoad {
                         pdfView.useBestQuality(true)
+                        scope.launch {
+                            val meta = pdfView.documentMeta
+                            val toc = pdfView.tableOfContents
+                            for (bookmark in toc) {
+                                Log.d("TOC", "Title: ${bookmark.title}, Page: ${bookmark.pageIdx}")
+                                if (bookmark.children.isNotEmpty()) {
+                                    for (child in bookmark.children) {
+                                        Log.d("TOC", "Has children: Title: ${child.title}, Page: ${child.pageIdx}")
+                                    }
+                                }
+                            }
+                            if (meta != null) {
+                                val title = meta.title ?: ""
+                                val author = meta.author ?: ""
+                                val bookFromUri = bookDataViewModel.getBookFromUri(pdfUri!!)
+
+                                if (bookFromUri?.title == "Untitled" && title.isNotBlank()) {
+                                    bookDataViewModel.updateBookTitle(bookFromUri, title)
+                                }
+
+                                if (bookFromUri?.author == "Unknown Author" && author.isNotBlank()) {
+                                    bookDataViewModel.updateBookAuthor(bookFromUri, author)
+                                }
+                            }
+                        }
 
                     }
                     .load()

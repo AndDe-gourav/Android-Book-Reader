@@ -11,9 +11,6 @@ class BookRepository(private val bookDao: BookDao) {
     val lastOpenedBook: Flow<Book?> = bookDao.lastOpenedBook()
     val allCollections: Flow<List<Book>> = bookDao.getAllCollections()
 
-    fun getBookById(id: Int): Flow<Book> {
-        return bookDao.getBookById(id)
-    }
 
     fun getBookByUri(uri: String): Flow<Book?> {
         return bookDao.getBookByUri(uri)
@@ -32,20 +29,20 @@ class BookRepository(private val bookDao: BookDao) {
         return if (existingBook == null) {
             bookDao.insertBook(book)
         } else {
-            bookDao.updateBook(existingBook.copy(timestamp = System.currentTimeMillis()))
+            bookDao.updateBookTime(book.uri, System.currentTimeMillis().toString())
             null
         }
     }
 
     suspend fun updateBookTime(book: Book) {
-        bookDao.updateBook(book.copy(timestamp = System.currentTimeMillis()))
+        bookDao.updateBookTime(book.uri, System.currentTimeMillis().toString())
     }
     suspend fun updateBookTitle(book: Book , title: String) {
-        bookDao.updateBook(book.copy(title = title))
+        bookDao.updateTitle(book.uri, title)
     }
 
     suspend fun updateBookAuthor(book: Book , author: String) {
-        bookDao.updateBook(book.copy(author = author))
+        bookDao.updateAuthor(book.uri, author)
     }
 
     suspend fun deleteBook(book: Book) {

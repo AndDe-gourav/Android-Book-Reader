@@ -46,6 +46,15 @@ interface BookDao {
     @Insert
     suspend fun insertBook(book: Book): Long
 
+    @Query("UPDATE book SET title  = :title  WHERE uri = :bookUri")
+    suspend fun updateTitle(bookUri: String, title: String)
+
+    @Query("UPDATE book SET author = :author WHERE uri = :bookUri")
+    suspend fun updateAuthor(bookUri: String, author: String)
+
+    @Query("UPDATE book SET timestamp = :time WHERE uri = :bookUri")
+    suspend fun updateBookTime(bookUri: String, time: String)
+
     @Update
     suspend fun updateBook(book: Book)
 

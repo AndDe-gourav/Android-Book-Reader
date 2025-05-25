@@ -241,6 +241,10 @@ class BookDataViewModel(
         }
     }
 
+    suspend fun getBookFromUri(bookUri: String): Book? {
+        return repository.getBookByUri(bookUri).firstOrNull()
+    }
+
 
     private fun bookOfCollection() {
         viewModelScope.launch {
