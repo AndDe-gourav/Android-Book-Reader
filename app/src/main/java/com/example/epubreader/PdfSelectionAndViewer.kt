@@ -8,6 +8,8 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +50,9 @@ import androidx.navigation.NavController
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import com.github.barteksc.pdfviewer.util.FitPolicy
+import com.google.firebase.Firebase
+import com.google.firebase.ai.ai
+import com.google.firebase.ai.type.GenerativeBackend
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -193,6 +198,29 @@ fun PDFViewerScreen(
 
     var isSystemUIVisible by remember { mutableStateOf(true) }
 
+
+    val contentResolver = LocalContext.current.contentResolver
+
+    val inputStream = contentResolver.openInputStream(uri!!)
+
+    val model = Firebase.ai(backend = GenerativeBackend.googleAI())
+        .generativeModel("gemini-2.5-pro-preview-05-06")
+
+//    LaunchedEffect(Unit) {
+//        inputStream?.use { stream ->
+//            val prompt = content {
+//                inlineData(
+//                    bytes = stream.readBytes(),
+//                    mimeType = "application/pdf"
+//                )
+//                text("can you explain me example 1 of 3.2")
+//            }
+//
+//            val response = model.generateContent(prompt)
+//            Log.d("Result", "${response.text}")
+//        }
+//    }
+
     BackHandler {
         showSystemBars(activity!!)
         navController.navigate("homeScreen")
@@ -215,79 +243,90 @@ fun PDFViewerScreen(
             }
         }
     }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-
-        AndroidView(
-            factory = { ctx -> PDFView(ctx, null).apply {
-                setBackgroundColor(0xFFFFF1E5.toInt())
-                }
-            },
-            update = { pdfView ->
-                pdfView.fromUri(uri)
-                    .pageFitPolicy(FitPolicy.BOTH)
-                    .enableSwipe(true)
-                    .swipeHorizontal(false)
-                    .enableDoubletap(true)
-                    .defaultPage(lastOpenedPageDB)
-                    .enableAnnotationRendering(false)
-                    .scrollHandle(DefaultScrollHandle(pdfView.context))
-                    .spacing(20)
-                    .enableAntialiasing(true)
-                    .nightMode(false)
-                    .pageSnap(false)
-                    .onPageChange { page, _ ->
-                        lastOpenedPage = page
+        Box(
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.backgroudcamel),
+                contentDescription = "Camel",
+                modifier = Modifier.align(Alignment.Center)
+            )
+            AndroidView(
+                factory = { ctx ->
+                    PDFView(ctx, null).apply {
+                        setBackgroundColor(Color.Transparent.hashCode())
                     }
-                    .onTap {
-                        if (!isSystemUIVisible) {
-                            showSystemBars(activity!!)
-                            isSystemUIVisible = true
-                        }else {
-                            hideSystemBars(activity!!)
-                            isSystemUIVisible = false
+                },
+                update = { pdfView ->
+                    pdfView.fromUri(uri)
+                        .pageFitPolicy(FitPolicy.BOTH)
+                        .enableSwipe(true)
+                        .swipeHorizontal(false)
+                        .enableDoubletap(true)
+                        .defaultPage(lastOpenedPageDB)
+                        .enableAnnotationRendering(false)
+                        .scrollHandle(DefaultScrollHandle(pdfView.context))
+                        .spacing(15)
+                        .enableAntialiasing(true)
+                        .nightMode(false)
+                        .pageSnap(false)
+                        .onPageChange { page, _ ->
+                            lastOpenedPage = page
                         }
-                        true
-                    }
-                    .scrollHandle(
-                        DefaultScrollHandle(pdfView.context)
-                    )
-                    .onLoad {
-                        pdfView.useBestQuality(true)
-                        scope.launch {
-                            val meta = pdfView.documentMeta
-                            val toc = pdfView.tableOfContents
-                            for (bookmark in toc) {
-                                Log.d("TOC", "Title: ${bookmark.title}, Page: ${bookmark.pageIdx}")
-                                if (bookmark.children.isNotEmpty()) {
-                                    for (child in bookmark.children) {
-                                        Log.d("TOC", "Has children: Title: ${child.title}, Page: ${child.pageIdx}")
+                        .onTap {
+                            if (!isSystemUIVisible) {
+                                showSystemBars(activity!!)
+                                isSystemUIVisible = true
+                            } else {
+                                hideSystemBars(activity!!)
+                                isSystemUIVisible = false
+                            }
+                            true
+                        }
+                        .scrollHandle(
+                            DefaultScrollHandle(pdfView.context)
+                        )
+                        .onLoad {
+                            pdfView.useBestQuality(true)
+                            scope.launch {
+                                val meta = pdfView.documentMeta
+                                val toc = pdfView.tableOfContents
+                                for (bookmark in toc) {
+                                    Log.d(
+                                        "TOC",
+                                        "Title: ${bookmark.title}, Page: ${bookmark.pageIdx}"
+                                    )
+                                    if (bookmark.children.isNotEmpty()) {
+                                        for (child in bookmark.children) {
+                                            Log.d(
+                                                "TOC",
+                                                "Has children: Title: ${child.title}, Page: ${child.pageIdx}"
+                                            )
+                                        }
+                                    }
+                                }
+                                if (meta != null) {
+                                    val title = meta.title ?: ""
+                                    val author = meta.author ?: ""
+                                    val bookFromUri = bookDataViewModel.getBookFromUri(pdfUri!!)
+
+                                    if (bookFromUri?.title == "Untitled" && title.isNotBlank()) {
+                                        bookDataViewModel.updateBookTitle(bookFromUri, title)
+                                    }
+
+                                    if (bookFromUri?.author == "Unknown Author" && author.isNotBlank()) {
+                                        bookDataViewModel.updateBookAuthor(bookFromUri, author)
                                     }
                                 }
                             }
-                            if (meta != null) {
-                                val title = meta.title ?: ""
-                                val author = meta.author ?: ""
-                                val bookFromUri = bookDataViewModel.getBookFromUri(pdfUri!!)
 
-                                if (bookFromUri?.title == "Untitled" && title.isNotBlank()) {
-                                    bookDataViewModel.updateBookTitle(bookFromUri, title)
-                                }
-
-                                if (bookFromUri?.author == "Unknown Author" && author.isNotBlank()) {
-                                    bookDataViewModel.updateBookAuthor(bookFromUri, author)
-                                }
-                            }
                         }
-
-                    }
-                    .load()
+                        .load()
 
 
-            },
-            modifier = Modifier.fillMaxSize()
-        )
-
-    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
 }

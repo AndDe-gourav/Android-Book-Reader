@@ -74,6 +74,7 @@ fun HomeScreen(
 
     var showAboutDocument by rememberSaveable{ mutableStateOf(false) }
 
+
     SharedTransitionLayout {
         AnimatedContent(
             targetState = showAboutDocument,
