@@ -16,10 +16,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven("https://jitpack.io")
-        jcenter()
     }
 }
 
 rootProject.name = "EPUB Reader"
-include(":app")
+include(":app", ":android-pdf-viewer")

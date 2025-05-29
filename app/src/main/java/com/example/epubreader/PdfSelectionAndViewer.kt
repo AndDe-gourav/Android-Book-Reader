@@ -4,10 +4,10 @@ import android.app.Activity
 import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,8 +40,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -55,6 +58,7 @@ import com.google.firebase.ai.ai
 import com.google.firebase.ai.type.GenerativeBackend
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
@@ -193,18 +197,22 @@ fun PDFViewerScreen(
 
     val scope = rememberCoroutineScope()
 
+    var totalPages by remember { mutableIntStateOf(0) }
+
+    var colorTheme: PDFView.Theme? by remember { mutableStateOf(PDFView.Theme.LIGHT) }
+    var isColorPaletteVisible by remember { mutableStateOf(false) }
+
     val lastOpenedPageDB by bookDataViewModel.lastPage.collectAsState()
     var lastOpenedPage by remember { mutableIntStateOf(0) }
 
     var isSystemUIVisible by remember { mutableStateOf(true) }
-
 
     val contentResolver = LocalContext.current.contentResolver
 
     val inputStream = contentResolver.openInputStream(uri!!)
 
     val model = Firebase.ai(backend = GenerativeBackend.googleAI())
-        .generativeModel("gemini-2.5-pro-preview-05-06")
+        .generativeModel("gemini-2.0-flash")
 
 //    LaunchedEffect(Unit) {
 //        inputStream?.use { stream ->
@@ -221,18 +229,11 @@ fun PDFViewerScreen(
 //        }
 //    }
 
-    BackHandler {
-        showSystemBars(activity!!)
-        navController.navigate("homeScreen")
-    }
-
-
     LaunchedEffect(Unit) {
         if (pdfUri != null) {
             bookDataViewModel.fetchLastPage(pdfUri)
         }
     }
-
 
     DisposableEffect(Unit) {
         onDispose {
@@ -241,92 +242,168 @@ fun PDFViewerScreen(
                     bookDataViewModel.updateLastPage(pdfUri, lastOpenedPage)
                 }
             }
+            showSystemBars(activity!!)
         }
     }
         Box(
-            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+            modifier = Modifier.background(MaterialTheme.colorScheme.background)
         ) {
             Image(
                 painter = painterResource(id = R.drawable.backgroudcamel),
                 contentDescription = "Camel",
                 modifier = Modifier.align(Alignment.Center)
             )
+
             AndroidView(
                 factory = { ctx ->
                     PDFView(ctx, null).apply {
                         setBackgroundColor(Color.Transparent.hashCode())
+                            fromUri(uri)
+                            .useBestQuality(true)
+                            .pageFitPolicy(FitPolicy.BOTH)
+                            .enableSwipe(true)
+                            .enableDoubletap(true)
+                            .scrollHandle(DefaultScrollHandle(ctx))
+                            .defaultPage(lastOpenedPageDB)
+                            .spacing(1)
+                            .onPageChange { page, _ ->
+                                lastOpenedPage = page
+                            }
+                            .onTap {
+                                scope.launch {
+                                    if (isColorPaletteVisible) {
+                                        isColorPaletteVisible = false
+                                        if (isSystemUIVisible) {
+                                            delay(1000)
+                                        }
+                                    }
+                                    if (!isSystemUIVisible) {
+                                        showSystemBars(activity!!)
+                                        isSystemUIVisible = true
+                                    } else {
+                                        hideSystemBars(activity!!)
+                                        isSystemUIVisible = false
+                                    }
+                                    }
+                                true
+                            }
+                            .onLoad {
+                                scope.launch {
+                                    val meta = this@apply.documentMeta
+                                    totalPages = this@apply.pageCount
+//                                val toc = pdfView.tableOfContents
+//                                for (bookmark in toc) {
+//                                    Log.d(
+//                                        "TOC",
+//                                        "Title: ${bookmark.title}, Page: ${bookmark.pageIdx}"
+//                                    )
+//                                    if (bookmark.children.isNotEmpty()) {
+//                                        for (child in bookmark.children) {
+//                                            Log.d("TOC", "Has children: Title: ${child.title}, Page: ${child.pageIdx}")
+//                                        }
+//                                    }
+//                                }
+                                    if (meta != null) {
+                                        val title = meta.title ?: ""
+                                        val author = meta.author ?: ""
+                                        val bookFromUri = bookDataViewModel.getBookFromUri(pdfUri!!)
+
+                                        if (bookFromUri?.title == "Untitled" && title.isNotBlank()) {
+                                            bookDataViewModel.updateBookTitle(bookFromUri, title)
+                                        }
+
+                                        if (bookFromUri?.author == "Unknown Author" && author.isNotBlank()) {
+                                            bookDataViewModel.updateBookAuthor(bookFromUri, author)
+                                        }
+                                    }
+
+                                }
+
+                            }
+                            .load()
+
                     }
                 },
                 update = { pdfView ->
-                    pdfView.fromUri(uri)
-                        .pageFitPolicy(FitPolicy.BOTH)
-                        .enableSwipe(true)
-                        .swipeHorizontal(false)
-                        .enableDoubletap(true)
-                        .defaultPage(lastOpenedPageDB)
-                        .enableAnnotationRendering(false)
-                        .scrollHandle(DefaultScrollHandle(pdfView.context))
-                        .spacing(15)
-                        .enableAntialiasing(true)
-                        .nightMode(false)
-                        .pageSnap(false)
-                        .onPageChange { page, _ ->
-                            lastOpenedPage = page
-                        }
-                        .onTap {
-                            if (!isSystemUIVisible) {
-                                showSystemBars(activity!!)
-                                isSystemUIVisible = true
-                            } else {
-                                hideSystemBars(activity!!)
-                                isSystemUIVisible = false
-                            }
-                            true
-                        }
-                        .scrollHandle(
-                            DefaultScrollHandle(pdfView.context)
-                        )
-                        .onLoad {
-                            pdfView.useBestQuality(true)
-                            scope.launch {
-                                val meta = pdfView.documentMeta
-                                val toc = pdfView.tableOfContents
-                                for (bookmark in toc) {
-                                    Log.d(
-                                        "TOC",
-                                        "Title: ${bookmark.title}, Page: ${bookmark.pageIdx}"
-                                    )
-                                    if (bookmark.children.isNotEmpty()) {
-                                        for (child in bookmark.children) {
-                                            Log.d(
-                                                "TOC",
-                                                "Has children: Title: ${child.title}, Page: ${child.pageIdx}"
-                                            )
-                                        }
-                                    }
-                                }
-                                if (meta != null) {
-                                    val title = meta.title ?: ""
-                                    val author = meta.author ?: ""
-                                    val bookFromUri = bookDataViewModel.getBookFromUri(pdfUri!!)
-
-                                    if (bookFromUri?.title == "Untitled" && title.isNotBlank()) {
-                                        bookDataViewModel.updateBookTitle(bookFromUri, title)
-                                    }
-
-                                    if (bookFromUri?.author == "Unknown Author" && author.isNotBlank()) {
-                                        bookDataViewModel.updateBookAuthor(bookFromUri, author)
-                                    }
-                                }
-                            }
-
-                        }
-                        .load()
-
-
+                    pdfView.setTheme(colorTheme)
+                    pdfView.invalidate()
                 },
                 modifier = Modifier.fillMaxSize()
             )
+            val rotationAnimation by animateFloatAsState(
+                targetValue = if (!isColorPaletteVisible)0f else -45f
+            )
+
+            if (isSystemUIVisible) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .navigationBarsPadding()
+                        .padding(end = 20.dp)
+                ) {
+                    AnimatedVisibility(
+                        visible = isColorPaletteVisible,
+                    ) {
+                        val colorToThemeMap = mapOf(
+                            Color.Black to PDFView.Theme.NIGHT,
+                            Color.White to PDFView.Theme.LIGHT,
+                            colorResource(id = R.color.Sepia) to PDFView.Theme.SEPIA,
+                            colorResource(id = R.color.Dark_Sepia) to PDFView.Theme.DARK_SEPIA
+                        )
+                        ThemeSelector(
+                            colorsList = listOf(
+                                Color.White,
+                                colorResource(id = R.color.Sepia),
+                                colorResource(id = R.color.Dark_Sepia),
+                                Color.Black
+                            ),
+                            onColorChange = { color ->
+                                colorTheme = colorToThemeMap[color]
+                            },
+                        )
+                    }
+                    Spacer(
+                        modifier = Modifier.size(20.dp)
+                    )
+                    AnimatedVisibility(
+                        visible = isSystemUIVisible
+                    ) {
+                        Surface(
+                            onClick = { isColorPaletteVisible = !isColorPaletteVisible },
+                            shape = RoundedCornerShape(8.dp),
+                            shadowElevation = 4.dp,
+                            modifier = Modifier
+                                .padding(5.dp)
+                                .size(50.dp)
+                                .rotate(rotationAnimation)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.paint_roller),
+                                contentDescription = "ColorPicker",
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+
+//            Surface(
+//                color = MaterialTheme.colorScheme.onBackground,
+//                shape = RoundedCornerShape(8.dp),
+//                modifier = Modifier
+//                    .align(Alignment.TopCenter)
+//                    .systemBarsPadding()
+//                    .padding(top = 50.dp)
+//            ) {
+//                Text(
+//                    text = " $lastOpenedPage / $totalPages",
+//                    modifier = Modifier.padding(15.dp),
+//                    fontWeight = FontWeight.Bold,
+//                    color = Color.Black
+//                )
+//            }
+
         }
 
 }

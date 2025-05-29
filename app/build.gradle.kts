@@ -42,7 +42,7 @@ android {
 }
 
 dependencies {
-    implementation ("com.github.mhiew:android-pdf-viewer:3.2.0-beta.3")
+    implementation(project(":android-pdf-viewer"))
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation(libs.androidx.material3.window.size.class1.android)
     implementation(libs.androidx.runtime.livedata)
