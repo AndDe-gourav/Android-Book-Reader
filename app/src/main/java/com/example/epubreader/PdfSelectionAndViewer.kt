@@ -11,6 +11,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -204,6 +205,7 @@ fun PDFViewerScreen(
 
     var colorTheme: PDFView.Theme? by remember { mutableStateOf(PDFView.Theme.LIGHT) }
     var isColorPaletteVisible by remember { mutableStateOf(false) }
+    var lockHorizontalMovement by remember { mutableStateOf(false) }
 
     val lastOpenedPageDB by bookDataViewModel.lastPage.collectAsState()
     var lastOpenedPage by remember { mutableIntStateOf(0) }
@@ -264,8 +266,8 @@ fun PDFViewerScreen(
                             fromUri(uri)
                             .useBestQuality(true)
                             .pageFitPolicy(FitPolicy.BOTH)
+                            .enableDoubletap(!lockHorizontalMovement)
                             .enableSwipe(true)
-                            .enableDoubletap(true)
                             .scrollHandle(DefaultScrollHandle(ctx))
                             .defaultPage(lastOpenedPageDB)
                             .spacing(1)
@@ -329,6 +331,8 @@ fun PDFViewerScreen(
                 },
                 update = { pdfView ->
                     pdfView.setTheme(colorTheme)
+                    pdfView.lockHorizontalMovement(lockHorizontalMovement)
+                    pdfView.enableDoubletap(!lockHorizontalMovement)
                     pdfView.invalidate()
                 },
                 modifier = Modifier.fillMaxSize()
@@ -372,21 +376,41 @@ fun PDFViewerScreen(
                     AnimatedVisibility(
                         visible = isSystemUIVisible
                     ) {
-                        Surface(
-                            onClick = { isColorPaletteVisible = !isColorPaletteVisible },
-                            shape = RoundedCornerShape(8.dp),
-                            shadowElevation = 4.dp,
-                            modifier = Modifier
-                                .padding(5.dp)
-                                .size(50.dp)
-                                .rotate(rotationAnimation)
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.paint_roller),
-                                contentDescription = "ColorPicker",
-                                modifier = Modifier.padding(10.dp)
-                            )
+                            Surface(
+                                onClick = { isColorPaletteVisible = !isColorPaletteVisible },
+                                shape = RoundedCornerShape(8.dp),
+                                shadowElevation = 4.dp,
+                                modifier = Modifier
+                                    .padding(5.dp)
+                                    .size(50.dp)
+                                    .rotate(rotationAnimation)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.paint_roller),
+                                    contentDescription = "ColorPicker",
+                                    modifier = Modifier.padding(10.dp)
+                                )
+                            }
+
+                            Surface(
+                                onClick = { lockHorizontalMovement = !lockHorizontalMovement },
+                                shape = RoundedCornerShape(8.dp),
+                                shadowElevation = 4.dp,
+                                modifier = Modifier
+                                    .padding(5.dp)
+                                    .size(50.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.solar_lock_broken),
+                                    contentDescription = "LockHorizontalMovement",
+                                    modifier = Modifier.padding(10.dp)
+                                )
+                            }
                         }
+
                     }
                 }
             }
@@ -411,3 +435,4 @@ fun PDFViewerScreen(
         }
 
 }
+

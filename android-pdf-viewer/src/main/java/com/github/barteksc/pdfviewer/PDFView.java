@@ -95,7 +95,7 @@ public class PDFView extends RelativeLayout {
 
     private static final String TAG = PDFView.class.getSimpleName();
 
-    public static final float DEFAULT_MAX_SCALE = 3.0f;
+    public static final float DEFAULT_MAX_SCALE = 10.0f;
     public static final float DEFAULT_MID_SCALE = 1.75f;
     public static final float DEFAULT_MIN_SCALE = 1.0f;
 
@@ -182,6 +182,8 @@ public class PDFView extends RelativeLayout {
     private boolean swipeVertical = true;
 
     private boolean enableSwipe = true;
+
+    private boolean isHorizontalMovementLocked = false;
 
     private boolean doubletapEnabled = true;
 
@@ -433,7 +435,7 @@ public class PDFView extends RelativeLayout {
 
     }
 
-    void enableDoubletap(boolean enableDoubletap) {
+    public void enableDoubletap(boolean enableDoubletap) {
         this.doubletapEnabled = enableDoubletap;
     }
 
@@ -857,7 +859,14 @@ public class PDFView extends RelativeLayout {
         redraw();
     }
 
+    public void lockHorizontalMovement(boolean wantTo){
+        isHorizontalMovementLocked = wantTo;
+    }
+
     public void moveTo(float offsetX, float offsetY) {
+        if (isHorizontalMovementLocked) {
+            offsetX = currentXOffset;
+        }
         moveTo(offsetX, offsetY, true);
     }
 
