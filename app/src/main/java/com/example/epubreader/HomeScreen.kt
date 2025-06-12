@@ -360,8 +360,9 @@ fun BottomBar(
                     onClick = {
                         selectedBook?.let {
                             bookDataViewModel.updateBookTime(it)
+
+                            navController.navigate("BookScreen/${encodedUri}")
                         }
-                        navController.navigate("BookScreen/${encodedUri}")
                     },
                     modifier = Modifier.size(42.dp)
                 ) {

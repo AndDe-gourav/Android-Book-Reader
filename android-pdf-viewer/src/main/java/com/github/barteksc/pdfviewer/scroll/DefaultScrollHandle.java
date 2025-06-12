@@ -63,7 +63,7 @@ public class DefaultScrollHandle extends RelativeLayout implements ScrollHandle 
         Drawable background;
         // determine handler position, default is right (when scrolling vertically) or bottom (when scrolling horizontally)
         if (pdfView.isSwipeVertical()) {
-            width = 30;
+            width = 25;
             height = 40;
             if (inverted) { // left
                 align = ALIGN_PARENT_LEFT;

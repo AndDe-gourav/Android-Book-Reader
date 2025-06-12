@@ -4,12 +4,14 @@ import android.app.Activity
 import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -84,6 +86,7 @@ fun PDFSelection(
 
             val encodedUri = Uri.encode(it.toString())
             bookDataViewModel.addBook(it)
+            bookDataViewModel.fetchLastPage(it.toString())
             navController.navigate("BookScreen/$encodedUri")
         }
     }
@@ -138,6 +141,7 @@ fun QuickPdfSelection(
 
             val encodedUri = Uri.encode(it.toString())
             bookDataViewModel.addBook(it)
+            bookDataViewModel.fetchLastPage(it.toString())
             navController.navigate("BookScreen/$encodedUri")
         }
     }
@@ -194,6 +198,13 @@ fun PDFViewerScreen(
     navController: NavController,
     pdfUri: String?
 ) {
+    LaunchedEffect(Unit) {
+        if (pdfUri != null) {
+            bookDataViewModel.fetchLastPage(pdfUri)
+            Log.d("page", "${bookDataViewModel.lastPage.value}")
+        }
+    }
+
 
     val uri = pdfUri?.toUri()
 
@@ -226,7 +237,7 @@ fun PDFViewerScreen(
 //                    bytes = stream.readBytes(),
 //                    mimeType = "application/pdf"
 //                )
-//                text("can you explain me example 1 of 3.2")
+//                text("can you tell me about the book")
 //            }
 //
 //            val response = model.generateContent(prompt)
@@ -234,11 +245,6 @@ fun PDFViewerScreen(
 //        }
 //    }
 
-    LaunchedEffect(Unit) {
-        if (pdfUri != null) {
-            bookDataViewModel.fetchLastPage(pdfUri)
-        }
-    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -294,6 +300,7 @@ fun PDFViewerScreen(
                             }
                             .onLoad {
                                 scope.launch {
+                                    Log.d("start ", "$lastOpenedPageDB")
                                     val meta = this@apply.documentMeta
                                     totalPages = this@apply.pageCount
 //                                val toc = pdfView.tableOfContents
@@ -377,22 +384,31 @@ fun PDFViewerScreen(
                         visible = isSystemUIVisible
                     ) {
                         Row(
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Surface(
-                                onClick = { isColorPaletteVisible = !isColorPaletteVisible },
-                                shape = RoundedCornerShape(8.dp),
-                                shadowElevation = 4.dp,
-                                modifier = Modifier
-                                    .padding(5.dp)
-                                    .size(50.dp)
-                                    .rotate(rotationAnimation)
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.paint_roller),
-                                    contentDescription = "ColorPicker",
-                                    modifier = Modifier.padding(10.dp)
-                                )
+                                Surface(
+                                    onClick = { isColorPaletteVisible = !isColorPaletteVisible },
+                                    shape = RoundedCornerShape(8.dp),
+                                    shadowElevation = 4.dp,
+                                    modifier = Modifier
+                                        .padding(5.dp)
+                                        .size(50.dp)
+                                        .rotate(rotationAnimation)
+                                        .border(
+                                            if (isColorPaletteVisible) 2.dp else 0.dp,
+                                            MaterialTheme.colorScheme.inverseSurface,
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.paint_roller),
+                                        contentDescription = "ColorPicker",
+                                        modifier = Modifier.padding(10.dp)
+                                    )
+                                }
                             }
 
                             Surface(
@@ -402,6 +418,11 @@ fun PDFViewerScreen(
                                 modifier = Modifier
                                     .padding(5.dp)
                                     .size(50.dp)
+                                    .border(
+                                        if (lockHorizontalMovement) 2.dp else 0.dp,
+                                        MaterialTheme.colorScheme.inverseSurface,
+                                        RoundedCornerShape(8.dp)
+                                    )
                             ) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.solar_lock_broken),

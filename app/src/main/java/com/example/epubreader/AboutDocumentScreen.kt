@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +28,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -42,7 +46,7 @@ import androidx.core.net.toUri
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AboutDoucument(
     bookDataViewModel: BookDataViewModel,
@@ -60,6 +64,9 @@ fun AboutDoucument(
     val fileSize = selectedBook?.uri?.let { bookDataViewModel.getFileSize(context= context, it.toUri())}
 
     val encodedUri = Uri.encode(selectedBook?.uri)
+
+    var showTimeGoal by remember{ mutableStateOf(false) }
+
 
     BackHandler {
         onAboutDocumentClicked()
@@ -81,7 +88,7 @@ fun AboutDoucument(
             modifier= Modifier.zIndex(0f)
         ) {
             item {
-                Spacer(modifier = Modifier.padding(top = 70.dp))
+                Spacer(modifier = Modifier.padding(top = 80.dp))
                 with(sharedTransitionScope) {
                     Box(
                         modifier = Modifier
@@ -126,18 +133,29 @@ fun AboutDoucument(
                         }
                     }
                 }
-                Box(
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                ) {
-                    (selectedBook?.title)?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.inverseSurface,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                        )
-                    }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                ){
+                    Text(
+                        text = selectedBook?.title ?: "",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.inverseSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp, bottom = 2.dp)
+                    )
+                    Text(
+                        text = "L__ ${selectedBook?.author ?: ""}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp, end = 8.dp)
+                    )
                 }
                 AnimatedIconRow(
                     bookDataViewModel = bookDataViewModel,
@@ -153,7 +171,9 @@ fun AboutDoucument(
                         .fillMaxWidth()
 
                 ) {
-                    Column {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Text(
                             text = "$time",
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
@@ -178,10 +198,32 @@ fun AboutDoucument(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.inverseSurface,
                         )
+                        Surface(
+                            onClick = { showTimeGoal = true},
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            modifier = modifier.padding(top = 5.dp),
+                            shadowElevation = 6.dp,
+                            tonalElevation = 0.dp
+                        ) {
+                            Text(
+                                text = "Set Time Goal",
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.inverseSurface,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(10.dp),
+                                )
+                        }
                     }
                 }
             }
         }
+        if (showTimeGoal)
+            TimePicker(
+                onDismissRequest = { showTimeGoal = false },
+                bookDataViewModel = bookDataViewModel
+            )
+
     }
 }
 
@@ -233,6 +275,8 @@ fun GerenalTopBar(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(vertical = 13.dp, horizontal = 34.dp)
             )
+
         }
     }
 }
+

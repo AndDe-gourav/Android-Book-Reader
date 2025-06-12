@@ -55,6 +55,9 @@ interface BookDao {
     @Query("UPDATE book SET timestamp = :time WHERE uri = :bookUri")
     suspend fun updateBookTime(bookUri: String, time: String)
 
+    @Query("UPDATE book SET timeGoal = :time WHERE uri = :bookUri")
+    suspend fun updateBookTimeGoal(bookUri: String, time: Int)
+
     @Update
     suspend fun updateBook(book: Book)
 

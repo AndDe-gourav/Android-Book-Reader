@@ -184,18 +184,13 @@ fun OnCellClicked(
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = cellName,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        modifier = Modifier.padding(top = 10.dp, bottom = 20.dp)
-                    )
-                }
+                Text(
+                    text = cellName,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    modifier = Modifier.padding(top = 10.dp, bottom = 20.dp)
+                )
                 OutlinedTextField(
                     value = value,
                     onValueChange = onValueChange,

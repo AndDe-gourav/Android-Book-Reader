@@ -37,6 +37,11 @@ class BookRepository(private val bookDao: BookDao) {
     suspend fun updateBookTime(book: Book) {
         bookDao.updateBookTime(book.uri, System.currentTimeMillis().toString())
     }
+
+    suspend fun updateBookTimeGoal(book: Book, time: Int) {
+        bookDao.updateBookTimeGoal(book.uri, time)
+    }
+
     suspend fun updateBookTitle(book: Book , title: String) {
         bookDao.updateTitle(book.uri, title)
     }
@@ -68,7 +73,5 @@ class BookRepository(private val bookDao: BookDao) {
     suspend fun updateLastPage(bookUri: String, lastPage: Int) {
         bookDao.updateLastPage(bookUri, lastPage)
     }
-
-
 
 }

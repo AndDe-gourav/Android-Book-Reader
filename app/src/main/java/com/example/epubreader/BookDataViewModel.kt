@@ -138,6 +138,7 @@ class BookDataViewModel(
                     doneReading = 0,
                     lastPage = 0,
                     totalPages = metadata.pageCount,
+                    timeGoal = 0,
                     timestamp = System.currentTimeMillis(),
                 )
                 repository.insertBook(newBook)
@@ -155,6 +156,12 @@ class BookDataViewModel(
     fun updateBookTime(book: Book) {
         viewModelScope.launch {
             repository.updateBookTime(book)
+        }
+    }
+
+    fun updateBookTimeGoal(book: Book, timeGoal: Int) {
+        viewModelScope.launch{
+            repository.updateBookTimeGoal(book, timeGoal)
         }
     }
 
@@ -278,6 +285,7 @@ class BookDataViewModel(
         fetchLastPageJob = viewModelScope.launch {
             repository.getLastPage(bookUri).collect { page ->
                 _lastPage.value = page
+                Log.d("lastPage", "${lastPage.value}")
             }
         }
     }

@@ -22,12 +22,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
@@ -47,15 +50,16 @@ fun BookShelf(
     modifier: Modifier = Modifier
 ) {
 
-
-    val groupedBooks = when(currentBookShelf){
-        "Recent" -> recentBooks.chunked(3)
-        "Favourites" -> favouritesBooks.chunked(3)
-        "To Read" -> toReadBooks.chunked(3)
-        "Collection" -> emptyList()
-        "Done Reading" -> completedBooks.chunked(3)
-        else -> {
-            recentBooks.chunked(3)
+    val groupedBooks = remember(currentBookShelf, recentBooks, favouritesBooks, toReadBooks, listOfCollections, completedBooks) {
+        when (currentBookShelf) {
+            "Recent" -> recentBooks.chunked(3)
+            "Favourites" -> favouritesBooks.chunked(3)
+            "To Read" -> toReadBooks.chunked(3)
+            "Collection" -> emptyList()
+            "Done Reading" -> completedBooks.chunked(3)
+            else -> {
+                recentBooks.chunked(3)
+            }
         }
     }
 
@@ -69,6 +73,17 @@ fun BookShelf(
             contentPadding = PaddingValues(top = 75.dp , bottom = 50.dp)
         ) {
             if ( currentBookShelf != "Collection") {
+                if (groupedBooks.isEmpty()){
+                    item {
+                        Text(
+                            text = "This Book Shelf is Empty",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.align(Alignment.CenterHorizontally).padding(75.dp),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.Black
+                        )
+                    }
+                }
                 items(
                     items = groupedBooks,
                 ) { rowBooks ->
@@ -129,6 +144,17 @@ fun BookShelf(
                 }
             }else {
                 bookDataViewModel.collectionToList()
+                if (groupedBooks.isEmpty()) {
+                    item {
+                        Text(
+                            text = "This Book Shelf is Empty",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.align(Alignment.CenterHorizontally).padding(75.dp),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.Black
+                        )
+                    }
+                }
                 items(
                     items = particularCollection,
                 ){ rowBooks  ->

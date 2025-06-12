@@ -17,5 +17,6 @@ data class Book(
     val doneReading: Int,
     val lastPage: Int,
     val totalPages: Int,
+    val timeGoal: Int,
     val timestamp: Long
 )
