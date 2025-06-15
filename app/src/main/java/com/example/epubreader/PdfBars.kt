@@ -10,11 +10,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 
@@ -26,7 +27,7 @@ fun PdfBottomBar(
     onTimerClicked: () -> Unit = {},
 ) {
      Surface(
-         color = MaterialTheme.colorScheme.surfaceContainerHigh,
+         color = colorResource( R.color.Book),
          shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
          shadowElevation = 4.dp,
          modifier = modifier
@@ -43,7 +44,8 @@ fun PdfBottomBar(
                      contentDescription = "ColorPicker",
                      modifier = Modifier
                          .padding(3.dp)
-                         .size(25.dp)
+                         .size(25.dp),
+                     tint = Color.Black
                  )
              }
              IconButton(
@@ -54,7 +56,8 @@ fun PdfBottomBar(
                      contentDescription = "LockHorizontalMovement",
                      modifier = Modifier
                          .padding(3.dp)
-                         .size(25.dp)
+                         .size(25.dp),
+                     tint = Color.Black
                  )
              }
              IconButton(
@@ -65,7 +68,8 @@ fun PdfBottomBar(
                      contentDescription = "Timer",
                      modifier = Modifier
                          .padding(3.dp)
-                         .size(25.dp)
+                         .size(25.dp),
+                     tint = Color.Black
                  )
              }
          }
@@ -86,7 +90,7 @@ fun PdfTopBar(
             .fillMaxWidth()
     ) {
         Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = colorResource( R.color.Book),
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .clickable { onBackClicked() },
@@ -99,13 +103,13 @@ fun PdfTopBar(
                 Icon(
                     painter = painterResource(id = R.drawable.sign_out_circle),
                     contentDescription = "exit",
-                    tint = MaterialTheme.colorScheme.inverseSurface,
+                    tint = Color.Black,
                     modifier = Modifier.size(24.dp)
                 )
             }
         }
         Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = colorResource( R.color.Book),
             shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp),
             shadowElevation = 4.dp,
             modifier = Modifier.align(Alignment.TopEnd)
@@ -122,7 +126,8 @@ fun PdfTopBar(
                         contentDescription = "TableOfContent",
                         modifier = Modifier
                             .padding(3.dp)
-                            .size(25.dp)
+                            .size(25.dp),
+                        tint = Color.Black
                     )
                 }
                 IconButton(
@@ -133,7 +138,8 @@ fun PdfTopBar(
                         contentDescription = "Settings",
                         modifier = Modifier
                             .padding(3.dp)
-                            .size(25.dp)
+                            .size(25.dp),
+                        tint = Color.Black
                     )
                 }
                 IconButton(
@@ -144,10 +150,12 @@ fun PdfTopBar(
                         contentDescription = "Options",
                         modifier = Modifier
                             .padding(3.dp)
-                            .size(25.dp)
+                            .size(25.dp),
+                        tint = Color.Black
                     )
                 }
             }
         }
     }
 }
+

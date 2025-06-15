@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -87,59 +88,75 @@ fun BookShelf(
                 items(
                     items = groupedBooks,
                 ) { rowBooks ->
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            rowBooks.forEach { book ->
-                                Surface(
-                                    color = Color.White,
-                                    tonalElevation = 8.dp,
-                                    shadowElevation = 16.dp,
-                                    modifier = Modifier
-                                        .height(100.dp)
-                                        .width(65.dp)
-                                        .clickable(
-                                            onClick = {
-                                                bookDataViewModel.selectBook(book.uri)
+                    if (groupedBooks.indexOf(rowBooks) != 2 || currentBookShelf != "Recent") {
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                rowBooks.forEach { book ->
+                                        if (rowBooks.indexOf(book) != 2 || groupedBooks.indexOf(rowBooks) == 0 || currentBookShelf != "Recent") {
+                                            Surface(
+                                                color = Color.White,
+                                                tonalElevation = 8.dp,
+                                                shadowElevation = 16.dp,
+                                                modifier = Modifier
+                                                    .height(100.dp)
+                                                    .width(65.dp)
+                                                    .clickable(
+                                                        onClick = {
+                                                            bookDataViewModel.selectBook(book.uri)
+                                                        }
+                                                    )
+                                            ) {
+                                                Image(
+                                                    painter = rememberAsyncImagePainter(
+                                                        model = book.bookCover
+                                                    ),
+                                                    contentDescription = "Shelf Book",
+                                                    contentScale = ContentScale.FillBounds,
+                                                    modifier = Modifier.fillMaxSize()
+                                                )
                                             }
-                                        )
-                                ) {
-                                    Image(
-                                        painter = rememberAsyncImagePainter(
-                                            model = book.bookCover
-                                        ),
-                                        contentDescription = "Shelf Book",
-                                        contentScale = ContentScale.FillBounds,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
+                                        }
+                                    if (rowBooks.indexOf(book) == 2 && groupedBooks.indexOf(rowBooks) == 1 && currentBookShelf == "Recent") {
+                                        Surface(
+                                            color = Color.Transparent,
+                                            modifier = Modifier.height(100.dp).width(60.dp)
+                                        ) {
+                                            Image(
+                                                painter = painterResource(id = R.drawable.books),
+                                                contentDescription = "LoadMoreBooks",
+                                                contentScale = ContentScale.FillBounds
+                                            )
+                                        }
+                                    }
                                 }
                             }
-                        }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(2.dp)
-                                .background(color = MaterialTheme.colorScheme.surfaceContainer)
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(14.dp)
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(
-                                            MaterialTheme.colorScheme.surfaceContainerHigh,
-                                            MaterialTheme.colorScheme.surfaceContainerHighest
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(2.dp)
+                                    .background(color = MaterialTheme.colorScheme.surfaceContainer)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(14.dp)
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                MaterialTheme.colorScheme.surfaceContainerHighest
+                                            )
                                         )
                                     )
-                                )
-                        )
-                        HorizontalDivider(
-                            thickness = 0.5.dp,
-                            color = colorResource(id = R.color.shadow)
-                        )
+                            )
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = colorResource(id = R.color.shadow)
+                            )
+                        }
                     }
                 }
             }else {
