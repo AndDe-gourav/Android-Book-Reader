@@ -4,6 +4,6 @@
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/background_color</item>
         <item name="postSplashScreenTheme">@style/Theme.EPUBReader</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/applogo</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/chatgpt_image_jun_12__2025__05_03_13_pm</item>
     </style>
 </resources>

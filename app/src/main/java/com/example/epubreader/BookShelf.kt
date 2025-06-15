@@ -180,7 +180,6 @@ fun BookShelf(
                                                 bookDataViewModel.selectBook(book.uri)
                                             }
                                         )
-
                                 ) {
                                     Image(
                                         painter = rememberAsyncImagePainter(

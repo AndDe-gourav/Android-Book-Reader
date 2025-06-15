@@ -9,11 +9,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContent
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,7 +48,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
@@ -195,8 +196,11 @@ fun getActivity(): Activity? {
 @Composable
 fun PDFViewerScreen(
     bookDataViewModel: BookDataViewModel,
+    pdfUri: String?,
+    onTocClicked: () -> Unit,
     navController: NavController,
-    pdfUri: String?
+    showTimeGoal: Boolean,
+    onTimeGoalClicked: () -> Unit,
 ) {
     LaunchedEffect(Unit) {
         if (pdfUri != null) {
@@ -254,6 +258,7 @@ fun PDFViewerScreen(
                 }
             }
             showSystemBars(activity!!)
+            lockHorizontalMovement = false
         }
     }
         Box(
@@ -303,7 +308,7 @@ fun PDFViewerScreen(
                                     Log.d("start ", "$lastOpenedPageDB")
                                     val meta = this@apply.documentMeta
                                     totalPages = this@apply.pageCount
-//                                val toc = pdfView.tableOfContents
+                                    bookDataViewModel.updateToc( this@apply.tableOfContents )
 //                                for (bookmark in toc) {
 //                                    Log.d(
 //                                        "TOC",
@@ -349,12 +354,22 @@ fun PDFViewerScreen(
             )
 
             if (isSystemUIVisible) {
+                PdfTopBar(
+                    modifier = Modifier
+                        .windowInsetsPadding(WindowInsets.safeContent)
+                        .align(Alignment.TopCenter)
+                        .systemBarsPadding(),
+                    onBackClicked = { navController.navigate("homeScreen")},
+                    onSortClicked = { },
+                    onOptionsClicked = { },
+                    onTocClicked = { onTocClicked() }
+                )
                 Column(
                     modifier = Modifier
                         .windowInsetsPadding(WindowInsets.safeContent)
                         .align(Alignment.BottomStart)
                         .navigationBarsPadding()
-                        .padding(start = 20.dp, bottom = 4.dp)
+                        .padding( bottom = 4.dp)
                 ) {
                     AnimatedVisibility(
                         visible = isColorPaletteVisible,
@@ -381,60 +396,36 @@ fun PDFViewerScreen(
                         modifier = Modifier.size(20.dp)
                     )
                     AnimatedVisibility(
-                        visible = isSystemUIVisible
+                        visible = isSystemUIVisible,
+                        enter = expandHorizontally(
+                            animationSpec = spring(
+
+                            ),
+                            expandFrom = Alignment.Start
+                        ),
+                        exit = shrinkHorizontally(
+                            shrinkTowards = Alignment.Start
+                        )
                     ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Surface(
-                                    onClick = { isColorPaletteVisible = !isColorPaletteVisible },
-                                    shape = RoundedCornerShape(8.dp),
-                                    shadowElevation = 4.dp,
-                                    modifier = Modifier
-                                        .padding(5.dp)
-                                        .size(50.dp)
-                                        .rotate(rotationAnimation)
-                                        .border(
-                                            if (isColorPaletteVisible) 2.dp else 0.dp,
-                                            MaterialTheme.colorScheme.inverseSurface,
-                                            RoundedCornerShape(8.dp)
-                                        )
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.paint_roller),
-                                        contentDescription = "ColorPicker",
-                                        modifier = Modifier.padding(10.dp)
-                                    )
-                                }
-                            }
-
-                            Surface(
-                                onClick = { lockHorizontalMovement = !lockHorizontalMovement },
-                                shape = RoundedCornerShape(8.dp),
-                                shadowElevation = 4.dp,
-                                modifier = Modifier
-                                    .padding(5.dp)
-                                    .size(50.dp)
-                                    .border(
-                                        if (lockHorizontalMovement) 2.dp else 0.dp,
-                                        MaterialTheme.colorScheme.inverseSurface,
-                                        RoundedCornerShape(8.dp)
-                                    )
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.solar_lock_broken),
-                                    contentDescription = "LockHorizontalMovement",
-                                    modifier = Modifier.padding(10.dp)
-                                )
-                            }
-                        }
-
+                       PdfBottomBar(
+                           onThemeClicked = {
+                               isColorPaletteVisible = !isColorPaletteVisible
+                           },
+                           onLockClicked = {
+                               lockHorizontalMovement = !lockHorizontalMovement
+                           },
+                           onTimerClicked = {
+                               onTimeGoalClicked()
+                           }
+                       )
                     }
                 }
             }
+            if (showTimeGoal)
+            TimePicker(
+                onDismissRequest = { onTimeGoalClicked() },
+                bookDataViewModel = bookDataViewModel
+            )
 
 
 //            Surface(

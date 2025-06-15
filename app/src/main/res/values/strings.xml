@@ -1,17 +1,3 @@
 <resources>
-    <string name="app_name">EPUB Reader</string>
-    <string name="Second">In Bibloria, books were not just for reading—they were life itself. Houses were carved into hardcovers, bridges were woven from torn-out pages, and food grew from the margins of ancient texts. The people of Bibloria had only one rule: Only "The World of Books" may be read.
-        This sacred book contained every story ever written, every knowledge ever recorded. But no one had ever reached its final page. Scholars spent their lives flipping through its endless chapters, while adventurers ventured into its depths, seeking stories lost in time.</string>
-    <string name="Third">One day, a young reader named Tarin discovered something strange—a blank page. No words, no ink, just empty space in the middle of "The World of Books." This had never happened before. Pages were never blank. Stories never ended. Panic spread through Bibloria.
-        "The book is broken!" the elders cried.But Tarin had a different thought. What if… the story was waiting to be written?With a trembling hand, he took a quill and wrote:"A boy named Tarin discovered that stories could be created, not just read."</string>
-    <string name ="SecondHindi">**बिब्लोरिया की भूमि में, हर कोई छोटा था—अंगूठे से बड़ा कोई नहीं था। उनकी पूरी दुनिया किताबों पर बनी थी। जंगलों की जगह, उपन्यासों के ऊँचे-ऊँचे ढेर हरे-भरे कागज़ी परिदृश्य बनाते थे। नदियों की जगह, स्याही पन्नों के बीच बहती थी, भूली-बिसरी कहानियों की फुसफुसाहट को अपने साथ ले जाती थी। आकाश स्वयं एक विशाल पार्चमेंट था, जिसकी रंगत बदलती रहती थी जैसे-जैसे कहानियाँ लिखी और पढ़ी जाती थीं।
-        बिब्लोरिया में, किताबें केवल पढ़ने के लिए नहीं थीं—वे ही जीवन थीं। घर कठोर जिल्दों में तराशे जाते थे, पुल फटे हुए पन्नों से बुने जाते थे, और भोजन प्राचीन ग्रंथों के हाशियों में उगता था। बिब्लोरिया के लोगों का केवल एक ही नियम था: केवल "द वर्ल्ड ऑफ बुक्स" ही पढ़ी जा सकती थी।
-        यह पवित्र पुस्तक हर लिखी गई कहानी और दर्ज किए गए हर ज्ञान को संजोए हुए थी। लेकिन कोई भी कभी इसकी अंतिम पंक्ति तक नहीं पहुँच पाया था। विद्वान अपना पूरा जीवन इसके अंतहीन अध्यायों को पलटने में बिता देते थे, जबकि साहसी खोजी इसकी गहराइयों में गुम हो चुके समय की कहानियाँ ढूँढने निकलते थे।</string>
-    <string name="ThirdHindi">एक दिन, एक युवा पाठक, तारिन, ने कुछ अजीब खोजा—एक खाली पन्ना। न शब्द, न स्याही, बस एक खाली जगह, "द वर्ल्ड ऑफ बुक्स" के बीचों-बीच। यह पहले कभी नहीं हुआ था। पन्ने कभी खाली नहीं होते थे। कहानियाँ कभी समाप्त नहीं होती थीं। बिब्लोरिया में अफरा-तफरी मच गई।
-        "पुस्तक टूट गई है!" बुजुर्ग चिल्लाए।
-        लेकिन तारिन के मन में एक अलग विचार आया। क्या हो अगर… यह कहानी लिखे जाने की प्रतीक्षा कर रही हो?
-        कांपते हाथों से, उसने एक कलम उठाई और लिखा:
-        "एक लड़के, तारिन, ने खोजा कि कहानियाँ केवल पढ़ी ही नहीं, बल्कि बनाई भी जा सकती हैं।"
-        जैसे ही उसने लिखा, पन्ना चमकने लगा, और अगले पृष्ठ पर नए शब्द प्रकट होने लगे, मानो स्वयं पुस्तक जीवंत हो उठी हो। पहली बार, बिब्लोरिया को सच्चाई पता चली: वे केवल पाठक नहीं थे। वे लेखक भी थे।
-        उस दिन के बाद, बिब्लोरिया के लोगों ने खाली पन्नों से डरना छोड़ दिया। उन्होंने उन्हें अपनाया, और अपनी दुनिया को नई कहानियों, नए विचारों और नए सपनों से भर दिया। और इस तरह, अनंत "द वर्ल्ड ऑफ बुक्स" केवल अतीत का दस्तावेज़ नहीं रहा—बल्कि भविष्य की रचना बन गया।**</string>
+    <string name="app_name">Book Reader</string>
 </resources>

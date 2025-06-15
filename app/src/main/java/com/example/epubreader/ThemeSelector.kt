@@ -1,6 +1,7 @@
 package com.example.epubreader
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,7 +19,9 @@ fun ThemeSelector(
     onColorChange: (Color) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn{
+    LazyColumn(
+        contentPadding = PaddingValues(horizontal = 7.dp)
+    ){
         items(colorsList) { color ->
             Surface(
                 border = BorderStroke(2.dp, Color.White),

@@ -12,6 +12,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.epubreader.model.Book
 import com.example.epubreader.model.BookRepository
+import com.shockwave.pdfium.PdfDocument
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,6 +68,9 @@ class BookDataViewModel(
 
     private val _lastPage = MutableStateFlow(0)
     val lastPage: StateFlow<Int> = _lastPage.asStateFlow()
+
+    private val _toc = MutableStateFlow<List<String>>(emptyList())
+    val toc: StateFlow<List<String>> = _toc.asStateFlow()
 
 
     init {
@@ -305,6 +309,16 @@ class BookDataViewModel(
             repository.getTotalPages(bookUri).collectLatest { pages ->
                 _totalPages.value = pages
             }
+        }
+    }
+
+    fun updateToc(toc: List<PdfDocument.Bookmark>) {
+        viewModelScope.launch {
+            val tocList: MutableList<String> = mutableListOf()
+            toc.forEach { title ->
+                tocList.add(title.title)
+            }
+            _toc.value = tocList
         }
     }
 

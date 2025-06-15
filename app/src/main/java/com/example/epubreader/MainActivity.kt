@@ -11,10 +11,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DrawerValue
@@ -22,12 +25,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -110,6 +119,7 @@ fun App(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentScreen = backStackEntry?.destination?.route ?: "homeScreen"
 
+    var showTimeGoal by remember{ mutableStateOf(false) }
     ModalNavigationDrawer(
         drawerState =  drawerState,
         gesturesEnabled = drawerState.isOpen,
@@ -118,6 +128,7 @@ fun App(
                 drawerContentColor = MaterialTheme.colorScheme.background,
                 drawerContainerColor = MaterialTheme.colorScheme.onBackground
             ) {
+                if (currentScreen == "homeScreen")
                 Drawer(
                     bookDataViewModel = bookDataViewModel,
                     navController = navController,
@@ -138,6 +149,22 @@ fun App(
                             state = rememberScrollState()
                         )
                 )
+                else{
+                    val toc by bookDataViewModel.toc.collectAsState()
+                    if (toc.isNotEmpty()) {
+                        LazyColumn(
+                            contentPadding = PaddingValues(24.dp)
+                        ) {
+                            items(toc) { toc ->
+                                Text(
+                                    text = toc,
+                                    fontWeight = FontWeight.Bold,
+                                    color = androidx.compose.ui.graphics.Color.Black
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     ) {
@@ -154,6 +181,12 @@ fun App(
                 val exitTransitionSpec = tween<IntOffset>(250)
                 composable(
                     route = "homeScreen",
+                    enterTransition = {
+                      slideIntoContainer(
+                          AnimatedContentTransitionScope.SlideDirection.Right,
+                          enterTransitionSpec
+                      )
+                    },
                     exitTransition = {
                         slideOutOfContainer(
                             AnimatedContentTransitionScope.SlideDirection.Left,
@@ -173,7 +206,9 @@ fun App(
                         toCloseDrawer = { scope.launch { drawerState.close() } },
                         toOpenDrawer = { scope.launch { drawerState.open()} },
                         modifier = Modifier
-                            .padding(innerPadding)
+                            .padding(innerPadding),
+                        showTimeGoal = showTimeGoal,
+                        onTimeGoalClicked = { showTimeGoal = !showTimeGoal }
                     )
                 }
                 composable(
@@ -205,7 +240,6 @@ fun App(
                     )
                 }
 
-
                 composable(
                     route = "BookScreen/{pdfUri}",
                     arguments = listOf(navArgument("pdfUri") { type = NavType.StringType }),
@@ -226,8 +260,11 @@ fun App(
                     val pdfUri = backStackEntry.arguments?.getString("pdfUri")
                     PDFViewerScreen(
                         bookDataViewModel = bookDataViewModel,
-                        navController,
-                        pdfUri
+                        navController = navController,
+                        pdfUri = pdfUri,
+                        onTocClicked = { scope.launch { drawerState.open()} },
+                        showTimeGoal = showTimeGoal,
+                        onTimeGoalClicked = { showTimeGoal = !showTimeGoal},
                     )
                 }
             }

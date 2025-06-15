@@ -57,6 +57,8 @@ fun HomeScreen(
     bookDataViewModel: BookDataViewModel,
     navController: NavController,
     toOpenDrawer: () -> Unit,
+    showTimeGoal: Boolean,
+    onTimeGoalClicked: () -> Unit,
     toCloseDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -212,7 +214,9 @@ fun HomeScreen(
                 AboutDoucument(
                     bookDataViewModel = bookDataViewModel,
                     navController = navController,
+                    showTimeGoal = showTimeGoal,
                     showAboutDocument = showAboutDocument,
+                    onTimeGoalClicked = onTimeGoalClicked,
                     onAboutDocumentClicked = {showAboutDocument = false},
                     sharedTransitionScope = this@SharedTransitionLayout,
                     animatedVisibilityScope = this@AnimatedContent,
