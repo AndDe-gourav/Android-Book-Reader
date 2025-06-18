@@ -69,9 +69,14 @@ class BookDataViewModel(
     private val _lastPage = MutableStateFlow(0)
     val lastPage: StateFlow<Int> = _lastPage.asStateFlow()
 
-    private val _toc = MutableStateFlow<List<String>>(emptyList())
-    val toc: StateFlow<List<String>> = _toc.asStateFlow()
+    private val _toc = MutableStateFlow<Map<String, List<String>>>(emptyMap())
+    val toc: StateFlow<Map<String, List<String>>> = _toc.asStateFlow()
 
+    private val _tocPage = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val tocPage: StateFlow<Map<String, Int>> = _tocPage.asStateFlow()
+
+    private val _childTocPage = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val childTocPage: StateFlow<Map<String, Int>> = _childTocPage.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -314,11 +319,27 @@ class BookDataViewModel(
 
     fun updateToc(toc: List<PdfDocument.Bookmark>) {
         viewModelScope.launch {
-            val tocList: MutableList<String> = mutableListOf()
-            toc.forEach { title ->
-                tocList.add(title.title)
+            val tocMap: MutableMap<String, List<String>> = mutableMapOf()
+            val pageMap: MutableMap<String, Int> = mutableMapOf()
+            val childPageMap: MutableMap<String, Int> = mutableMapOf()
+            toc.forEach { heading ->
+                val key = heading.title
+                if (heading.children.isNotEmpty() ){
+                    val listOfChild: MutableList<String> = mutableListOf()
+                   for( child in heading.children){
+                       listOfChild.add(child.title)
+                       childPageMap[child.title] = child.pageIdx.toInt()
+                   }
+                    tocMap[key] = listOfChild
+                    pageMap[key] = heading.pageIdx.toInt()
+                }else{
+                    tocMap[key] = emptyList()
+                    pageMap[key] = heading.pageIdx.toInt()
+                }
             }
-            _toc.value = tocList
+            _toc.value = tocMap
+            _tocPage.value = pageMap
+            _childTocPage.value = childPageMap
         }
     }
 

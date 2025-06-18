@@ -5,13 +5,17 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -197,7 +201,6 @@ fun getActivity(): Activity? {
 fun PDFViewerScreen(
     bookDataViewModel: BookDataViewModel,
     pdfUri: String?,
-    onTocClicked: () -> Unit,
     navController: NavController,
     showTimeGoal: Boolean,
     onTimeGoalClicked: () -> Unit,
@@ -222,8 +225,12 @@ fun PDFViewerScreen(
     var isColorPaletteVisible by remember { mutableStateOf(false) }
     var lockHorizontalMovement by remember { mutableStateOf(false) }
 
+
+    var isTocSheetVisible by remember { mutableStateOf(false) }
+
     val lastOpenedPageDB by bookDataViewModel.lastPage.collectAsState()
     var lastOpenedPage by remember { mutableIntStateOf(0) }
+    var jumpToPage by remember { mutableIntStateOf(lastOpenedPageDB) }
 
     var isSystemUIVisible by remember { mutableStateOf(true) }
 
@@ -248,6 +255,13 @@ fun PDFViewerScreen(
 //            Log.d("Result", "${response.text}")
 //        }
 //    }
+    BackHandler {
+        if (isTocSheetVisible){
+            isTocSheetVisible = false
+        }else{
+            navController.navigate("homeScreen")
+        }
+    }
 
 
     DisposableEffect(Unit) {
@@ -284,6 +298,7 @@ fun PDFViewerScreen(
                             .spacing(1)
                             .onPageChange { page, _ ->
                                 lastOpenedPage = page
+                                jumpToPage = page
                             }
                             .onTap {
                                 scope.launch {
@@ -309,17 +324,6 @@ fun PDFViewerScreen(
                                     val meta = this@apply.documentMeta
                                     totalPages = this@apply.pageCount
                                     bookDataViewModel.updateToc( this@apply.tableOfContents )
-//                                for (bookmark in toc) {
-//                                    Log.d(
-//                                        "TOC",
-//                                        "Title: ${bookmark.title}, Page: ${bookmark.pageIdx}"
-//                                    )
-//                                    if (bookmark.children.isNotEmpty()) {
-//                                        for (child in bookmark.children) {
-//                                            Log.d("TOC", "Has children: Title: ${child.title}, Page: ${child.pageIdx}")
-//                                        }
-//                                    }
-//                                }
                                     if (meta != null) {
                                         val title = meta.title ?: ""
                                         val author = meta.author ?: ""
@@ -342,6 +346,10 @@ fun PDFViewerScreen(
                     }
                 },
                 update = { pdfView ->
+                    if (jumpToPage != lastOpenedPage) {
+                        pdfView.jumpTo(jumpToPage, true)
+                        lastOpenedPage = jumpToPage
+                    }
                     pdfView.setTheme(colorTheme)
                     pdfView.lockHorizontalMovement(lockHorizontalMovement)
                     pdfView.enableDoubletap(!lockHorizontalMovement)
@@ -349,10 +357,6 @@ fun PDFViewerScreen(
                 },
                 modifier = Modifier.fillMaxSize()
             )
-            val rotationAnimation by animateFloatAsState(
-                targetValue = if (!isColorPaletteVisible)0f else -45f
-            )
-
             if (isSystemUIVisible) {
                 PdfTopBar(
                     modifier = Modifier
@@ -362,7 +366,7 @@ fun PDFViewerScreen(
                     onBackClicked = { navController.navigate("homeScreen")},
                     onSortClicked = { },
                     onOptionsClicked = { },
-                    onTocClicked = { onTocClicked() }
+                    onTocClicked = { isTocSheetVisible = !isTocSheetVisible }
                 )
                 Column(
                     modifier = Modifier
@@ -426,23 +430,45 @@ fun PDFViewerScreen(
                 onDismissRequest = { onTimeGoalClicked() },
                 bookDataViewModel = bookDataViewModel
             )
+            AnimatedVisibility (
+                visible = isTocSheetVisible,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .background(color = Color.Black.copy(alpha = 0.3f))
+                        .fillMaxSize()
+                        .clickable(
+                            onClick = {
+                                isTocSheetVisible = !isTocSheetVisible
+                            }
+                        )
+                )
+            }
+                AnimatedVisibility(
+                    visible = isTocSheetVisible,
+                    enter = slideInVertically(
+                        initialOffsetY = { fullHeight -> fullHeight }
+                    ),
+                    exit = slideOutVertically(
+                        targetOffsetY = { fullHeight -> fullHeight }
+                    )
+                ) {
+                    TocSheet(
+                        currentPage = lastOpenedPage,
+                        bookDataViewModel = bookDataViewModel,
+                        onTocPageClicked = { tocPage ->
+                            jumpToPage = tocPage
+                            isTocSheetVisible = !isTocSheetVisible
+                        },
+                        onChildPageClicked = { childPage ->
+                            jumpToPage = childPage
+                            isTocSheetVisible = !isTocSheetVisible
+                        },
+                    )
+                }
 
-
-//            Surface(
-//                color = MaterialTheme.colorScheme.onBackground,
-//                shape = RoundedCornerShape(8.dp),
-//                modifier = Modifier
-//                    .align(Alignment.TopCenter)
-//                    .systemBarsPadding()
-//                    .padding(top = 50.dp)
-//            ) {
-//                Text(
-//                    text = " $lastOpenedPage / $totalPages",
-//                    modifier = Modifier.padding(15.dp),
-//                    fontWeight = FontWeight.Bold,
-//                    color = Color.Black
-//                )
-//            }
 
         }
 

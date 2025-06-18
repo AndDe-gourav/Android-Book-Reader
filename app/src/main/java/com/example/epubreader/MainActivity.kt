@@ -11,13 +11,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DrawerValue
@@ -25,10 +22,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,7 +31,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -128,7 +122,6 @@ fun App(
                 drawerContentColor = MaterialTheme.colorScheme.background,
                 drawerContainerColor = MaterialTheme.colorScheme.onBackground
             ) {
-                if (currentScreen == "homeScreen")
                 Drawer(
                     bookDataViewModel = bookDataViewModel,
                     navController = navController,
@@ -149,22 +142,6 @@ fun App(
                             state = rememberScrollState()
                         )
                 )
-                else{
-                    val toc by bookDataViewModel.toc.collectAsState()
-                    if (toc.isNotEmpty()) {
-                        LazyColumn(
-                            contentPadding = PaddingValues(24.dp)
-                        ) {
-                            items(toc) { toc ->
-                                Text(
-                                    text = toc,
-                                    fontWeight = FontWeight.Bold,
-                                    color = androidx.compose.ui.graphics.Color.Black
-                                )
-                            }
-                        }
-                    }
-                }
             }
         }
     ) {
@@ -262,7 +239,6 @@ fun App(
                         bookDataViewModel = bookDataViewModel,
                         navController = navController,
                         pdfUri = pdfUri,
-                        onTocClicked = { scope.launch { drawerState.open()} },
                         showTimeGoal = showTimeGoal,
                         onTimeGoalClicked = { showTimeGoal = !showTimeGoal},
                     )
