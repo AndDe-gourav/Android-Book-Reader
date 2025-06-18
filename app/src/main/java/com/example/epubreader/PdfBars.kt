@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,6 +24,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun PdfBottomBar(
+    isColorPaletteVisible: Boolean,
+    isHorizontalLocked: Boolean,
     modifier: Modifier = Modifier,
     onThemeClicked: () -> Unit = {},
     onLockClicked: () -> Unit = {},
@@ -33,11 +38,15 @@ fun PdfBottomBar(
          modifier = modifier
          ) {
          Row(
-             modifier = Modifier.padding(horizontal = 12.dp),
+             modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
              horizontalArrangement = Arrangement.spacedBy(12.dp)
          ) {
-             IconButton(
-                 onClick = { onThemeClicked() }
+             FilledIconButton(
+                 shape = RoundedCornerShape(8.dp),
+                 colors = IconButtonDefaults.iconButtonColors(
+                     if (isColorPaletteVisible) MaterialTheme.colorScheme.surfaceContainerHigh else colorResource(id = R.color.Book)
+                 ),
+                 onClick = { onThemeClicked()}
              ) {
                  Icon(
                      painter = painterResource(id = R.drawable.paint_roller),
@@ -48,11 +57,16 @@ fun PdfBottomBar(
                      tint = Color.Black
                  )
              }
-             IconButton(
+
+             FilledIconButton(
+                 shape = RoundedCornerShape(8.dp),
+                 colors = IconButtonDefaults.iconButtonColors(
+                     if (isHorizontalLocked) MaterialTheme.colorScheme.surfaceContainerHigh else colorResource(id = R.color.Book)
+                 ),
                  onClick = { onLockClicked() }
              ) {
                  Icon(
-                     painter = painterResource(id = R.drawable.vector),
+                     painter = painterResource(id = R.drawable.vector_1_),
                      contentDescription = "LockHorizontalMovement",
                      modifier = Modifier
                          .padding(3.dp)
@@ -79,9 +93,9 @@ fun PdfBottomBar(
 
 @Composable
 fun PdfTopBar(
+    isTocSheetVisible: Boolean,
     onBackClicked: () -> Unit,
     onTocClicked: () -> Unit,
-    onSortClicked: () -> Unit,
     onOptionsClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -118,8 +132,12 @@ fun PdfTopBar(
                 modifier = Modifier.padding(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                IconButton(
-                    onClick = { onTocClicked() }
+                FilledIconButton(
+                 shape = RoundedCornerShape(8.dp),
+                 colors = IconButtonDefaults.iconButtonColors(
+                     if (isTocSheetVisible) MaterialTheme.colorScheme.surfaceContainerHigh else colorResource(id = R.color.Book)
+                 ),
+                 onClick = {  onTocClicked()}
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.sort),
@@ -130,18 +148,7 @@ fun PdfTopBar(
                         tint = Color.Black
                     )
                 }
-                IconButton(
-                    onClick = {  }
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.setting_line),
-                        contentDescription = "Settings",
-                        modifier = Modifier
-                            .padding(3.dp)
-                            .size(25.dp),
-                        tint = Color.Black
-                    )
-                }
+
                 IconButton(
                     onClick = {  }
                 ) {

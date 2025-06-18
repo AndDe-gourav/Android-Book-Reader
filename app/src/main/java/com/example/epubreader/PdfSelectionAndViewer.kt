@@ -3,6 +3,7 @@ package com.example.epubreader
 import android.app.Activity
 import android.content.ContextWrapper
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.BackHandler
@@ -53,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
@@ -225,6 +227,8 @@ fun PDFViewerScreen(
     var isColorPaletteVisible by remember { mutableStateOf(false) }
     var lockHorizontalMovement by remember { mutableStateOf(false) }
 
+    val configuration = LocalConfiguration.current
+
 
     var isTocSheetVisible by remember { mutableStateOf(false) }
 
@@ -339,7 +343,6 @@ fun PDFViewerScreen(
                                     }
 
                                 }
-
                             }
                             .load()
 
@@ -364,8 +367,8 @@ fun PDFViewerScreen(
                         .align(Alignment.TopCenter)
                         .systemBarsPadding(),
                     onBackClicked = { navController.navigate("homeScreen")},
-                    onSortClicked = { },
                     onOptionsClicked = { },
+                    isTocSheetVisible = isTocSheetVisible,
                     onTocClicked = { isTocSheetVisible = !isTocSheetVisible }
                 )
                 Column(
@@ -412,6 +415,8 @@ fun PDFViewerScreen(
                         )
                     ) {
                        PdfBottomBar(
+                           isColorPaletteVisible = isColorPaletteVisible,
+                           isHorizontalLocked = lockHorizontalMovement,
                            onThemeClicked = {
                                isColorPaletteVisible = !isColorPaletteVisible
                            },
@@ -425,7 +430,7 @@ fun PDFViewerScreen(
                     }
                 }
             }
-            if (showTimeGoal)
+            if(showTimeGoal)
             TimePicker(
                 onDismissRequest = { onTimeGoalClicked() },
                 bookDataViewModel = bookDataViewModel
@@ -466,6 +471,7 @@ fun PDFViewerScreen(
                             jumpToPage = childPage
                             isTocSheetVisible = !isTocSheetVisible
                         },
+                        modifier = Modifier.windowInsetsPadding(if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) WindowInsets.safeContent else WindowInsets(0,0,0,0))
                     )
                 }
 

@@ -182,7 +182,7 @@ fun TocSheet(
                                                 } else MaterialTheme.colorScheme.onBackground,
                                                 shape = RoundedCornerShape(8.dp)
                                             )
-                                            .fillMaxWidth(0.8f)
+                                            .fillMaxWidth(0.9f)
                                             .clickable(
                                                 onClick = {
                                                     onChildPageClicked(childPage[subheadings]!!)
