@@ -33,7 +33,6 @@ import coil.compose.rememberAsyncImagePainter
 @Composable
 fun ReportScreen(
     navController: NavController,
-    onReportClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(

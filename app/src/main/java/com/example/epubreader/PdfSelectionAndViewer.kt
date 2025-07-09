@@ -61,7 +61,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
-import androidx.core.splashscreen.SplashScreen
 import androidx.navigation.NavController
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
@@ -232,8 +231,6 @@ fun PDFViewerScreen(
 
     val scope = rememberCoroutineScope()
 
-    var totalPages by remember { mutableIntStateOf(0) }
-
     var colorTheme: PDFView.Theme? by remember { mutableStateOf(PDFView.Theme.LIGHT) }
     var isColorPaletteVisible by remember { mutableStateOf(false) }
     var lockHorizontalMovement by remember { mutableStateOf(false) }
@@ -286,7 +283,7 @@ fun PDFViewerScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            pdfUri?.let {
+            pdfUri.let {
                 CoroutineScope(Dispatchers.IO).launch {
                     bookDataViewModel.updateLastPage(pdfUri, lastOpenedPage)
                 }
@@ -342,12 +339,11 @@ fun PDFViewerScreen(
                                 scope.launch {
                                     Log.d("start ", "$lastOpenedPageDB")
                                     val meta = this@apply.documentMeta
-                                    totalPages = this@apply.pageCount
                                     bookDataViewModel.updateToc( this@apply.tableOfContents )
                                     if (meta != null) {
                                         val title = meta.title ?: ""
                                         val author = meta.author ?: ""
-                                        val bookFromUri = bookDataViewModel.getBookFromUri(pdfUri!!)
+                                        val bookFromUri = bookDataViewModel.getBookFromUri(pdfUri)
 
                                         if (bookFromUri?.title == "Untitled" && title.isNotBlank()) {
                                             bookDataViewModel.updateBookTitle(bookFromUri, title)

@@ -112,7 +112,7 @@ fun App(
     val timeGoalFactory = TimeGoalViewModelFactory(application, timeGoalRepository)
     val timeGoalViewModel: TimeGoalViewModel = viewModel(factory = timeGoalFactory)
 
-    var drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -219,7 +219,6 @@ fun App(
                     ) {
                     ReportScreen(
                         navController = navController,
-                        onReportClicked = { },
                         modifier = Modifier.padding(innerPadding)
                     )
                 }

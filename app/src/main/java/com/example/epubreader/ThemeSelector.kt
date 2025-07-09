@@ -20,6 +20,7 @@ fun ThemeSelector(
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
+        modifier = modifier,
         contentPadding = PaddingValues(horizontal = 7.dp)
     ){
         items(colorsList) { color ->

@@ -185,6 +185,7 @@ fun TimeSelector(
     val hourFocusRequester = remember { FocusRequester() }
     val minuteFocusRequester = remember { FocusRequester() }
     Row(
+        modifier = modifier,
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         Spacer(

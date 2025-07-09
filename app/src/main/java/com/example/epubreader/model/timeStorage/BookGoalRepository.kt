@@ -17,7 +17,7 @@ class TimeGoalRepository(private val timeGoalDao: TimeGoalDao) {
         return  timeGoalDao.getBookByUri(bookUri).firstOrNull()?.timeGoal
     }
 
-    suspend fun  getBookByUri(bookUri: String): Flow<TimeGoal?>{
+    fun  getBookByUri(bookUri: String): Flow<TimeGoal?>{
         return  timeGoalDao.getBookByUri(bookUri)
     }
     suspend fun updateBookTimeGoal(bookUri: String, time: Int) {
