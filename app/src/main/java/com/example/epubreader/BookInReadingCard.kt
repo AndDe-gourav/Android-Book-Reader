@@ -42,12 +42,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import com.example.epubreader.model.Book
+import com.example.epubreader.model.bookStorage.Book
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun BookInReading(
     bookDataViewModel: BookDataViewModel,
+    timeGoalViewModel: TimeGoalViewModel,
     showAboutDocument: Boolean,
     onAboutDocumentClicked: () -> Unit,
     snackBarContent: (String) -> Unit,
@@ -186,6 +187,7 @@ fun BookInReading(
         }
         AnimatedIconRow(
             bookDataViewModel = bookDataViewModel,
+            timeGoalViewModel = timeGoalViewModel,
             showAboutDocument = showAboutDocument,
             navController = navController,
             snackBarContent = snackBarContent,
@@ -209,7 +211,7 @@ fun CustumSlideBar(
                 .fillMaxWidth()
                 .height(16.dp)
                 .background(
-                    color = MaterialTheme.colorScheme.onBackground,
+                    color = Color.White,
                     shape = RoundedCornerShape(4.dp)
                 )
         )

@@ -1,5 +1,8 @@
 package com.example.epubreader
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 
 @Composable
 fun PdfBottomBar(
@@ -94,75 +98,89 @@ fun PdfBottomBar(
 @Composable
 fun PdfTopBar(
     isTocSheetVisible: Boolean,
+    navController: NavController,
+    isSystemUIVisible: Boolean,
+    bookDataViewModel: BookDataViewModel,
     onBackClicked: () -> Unit,
     onTocClicked: () -> Unit,
-    onOptionsClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .fillMaxWidth()
     ) {
-        Surface(
-            color = colorResource( R.color.Book),
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .clickable { onBackClicked() },
-            shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
-            shadowElevation = 4.dp,
+        AnimatedVisibility(
+            visible = isSystemUIVisible,
+            enter = slideInHorizontally(
+                initialOffsetX = { fullWidth -> -fullWidth }
+            ),
+            exit = slideOutHorizontally(
+                targetOffsetX = { fullWidth -> -fullWidth }
+            ),
+            modifier = Modifier.align(Alignment.TopStart)
         ) {
-            IconButton(
-                onClick = {onBackClicked()}
+            Surface(
+                color = colorResource(R.color.Book),
+                modifier = Modifier
+                    .clickable { onBackClicked() },
+                shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
+                shadowElevation = 4.dp,
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.sign_out_circle),
-                    contentDescription = "exit",
-                    tint = Color.Black,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-        Surface(
-            color = colorResource( R.color.Book),
-            shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp),
-            shadowElevation = 4.dp,
-            modifier = Modifier.align(Alignment.TopEnd)
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                FilledIconButton(
-                 shape = RoundedCornerShape(8.dp),
-                 colors = IconButtonDefaults.iconButtonColors(
-                     if (isTocSheetVisible) MaterialTheme.colorScheme.surfaceContainerHigh else colorResource(id = R.color.Book)
-                 ),
-                 onClick = {  onTocClicked()}
+                IconButton(
+                    onClick = { onBackClicked() }
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.sort),
-                        contentDescription = "TableOfContent",
-                        modifier = Modifier
-                            .padding(3.dp)
-                            .size(25.dp),
-                        tint = Color.Black
+                        painter = painterResource(id = R.drawable.sign_out_circle),
+                        contentDescription = "exit",
+                        tint = Color.Black,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
-
-                IconButton(
-                    onClick = {  }
+            }
+        }
+        AnimatedVisibility(
+            visible = isSystemUIVisible,
+            enter = slideInHorizontally(
+                initialOffsetX = { fullWidth -> fullWidth }
+            ),
+            exit = slideOutHorizontally(
+                targetOffsetX = { fullWidth -> fullWidth }
+            ),
+            modifier = Modifier.align(Alignment.TopEnd)
+        ) {
+            Surface(
+                color = colorResource(R.color.Book),
+                shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp),
+                shadowElevation = 4.dp,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.meatballs_menu),
-                        contentDescription = "Options",
-                        modifier = Modifier
-                            .padding(3.dp)
-                            .size(25.dp),
-                        tint = Color.Black
+                    FilledIconButton(
+                        shape = RoundedCornerShape(8.dp),
+                        colors = IconButtonDefaults.iconButtonColors(
+                            if (isTocSheetVisible) MaterialTheme.colorScheme.surfaceContainerHigh else colorResource(
+                                id = R.color.Book
+                            )
+                        ),
+                        onClick = { onTocClicked() }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.sort),
+                            contentDescription = "TableOfContent",
+                            modifier = Modifier
+                                .padding(3.dp)
+                                .size(25.dp),
+                            tint = Color.Black
+                        )
+                    }
+                    PdfOptions(
+                        bookDataViewModel = bookDataViewModel,
+                        navController = navController,
                     )
                 }
             }
         }
     }
 }
-

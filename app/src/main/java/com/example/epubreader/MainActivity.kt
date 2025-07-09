@@ -42,8 +42,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.epubreader.model.BookDatabase
-import com.example.epubreader.model.BookRepository
+import com.example.epubreader.model.bookStorage.BookDatabase
+import com.example.epubreader.model.bookStorage.BookRepository
+import com.example.epubreader.model.timeStorage.TimeGoalDatabase
+import com.example.epubreader.model.timeStorage.TimeGoalRepository
 import com.example.epubreader.ui.theme.EPUBReaderTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -100,12 +102,15 @@ fun App(
 
     val database = BookDatabase.getDatabase(context)
     val bookDao = database.BookDao()
-
     val repository = BookRepository(bookDao)
-
     val factory = BookViewModelFactory(application, repository)
-
     val bookDataViewModel: BookDataViewModel = viewModel(factory = factory)
+
+    val timeGoalDatabase = TimeGoalDatabase.getDatabase(context)
+    val timeGoalDao = timeGoalDatabase.TimeGoalDao()
+    val timeGoalRepository = TimeGoalRepository(timeGoalDao)
+    val timeGoalFactory = TimeGoalViewModelFactory(application, timeGoalRepository)
+    val timeGoalViewModel: TimeGoalViewModel = viewModel(factory = timeGoalFactory)
 
     var drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
@@ -124,6 +129,7 @@ fun App(
             ) {
                 Drawer(
                     bookDataViewModel = bookDataViewModel,
+                    timeGoalViewModel = timeGoalViewModel,
                     navController = navController,
                     onBackPressed = {
                         scope.launch {
@@ -179,6 +185,8 @@ fun App(
                 ) {
                     HomeScreen(
                         bookDataViewModel = bookDataViewModel,
+                        timeGoalViewModel = timeGoalViewModel,
+                        currentScreen = currentScreen,
                         navController = navController,
                         toCloseDrawer = { scope.launch { drawerState.close() } },
                         toOpenDrawer = { scope.launch { drawerState.open()} },
@@ -186,6 +194,33 @@ fun App(
                             .padding(innerPadding),
                         showTimeGoal = showTimeGoal,
                         onTimeGoalClicked = { showTimeGoal = !showTimeGoal }
+                    )
+                }
+                composable(
+                    route = "Report",
+                    enterTransition = {
+                        slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Left,
+                            enterTransitionSpec
+                        )
+                    },
+                    exitTransition = {
+                        slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Left,
+                            exitTransitionSpec
+                        )
+                    },
+                    popExitTransition = {
+                        slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Right,
+                            exitTransitionSpec
+                        )
+                    }
+                    ) {
+                    ReportScreen(
+                        navController = navController,
+                        onReportClicked = { },
+                        modifier = Modifier.padding(innerPadding)
                     )
                 }
                 composable(
@@ -237,6 +272,8 @@ fun App(
                     val pdfUri = backStackEntry.arguments?.getString("pdfUri")
                     PDFViewerScreen(
                         bookDataViewModel = bookDataViewModel,
+                        timeGoalViewModel = timeGoalViewModel,
+                        currentScreen = currentScreen,
                         navController = navController,
                         pdfUri = pdfUri,
                         showTimeGoal = showTimeGoal,

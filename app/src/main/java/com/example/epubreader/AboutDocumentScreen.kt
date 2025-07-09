@@ -46,6 +46,8 @@ import coil.compose.rememberAsyncImagePainter
 @Composable
 fun AboutDoucument(
     bookDataViewModel: BookDataViewModel,
+    timeGoalViewModel: TimeGoalViewModel,
+    currentScreen: String,
     navController: NavController,
     showAboutDocument: Boolean,
     showTimeGoal: Boolean,
@@ -161,6 +163,7 @@ fun AboutDoucument(
                     selectedBook = selectedBook,
                     listOfCollections = listOfCollections,
                     snackBarContent = {},
+                    timeGoalViewModel = timeGoalViewModel
                 )
                 Box(
                     modifier = Modifier
@@ -218,12 +221,12 @@ fun AboutDoucument(
         if (showTimeGoal)
             TimePicker(
                 onDismissRequest = { onTimeGoalClicked() },
-                bookDataViewModel = bookDataViewModel
+                bookDataViewModel = bookDataViewModel,
+                timeGoalViewModel = timeGoalViewModel,
+                currentScreen = currentScreen,
             )
     }
 }
-
-
 
 @Composable
 fun GerenalTopBar(

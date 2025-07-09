@@ -1,0 +1,15 @@
+package com.example.epubreader.model.timeStorage
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "TimeGoal")
+data class TimeGoal(
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
+    val uri: String,
+    val date: String,
+    val startTime: Long,
+    val totalTime: Long,
+    val timeGoal: Int,
+)

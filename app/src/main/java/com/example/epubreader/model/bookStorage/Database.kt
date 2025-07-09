@@ -1,4 +1,4 @@
-package com.example.epubreader.model
+package com.example.epubreader.model.bookStorage
 
 import android.content.Context
 import androidx.room.Database
@@ -18,7 +18,7 @@ abstract class BookDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                                 context.applicationContext,
                                 BookDatabase::class.java,
-                                "pdf_database"
+                                "book_database"
                             ).fallbackToDestructiveMigration(false).build()
                 INSTANCE = instance
                 instance

@@ -29,7 +29,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.navigation.NavController
-import com.example.epubreader.model.Book
+import com.example.epubreader.model.bookStorage.Book
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -37,6 +37,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AnimatedIconRow(
     bookDataViewModel: BookDataViewModel,
+    timeGoalViewModel: TimeGoalViewModel,
     showAboutDocument: Boolean,
     navController: NavController,
     selectedBook: Book?,
@@ -112,7 +113,8 @@ fun AnimatedIconRow(
             bookDataViewModel = bookDataViewModel,
             showAboutDocument = showAboutDocument,
             navController = navController,
-            selectedBook = selectedBook
+            selectedBook = selectedBook,
+            timeGoalViewModel = timeGoalViewModel,
         )
 
         if (openNewCollectionDialog) {
@@ -216,7 +218,8 @@ fun OptionsDropDownMenu(
     showAboutDocument: Boolean,
     modifier: Modifier = Modifier,
     selectedBook: Book?,
-    bookDataViewModel: BookDataViewModel
+    bookDataViewModel: BookDataViewModel,
+    timeGoalViewModel: TimeGoalViewModel,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -229,6 +232,7 @@ fun OptionsDropDownMenu(
             onDismiss = { openRemoveDialog = false },
             onRemoveClicked = {
                 selectedBook?.let { bookDataViewModel.deleteBook(it) }
+                selectedBook?.let{ timeGoalViewModel.deleteBookFromTimeGoal(it.uri)}
                 openRemoveDialog = false
                 if (showAboutDocument){
                     navController.navigate("homeScreen")

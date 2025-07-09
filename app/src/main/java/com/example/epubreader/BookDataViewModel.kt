@@ -10,8 +10,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.epubreader.model.Book
-import com.example.epubreader.model.BookRepository
+import com.example.epubreader.model.bookStorage.Book
+import com.example.epubreader.model.bookStorage.BookRepository
 import com.shockwave.pdfium.PdfDocument
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -147,11 +147,13 @@ class BookDataViewModel(
                     doneReading = 0,
                     lastPage = 0,
                     totalPages = metadata.pageCount,
-                    timeGoal = 0,
                     timestamp = System.currentTimeMillis(),
                 )
                 repository.insertBook(newBook)
                 selectBook(newBook.uri)
+
+
+
             } catch (_: Exception) {
 
             }
@@ -165,12 +167,6 @@ class BookDataViewModel(
     fun updateBookTime(book: Book) {
         viewModelScope.launch {
             repository.updateBookTime(book)
-        }
-    }
-
-    fun updateBookTimeGoal(book: Book, timeGoal: Int) {
-        viewModelScope.launch{
-            repository.updateBookTimeGoal(book, timeGoal)
         }
     }
 

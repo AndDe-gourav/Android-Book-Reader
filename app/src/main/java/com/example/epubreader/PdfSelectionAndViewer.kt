@@ -10,12 +10,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -62,6 +61,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
+import androidx.core.splashscreen.SplashScreen
 import androidx.navigation.NavController
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
@@ -79,6 +79,7 @@ import kotlinx.coroutines.launch
 fun PDFSelection(
     navController: NavController,
     bookDataViewModel: BookDataViewModel,
+    timeGoalViewModel: TimeGoalViewModel,
     toCloseDrawer: () -> Unit,
 ) {
 
@@ -93,6 +94,8 @@ fun PDFSelection(
 
             val encodedUri = Uri.encode(it.toString())
             bookDataViewModel.addBook(it)
+            timeGoalViewModel.addTimeGoalBook(it)
+
             bookDataViewModel.fetchLastPage(it.toString())
             navController.navigate("BookScreen/$encodedUri")
         }
@@ -133,6 +136,7 @@ fun PDFSelection(
 fun QuickPdfSelection(
     navController: NavController,
     bookDataViewModel: BookDataViewModel,
+    timeGoalViewModel: TimeGoalViewModel,
     toCloseDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -148,6 +152,8 @@ fun QuickPdfSelection(
 
             val encodedUri = Uri.encode(it.toString())
             bookDataViewModel.addBook(it)
+            timeGoalViewModel.addTimeGoalBook(it)
+
             bookDataViewModel.fetchLastPage(it.toString())
             navController.navigate("BookScreen/$encodedUri")
         }
@@ -202,6 +208,8 @@ fun getActivity(): Activity? {
 @Composable
 fun PDFViewerScreen(
     bookDataViewModel: BookDataViewModel,
+    timeGoalViewModel: TimeGoalViewModel,
+    currentScreen: String,
     pdfUri: String?,
     navController: NavController,
     showTimeGoal: Boolean,
@@ -209,6 +217,9 @@ fun PDFViewerScreen(
 ) {
     LaunchedEffect(Unit) {
         if (pdfUri != null) {
+            if (timeGoalViewModel.getTimeGoal(pdfUri) != 0) {
+                timeGoalViewModel.updateStartTime(pdfUri, System.currentTimeMillis())
+            }
             bookDataViewModel.fetchLastPage(pdfUri)
             Log.d("page", "${bookDataViewModel.lastPage.value}")
         }
@@ -260,6 +271,11 @@ fun PDFViewerScreen(
 //        }
 //    }
     BackHandler {
+        scope.launch {
+            if (timeGoalViewModel.getTimeGoal(pdfUri) != 0) {
+                timeGoalViewModel.updateTotalTime(pdfUri, System.currentTimeMillis())
+            }
+        }
         if (isTocSheetVisible){
             isTocSheetVisible = false
         }else{
@@ -360,17 +376,18 @@ fun PDFViewerScreen(
                 },
                 modifier = Modifier.fillMaxSize()
             )
-            if (isSystemUIVisible) {
-                PdfTopBar(
-                    modifier = Modifier
-                        .windowInsetsPadding(WindowInsets.safeContent)
-                        .align(Alignment.TopCenter)
-                        .systemBarsPadding(),
-                    onBackClicked = { navController.navigate("homeScreen")},
-                    onOptionsClicked = { },
-                    isTocSheetVisible = isTocSheetVisible,
-                    onTocClicked = { isTocSheetVisible = !isTocSheetVisible }
-                )
+            PdfTopBar(
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets.safeContent)
+                    .align(Alignment.TopCenter)
+                    .systemBarsPadding(),
+                onBackClicked = { navController.navigate("homeScreen") },
+                isTocSheetVisible = isTocSheetVisible,
+                onTocClicked = { isTocSheetVisible = !isTocSheetVisible },
+                bookDataViewModel = bookDataViewModel,
+                navController = navController,
+                isSystemUIVisible = isSystemUIVisible
+            )
                 Column(
                     modifier = Modifier
                         .windowInsetsPadding(WindowInsets.safeContent)
@@ -404,14 +421,11 @@ fun PDFViewerScreen(
                     )
                     AnimatedVisibility(
                         visible = isSystemUIVisible,
-                        enter = expandHorizontally(
-                            animationSpec = spring(
-
-                            ),
-                            expandFrom = Alignment.Start
+                        enter = slideInHorizontally(
+                            initialOffsetX = { fullWidth -> -fullWidth }
                         ),
-                        exit = shrinkHorizontally(
-                            shrinkTowards = Alignment.Start
+                        exit = slideOutHorizontally(
+                            targetOffsetX = { fullWidth -> -fullWidth }
                         )
                     ) {
                        PdfBottomBar(
@@ -429,12 +443,14 @@ fun PDFViewerScreen(
                        )
                     }
                 }
+            if(showTimeGoal) {
+                TimePicker(
+                    onDismissRequest = { onTimeGoalClicked() },
+                    bookDataViewModel = bookDataViewModel,
+                    timeGoalViewModel = timeGoalViewModel,
+                    currentScreen = currentScreen,
+                )
             }
-            if(showTimeGoal)
-            TimePicker(
-                onDismissRequest = { onTimeGoalClicked() },
-                bookDataViewModel = bookDataViewModel
-            )
             AnimatedVisibility (
                 visible = isTocSheetVisible,
                 enter = fadeIn(),

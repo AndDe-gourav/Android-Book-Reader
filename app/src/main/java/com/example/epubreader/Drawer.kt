@@ -30,6 +30,7 @@ import androidx.navigation.NavController
 fun Drawer(
     navController: NavController,
     bookDataViewModel: BookDataViewModel,
+    timeGoalViewModel: TimeGoalViewModel,
     onBackPressed: () -> Unit,
     toCloseDrawer: () -> Unit,
     currentScreen: String,
@@ -58,6 +59,7 @@ fun Drawer(
         PDFSelection(
             navController = navController,
             bookDataViewModel = bookDataViewModel,
+            timeGoalViewModel = timeGoalViewModel,
             toCloseDrawer = toCloseDrawer
         )
         DrawerRow(

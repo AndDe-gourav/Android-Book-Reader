@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
-import com.example.epubreader.model.Book
+import com.example.epubreader.model.bookStorage.Book
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -55,6 +55,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     bookDataViewModel: BookDataViewModel,
+    timeGoalViewModel: TimeGoalViewModel,
+    currentScreen: String,
     navController: NavController,
     toOpenDrawer: () -> Unit,
     showTimeGoal: Boolean,
@@ -99,6 +101,7 @@ fun HomeScreen(
                             )
                             BookInReading(
                                 bookDataViewModel = bookDataViewModel,
+                                timeGoalViewModel = timeGoalViewModel,
                                 showAboutDocument = showAboutDocument,
                                 onAboutDocumentClicked = { showAboutDocument = true },
                                 navController = navController,
@@ -205,6 +208,7 @@ fun HomeScreen(
                     BottomBar(
                         navController = navController,
                         bookDataViewModel = bookDataViewModel,
+                        timeGoalViewModel = timeGoalViewModel,
                         toCloseDrawer = toCloseDrawer,
                         selectedBook = selectedBook,
                         modifier = Modifier.align(Alignment.BottomCenter)
@@ -213,6 +217,8 @@ fun HomeScreen(
             } else {
                 AboutDoucument(
                     bookDataViewModel = bookDataViewModel,
+                    timeGoalViewModel = timeGoalViewModel,
+                    currentScreen = currentScreen,
                     navController = navController,
                     showTimeGoal = showTimeGoal,
                     showAboutDocument = showAboutDocument,
@@ -316,6 +322,7 @@ fun GernealDrawerTopBar(
 @Composable
 fun BottomBar(
     bookDataViewModel: BookDataViewModel,
+    timeGoalViewModel: TimeGoalViewModel,
     navController: NavController,
     toCloseDrawer: () -> Unit,
     selectedBook: Book?,
@@ -349,7 +356,11 @@ fun BottomBar(
                     painter = painterResource(id = R.drawable.chart),
                     contentDescription = "Report",
                     tint = MaterialTheme.colorScheme.inverseSurface,
-                    modifier = Modifier.size(25.dp)
+                    modifier = Modifier
+                        .size(25.dp)
+                        .clickable {
+                            navController.navigate("Report")
+                        }
                 )
                 Text(
                     text = "Report",
@@ -386,6 +397,7 @@ fun BottomBar(
             }
             QuickPdfSelection(
                 bookDataViewModel = bookDataViewModel,
+                timeGoalViewModel = timeGoalViewModel,
                 navController = navController,
                 toCloseDrawer = toCloseDrawer,
             )

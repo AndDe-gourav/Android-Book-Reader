@@ -1,4 +1,4 @@
-package com.example.epubreader.model
+package com.example.epubreader.model.bookStorage
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
@@ -38,9 +38,6 @@ class BookRepository(private val bookDao: BookDao) {
         bookDao.updateBookTime(book.uri, System.currentTimeMillis().toString())
     }
 
-    suspend fun updateBookTimeGoal(book: Book, time: Int) {
-        bookDao.updateBookTimeGoal(book.uri, time)
-    }
 
     suspend fun updateBookTitle(book: Book , title: String) {
         bookDao.updateTitle(book.uri, title)
