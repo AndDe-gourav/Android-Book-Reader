@@ -197,7 +197,7 @@ fun App(
                     )
                 }
                 composable(
-                    route = "Report",
+                    route = "StatsScreen",
                     enterTransition = {
                         slideIntoContainer(
                             AnimatedContentTransitionScope.SlideDirection.Left,
@@ -217,8 +217,10 @@ fun App(
                         )
                     }
                     ) {
-                    ReportScreen(
+                    StatsScreen(
                         navController = navController,
+                        bookDataViewModel = bookDataViewModel,
+                        timeGoalViewModel = timeGoalViewModel,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }

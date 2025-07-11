@@ -45,7 +45,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun TimePicker(
     onDismissRequest: () -> Unit,
-    currentScreen: String,
+    onTimeGoalSet: () -> Unit,
     bookDataViewModel: BookDataViewModel,
     timeGoalViewModel: TimeGoalViewModel,
     modifier: Modifier = Modifier
@@ -152,12 +152,7 @@ fun TimePicker(
                                     bookDataViewModel.selectedBook.value?.uri!!,
                                     (hourValue.toInt() * 60 + minuteValue.toInt())
                                 )
-                                if(currentScreen != "homeScreen") {
-                                    timeGoalViewModel.updateStartTime(
-                                        bookDataViewModel.selectedBook.value?.uri!!,
-                                        System.currentTimeMillis()
-                                    )
-                                }
+                                onTimeGoalSet()
                                 onDismissRequest()
                             }
                         }

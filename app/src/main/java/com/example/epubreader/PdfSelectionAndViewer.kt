@@ -61,6 +61,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
@@ -214,13 +217,35 @@ fun PDFViewerScreen(
     showTimeGoal: Boolean,
     onTimeGoalClicked: () -> Unit,
 ) {
+    var timeGoal: Int? by remember { mutableStateOf(0) }
+    var sessionStartTime by remember { mutableStateOf(System.currentTimeMillis()) }
+    var sessionTimeSpent by remember { mutableStateOf( 0L) }
+    var timeGoalAvailable by remember { mutableStateOf(false) }
+    var totalTime: Long? by remember { mutableStateOf(0L) }
+
+    LaunchedEffect(Unit) {
+        var timeGoalCompleted = timeGoalViewModel.getGoalCompleted(pdfUri!!)
+        while (true) {
+            val now = System.currentTimeMillis()
+            sessionTimeSpent = now - sessionStartTime
+            if (timeGoalAvailable && (timeGoalCompleted == 0) && timeGoal !=0) {
+                (totalTime?.plus(sessionTimeSpent))?.div(1000)?.let {
+                    if ((it) >= timeGoal?.times(60)!!) {
+                        timeGoalViewModel.updateGoalCompleted(pdfUri, 1)
+                        timeGoalCompleted = timeGoalViewModel.getGoalCompleted(pdfUri)
+                    }
+                }
+            }
+            delay(1000L)
+        }
+    }
     LaunchedEffect(Unit) {
         if (pdfUri != null) {
             if (timeGoalViewModel.getTimeGoal(pdfUri) != 0) {
-                timeGoalViewModel.updateStartTime(pdfUri, System.currentTimeMillis())
+                timeGoalAvailable = true
             }
+            totalTime = timeGoalViewModel.getTotalTime(pdfUri)
             bookDataViewModel.fetchLastPage(pdfUri)
-            Log.d("page", "${bookDataViewModel.lastPage.value}")
         }
     }
 
@@ -230,6 +255,8 @@ fun PDFViewerScreen(
     val activity = getActivity()
 
     val scope = rememberCoroutineScope()
+
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     var colorTheme: PDFView.Theme? by remember { mutableStateOf(PDFView.Theme.LIGHT) }
     var isColorPaletteVisible by remember { mutableStateOf(false) }
@@ -268,11 +295,6 @@ fun PDFViewerScreen(
 //        }
 //    }
     BackHandler {
-        scope.launch {
-            if (timeGoalViewModel.getTimeGoal(pdfUri) != 0) {
-                timeGoalViewModel.updateTotalTime(pdfUri, System.currentTimeMillis())
-            }
-        }
         if (isTocSheetVisible){
             isTocSheetVisible = false
         }else{
@@ -280,18 +302,46 @@ fun PDFViewerScreen(
         }
     }
 
+    if (timeGoalAvailable) {
+        DisposableEffect(lifecycleOwner) {
+            val lifecycleObserver = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_PAUSE -> {
+                        timeGoalViewModel.updateTotalTime(pdfUri, sessionTimeSpent)
+                        Log.d("time spent", "$sessionTimeSpent")
+                    }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            pdfUri.let {
-                CoroutineScope(Dispatchers.IO).launch {
-                    bookDataViewModel.updateLastPage(pdfUri, lastOpenedPage)
+                    Lifecycle.Event.ON_RESUME -> {
+                        sessionStartTime = System.currentTimeMillis()
+                        sessionTimeSpent = 0
+                        scope.launch {
+                            timeGoal = timeGoalViewModel.getTimeGoal(pdfUri)
+                        }
+                    }
+
+                    else -> {}
                 }
             }
-            showSystemBars(activity!!)
-            lockHorizontalMovement = false
+
+            lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
+
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
+            }
         }
     }
+        DisposableEffect(Unit) {
+            onDispose {
+                pdfUri.let {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        bookDataViewModel.updateLastPage(pdfUri, lastOpenedPage)
+                    }
+                }
+                showSystemBars(activity!!)
+                lockHorizontalMovement = false
+
+            }
+        }
         Box(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
         ) {
@@ -444,7 +494,14 @@ fun PDFViewerScreen(
                     onDismissRequest = { onTimeGoalClicked() },
                     bookDataViewModel = bookDataViewModel,
                     timeGoalViewModel = timeGoalViewModel,
-                    currentScreen = currentScreen,
+                    onTimeGoalSet = {
+                        timeGoalAvailable = true
+                        scope.launch {
+                            timeGoal = timeGoalViewModel.getTimeGoal(pdfUri)
+                            Log.d("running", "$timeGoal")
+                        }
+                    }
+
                 )
             }
             AnimatedVisibility (

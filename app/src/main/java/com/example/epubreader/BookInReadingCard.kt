@@ -38,6 +38,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -137,6 +138,8 @@ fun BookInReading(
                                     text = it,
                                     style = MaterialTheme.typography.titleLarge.copy(fontSize = 14.sp),
                                     color = MaterialTheme.colorScheme.inverseSurface,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.width(180.dp)
                                 )
                             }
@@ -168,7 +171,8 @@ fun BookInReading(
                     modifier = Modifier.size(20.dp)
                 )
                 CustumSlideBar(
-                    value = sliderProgress
+                    value = sliderProgress,
+                    color = MaterialTheme.colorScheme.outline
                 )
                 Text(
                     text = if (totalPages != 0) {
@@ -201,6 +205,7 @@ fun BookInReading(
 @Composable
 fun CustumSlideBar(
     value: Float,
+    color: Color,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -221,7 +226,7 @@ fun CustumSlideBar(
                 .fillMaxWidth(value)
                 .padding(3.dp)
                 .background(
-                    color = MaterialTheme.colorScheme.outline,
+                    color = color,
                     shape = RoundedCornerShape(4.dp)
                 )
 
@@ -232,7 +237,7 @@ fun CustumSlideBar(
                 .align(Alignment.CenterEnd)
                 .size(3.dp)
                 .background(
-                    color = MaterialTheme.colorScheme.outline,
+                    color = color,
                     shape = RoundedCornerShape(8.dp)
                 )
         )

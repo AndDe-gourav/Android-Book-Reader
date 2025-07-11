@@ -8,6 +8,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.epubreader.model.timeStorage.TimeGoal
 import com.example.epubreader.model.timeStorage.TimeGoalRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -17,14 +20,34 @@ class TimeGoalViewModel(
     application: Application,
     ) : AndroidViewModel(application) {
 
+        private val _allTimeGoalBooks = MutableStateFlow<List<TimeGoal>>(emptyList())
+        val allTimeGoalBooks: StateFlow<List<TimeGoal>> = _allTimeGoalBooks.asStateFlow()
+
+
+
+    init {
+        viewModelScope.launch {
+            repository.timeGoalBooks.collect { goals ->
+                _allTimeGoalBooks.value = goals
+            }
+        }
+    }
+
     fun updateBookTimeGoal(bookUri: String, timeGoal: Int) {
         viewModelScope.launch{
             repository.updateBookTimeGoal(bookUri, timeGoal)
         }
     }
 
-    suspend fun getTimeGoal(bookUri: String): Int?{
+    suspend fun getTimeGoal(bookUri: String):Int?{
         return repository.getTimeGoal(bookUri)
+    }
+    suspend fun getTotalTime(bookUri: String):Long?{
+        return repository.getTotalTime(bookUri)
+    }
+
+    suspend fun getGoalCompleted(bookUri: String):Int?{
+        return repository.getGoalCompleted(bookUri)
     }
 
     fun deleteBookFromTimeGoal(bookUri: String) {
@@ -33,18 +56,15 @@ class TimeGoalViewModel(
             repository.deleteBook(book)
         }
     }
-
-    fun updateStartTime(bookUri: String, startTime: Long) {
+    fun updateTotalTime(bookUri: String, time: Long) {
         viewModelScope.launch {
-            repository.updateStartTime(bookUri, startTime)
+            repository.updateTotalTime(bookUri, time+(repository.getBookByUri(bookUri).firstOrNull()!!.totalTime))
         }
     }
 
-    fun updateTotalTime(bookUri: String, endTime: Long) {
+    fun updateGoalCompleted(bookUri: String, goalCompleted: Int) {
         viewModelScope.launch {
-            val totalTime =
-                (repository.getTotalTime(bookUri) ?: 0) + endTime - repository.getStartingTime(bookUri)!!
-            repository.updateTotalTime(bookUri, totalTime)
+            repository.updateGoalCompleted(bookUri, goalCompleted)
         }
     }
 
@@ -54,9 +74,9 @@ class TimeGoalViewModel(
             val timeBook = TimeGoal(
                 uri = uri.toString(),
                 date = LocalDate.now().toString(),
-                startTime = 0,
                 totalTime = 0,
-                timeGoal = 0
+                timeGoal = 0,
+                goalCompleted = 0,
             )
             repository.insertBook(timeBook)
         }

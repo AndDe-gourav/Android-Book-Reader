@@ -223,7 +223,7 @@ fun AboutDoucument(
                 onDismissRequest = { onTimeGoalClicked() },
                 bookDataViewModel = bookDataViewModel,
                 timeGoalViewModel = timeGoalViewModel,
-                currentScreen = currentScreen,
+                onTimeGoalSet = { }
             )
     }
 }

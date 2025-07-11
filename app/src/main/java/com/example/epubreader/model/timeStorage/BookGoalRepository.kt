@@ -5,16 +5,18 @@ import kotlinx.coroutines.flow.firstOrNull
 
 class TimeGoalRepository(private val timeGoalDao: TimeGoalDao) {
 
-    suspend fun getStartingTime(bookUri: String):Long?{
-        return timeGoalDao.getBookByUri(bookUri).firstOrNull()?.startTime
-    }
+    val timeGoalBooks: Flow<List<TimeGoal>> = timeGoalDao.getTimeGoalBooks()
 
     suspend fun getTotalTime(bookUri: String):Long?{
         return timeGoalDao.getBookByUri(bookUri).firstOrNull()?.totalTime
     }
-    
+
     suspend fun getTimeGoal(bookUri: String):Int?{
         return  timeGoalDao.getBookByUri(bookUri).firstOrNull()?.timeGoal
+    }
+
+    suspend fun getGoalCompleted(bookUri: String):Int?{
+        return  timeGoalDao.getBookByUri(bookUri).firstOrNull()?.goalCompleted
     }
 
     fun  getBookByUri(bookUri: String): Flow<TimeGoal?>{
@@ -28,13 +30,14 @@ class TimeGoalRepository(private val timeGoalDao: TimeGoalDao) {
         timeGoalDao.deleteBook(book)
     }
 
-    suspend fun updateStartTime(bookUri: String, startTime: Long) {
-        timeGoalDao.updateStartTime(bookUri, startTime)
-    }
-
     suspend fun updateTotalTime(bookUri: String, totalTime: Long) {
         timeGoalDao.updateTotalTime(bookUri, totalTime)
     }
+
+    suspend fun updateGoalCompleted(bookUri: String, goalCompleted: Int) {
+        timeGoalDao.updateGoalCompleted(bookUri, goalCompleted)
+    }
+
 
 
     suspend fun insertBook(book: TimeGoal): Long? {

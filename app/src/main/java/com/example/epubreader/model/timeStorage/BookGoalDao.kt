@@ -12,12 +12,14 @@ interface TimeGoalDao {
     @Query("SELECT * FROM TimeGoal WHERE uri = :bookUri")
     suspend fun getBookGoal(bookUri: String): TimeGoal?
 
-    @Query("SELECT startTime FROM TimeGoal WHERE uri = :bookUri")
-    suspend fun getStartingTime(bookUri: String):Long?
-
     @Query("SELECT totalTime FROM TimeGoal WHERE uri = :bookUri")
     suspend fun getTotalTime(bookUri: String):Long?
 
+    @Query("SELECT goalCompleted FROM TimeGoal WHERE uri = :bookUri")
+    suspend fun getGoalCompleted(bookUri: String):Int?
+
+    @Query("SELECT * FROM TimeGoal WHERE timeGoal > 0")
+    fun getTimeGoalBooks(): Flow<List<TimeGoal>>
     @Insert
     suspend fun insertBook(book: TimeGoal):Long?
 
@@ -27,11 +29,11 @@ interface TimeGoalDao {
     @Query("SELECT * FROM TimeGoal WHERE uri = :bookUri")
     fun getBookByUri(bookUri: String): Flow<TimeGoal?>
 
-    @Query("UPDATE TimeGoal SET startTime = :startTime WHERE uri = :bookUri")
-    suspend fun updateStartTime(bookUri: String, startTime: Long)
-
     @Query("UPDATE TimeGoal SET totalTime = :totalTime WHERE uri = :bookUri")
     suspend fun updateTotalTime(bookUri: String, totalTime: Long)
+
+    @Query("UPDATE TimeGoal SET goalCompleted = :goalCompleted WHERE uri = :bookUri")
+    suspend fun updateGoalCompleted(bookUri: String, goalCompleted: Int)
 
     @Delete
     suspend fun deleteBook(book: TimeGoal)

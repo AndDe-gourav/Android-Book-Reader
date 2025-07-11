@@ -17,6 +17,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -25,21 +31,28 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 
 @Composable
-fun ReportScreen(
+fun StatsScreen(
+    bookDataViewModel: BookDataViewModel,
+    timeGoalViewModel: TimeGoalViewModel,
     navController: NavController,
     modifier: Modifier = Modifier
 ) {
+
+    val timeGoalsBooks by timeGoalViewModel.allTimeGoalBooks.collectAsState()
+
     Box(
         modifier = modifier
     ) {
         GerenalTopBar(
-            titleText = "Report",
+            titleText = "Stats",
             onBackClicked = {
                 navController.navigate("homeScreen")
             },
@@ -50,20 +63,37 @@ fun ReportScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.zIndex(0f)
         ) {
-            item { Spacer(modifier = Modifier.padding(80.dp))  }
+            item { Spacer(modifier = Modifier.padding(40.dp))  }
             items(
-                items = listOf(1, 2,3,4,5,6),
-            ){
+                items = timeGoalsBooks,
+            ){ book ->
+
+                val totalTimeHours = book.totalTime/3600000
+                val totalTimeMinutes = (book.totalTime/60000)%60
+
+                val timeGoalHours = book.timeGoal/60
+                val timeGoalMinutes = book.timeGoal%60
+
+                var bookTitle by remember(book) { mutableStateOf("Untitled") }
+                var bookAuthor by remember(book) { mutableStateOf("Unknown Author") }
+                var bookCover: String? by remember(book) { mutableStateOf("bookCover") }
+
+                LaunchedEffect(book) {
+                    bookTitle = bookDataViewModel.getBookFromUri(book.uri)?.title.toString()
+                    bookAuthor = bookDataViewModel.getBookFromUri(book.uri)?.author.toString()
+                    bookCover = bookDataViewModel.getBookFromUri(book.uri)?.bookCover
+                }
+
                 Surface(
                     color = MaterialTheme.colorScheme.onBackground,
                     shape = RoundedCornerShape(8.dp),
                     shadowElevation = 2.dp,
                     modifier = Modifier
-                        .padding(12.dp)
+                        .padding(6.dp)
                         .fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp)
+                        modifier = Modifier.padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 2.dp)
                     ) {
                         Surface(
                             color = Color.White,
@@ -80,7 +110,7 @@ fun ReportScreen(
                         ) {
                             Image(
                                 painter = rememberAsyncImagePainter(
-                                    model = ""
+                                    model = bookCover
                                 ),
                                 contentDescription = "Book_cover_1",
                                 contentScale = ContentScale.FillBounds,
@@ -92,18 +122,22 @@ fun ReportScreen(
                                 .fillMaxWidth()
                         ) {
                             Text(
-                                text =  "The Book title",
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                                text = bookTitle,
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
                                 color = MaterialTheme.colorScheme.inverseSurface,
                                 textAlign = TextAlign.Start,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .fillMaxWidth()
                             )
                             Text(
-                                text = "L__The Book author",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = bookAuthor,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                                 textAlign = TextAlign.End,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .fillMaxWidth()
                             )
@@ -115,23 +149,27 @@ fun ReportScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Row {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         Text(
-                                            text = "20m ",
+                                            text = if(book.goalCompleted == 0){ if(totalTimeHours != 0L){ totalTimeHours.toString()  +"h " + totalTimeMinutes.toString() + "m "}else { totalTimeMinutes.toString() + "m "}}else{ "Goal Complete"},
                                             style = MaterialTheme.typography.bodyMedium.copy(
                                                 fontWeight = FontWeight.SemiBold
                                             ),
                                             color = MaterialTheme.colorScheme.inverseSurface,
                                         )
                                         Text(
-                                            text = "Done",
-                                            style = MaterialTheme.typography.bodyMedium,
+                                            text = if (book.goalCompleted == 0){"Done"}else{ ""},
+                                            style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.inverseSurface,
                                         )
                                     }
-                                    Row {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         Text(
-                                            text = "2h 20m ",
+                                            text = if (timeGoalHours != 0){ timeGoalHours.toString()  +"h " + timeGoalMinutes.toString() + "m "}else { timeGoalMinutes.toString() + "m " },
                                             style = MaterialTheme.typography.bodyMedium.copy(
                                                 fontWeight = FontWeight.SemiBold
                                             ),
@@ -140,16 +178,16 @@ fun ReportScreen(
                                         )
                                         Text(
                                             text = "Time Goal",
-                                            style = MaterialTheme.typography.bodyMedium,
+                                            style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.inverseSurface,
                                             textAlign = TextAlign.End,
                                         )
                                     }
                                 }
                                 CustumSlideBar(
-                                    value = 0.4f
+                                    value = (((book.totalTime/60000)/(book.timeGoal).toFloat())),
+                                    color = colorResource(id= R.color.CompleteBar)
                                 )
-
                             }
                         }
                     }

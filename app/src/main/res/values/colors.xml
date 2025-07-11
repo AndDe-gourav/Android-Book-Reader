@@ -26,6 +26,7 @@
     <color name="Book">#F2F2F3</color>
     <color name="Sepia">#d1c494</color>
     <color name="Dark_Sepia">#948f71</color>
+    <color name="CompleteBar">#85D889</color>
 
 
 </resources>

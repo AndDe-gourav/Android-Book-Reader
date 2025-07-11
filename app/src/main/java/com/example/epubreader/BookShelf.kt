@@ -161,7 +161,7 @@ fun BookShelf(
                 }
             }else {
                 bookDataViewModel.collectionToList()
-                if (groupedBooks.isEmpty()) {
+                if (particularCollection.isEmpty()) {
                     item {
                         Text(
                             text = "This Book Shelf is Empty",
