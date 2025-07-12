@@ -32,6 +32,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -125,10 +126,17 @@ fun TimePicker(
                         textAlign = TextAlign.End,
                         fontSize = 18.sp,
                         modifier = Modifier.fillMaxWidth(),
-
                         color = Color.Black
                     )
                 }
+                Text(
+                    text = "This will reset your timer (if any)",
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                    fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                    color = colorResource(id = R.color.LightRed),
+                )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

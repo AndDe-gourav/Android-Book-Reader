@@ -34,6 +34,8 @@ class TimeGoalRepository(private val timeGoalDao: TimeGoalDao) {
         timeGoalDao.updateTotalTime(bookUri, totalTime)
     }
 
+
+
     suspend fun updateGoalCompleted(bookUri: String, goalCompleted: Int) {
         timeGoalDao.updateGoalCompleted(bookUri, goalCompleted)
     }

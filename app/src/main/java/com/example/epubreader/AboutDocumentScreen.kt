@@ -47,11 +47,8 @@ import coil.compose.rememberAsyncImagePainter
 fun AboutDoucument(
     bookDataViewModel: BookDataViewModel,
     timeGoalViewModel: TimeGoalViewModel,
-    currentScreen: String,
     navController: NavController,
     showAboutDocument: Boolean,
-    showTimeGoal: Boolean,
-    onTimeGoalClicked: () -> Unit,
     onAboutDocumentClicked: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
@@ -198,33 +195,10 @@ fun AboutDoucument(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.inverseSurface,
                         )
-                        Surface(
-                            onClick = { onTimeGoalClicked()},
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            modifier = modifier.padding(top = 5.dp),
-                            shadowElevation = 6.dp,
-                            tonalElevation = 0.dp
-                        ) {
-                            Text(
-                                text = "Set Time Goal",
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.inverseSurface,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(10.dp),
-                                )
-                        }
                     }
                 }
             }
         }
-        if (showTimeGoal)
-            TimePicker(
-                onDismissRequest = { onTimeGoalClicked() },
-                bookDataViewModel = bookDataViewModel,
-                timeGoalViewModel = timeGoalViewModel,
-                onTimeGoalSet = { }
-            )
     }
 }
 

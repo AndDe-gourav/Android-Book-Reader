@@ -29,6 +29,7 @@ import androidx.navigation.NavController
 @Composable
 fun PdfBottomBar(
     isColorPaletteVisible: Boolean,
+    isTimerVisible: Boolean,
     isHorizontalLocked: Boolean,
     modifier: Modifier = Modifier,
     onThemeClicked: () -> Unit = {},
@@ -78,7 +79,11 @@ fun PdfBottomBar(
                      tint = Color.Black
                  )
              }
-             IconButton(
+             FilledIconButton(
+                 shape = RoundedCornerShape(8.dp),
+                 colors = IconButtonDefaults.iconButtonColors(
+                     if (isTimerVisible) MaterialTheme.colorScheme.surfaceContainerHigh else colorResource(id = R.color.Book)
+                 ),
                  onClick = { onTimerClicked() }
              ) {
                  Icon(

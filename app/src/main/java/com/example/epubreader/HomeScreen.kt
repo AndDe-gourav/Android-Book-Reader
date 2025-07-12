@@ -61,11 +61,8 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     bookDataViewModel: BookDataViewModel,
     timeGoalViewModel: TimeGoalViewModel,
-    currentScreen: String,
     navController: NavController,
     toOpenDrawer: () -> Unit,
-    showTimeGoal: Boolean,
-    onTimeGoalClicked: () -> Unit,
     toCloseDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -244,11 +241,8 @@ fun HomeScreen(
                 AboutDoucument(
                     bookDataViewModel = bookDataViewModel,
                     timeGoalViewModel = timeGoalViewModel,
-                    currentScreen = currentScreen,
                     navController = navController,
-                    showTimeGoal = showTimeGoal,
                     showAboutDocument = showAboutDocument,
-                    onTimeGoalClicked = onTimeGoalClicked,
                     onAboutDocumentClicked = {showAboutDocument = false},
                     sharedTransitionScope = this@SharedTransitionLayout,
                     animatedVisibilityScope = this@AnimatedContent,

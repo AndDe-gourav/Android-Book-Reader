@@ -61,6 +61,11 @@ class TimeGoalViewModel(
             repository.updateTotalTime(bookUri, time+(repository.getBookByUri(bookUri).firstOrNull()!!.totalTime))
         }
     }
+    fun resetTotalTime(bookUri: String) {
+        viewModelScope.launch {
+            repository.updateTotalTime(bookUri, 0)
+        }
+    }
 
     fun updateGoalCompleted(bookUri: String, goalCompleted: Int) {
         viewModelScope.launch {

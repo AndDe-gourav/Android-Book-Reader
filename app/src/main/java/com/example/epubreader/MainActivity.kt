@@ -186,14 +186,11 @@ fun App(
                     HomeScreen(
                         bookDataViewModel = bookDataViewModel,
                         timeGoalViewModel = timeGoalViewModel,
-                        currentScreen = currentScreen,
                         navController = navController,
                         toCloseDrawer = { scope.launch { drawerState.close() } },
                         toOpenDrawer = { scope.launch { drawerState.open()} },
                         modifier = Modifier
                             .padding(innerPadding),
-                        showTimeGoal = showTimeGoal,
-                        onTimeGoalClicked = { showTimeGoal = !showTimeGoal }
                     )
                 }
                 composable(

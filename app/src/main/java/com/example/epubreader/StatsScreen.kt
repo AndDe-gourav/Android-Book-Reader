@@ -186,7 +186,7 @@ fun StatsScreen(
                                 }
                                 CustumSlideBar(
                                     value = (((book.totalTime/60000)/(book.timeGoal).toFloat())),
-                                    color = colorResource(id= R.color.CompleteBar)
+                                    color = if (book.goalCompleted == 1) colorResource(id= R.color.CompleteBar)else MaterialTheme.colorScheme.outline
                                 )
                             }
                         }

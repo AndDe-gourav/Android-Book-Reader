@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -255,11 +256,13 @@ fun PDFViewerScreen(
     val activity = getActivity()
 
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val lifecycleOwner = LocalLifecycleOwner.current
 
     var colorTheme: PDFView.Theme? by remember { mutableStateOf(PDFView.Theme.LIGHT) }
     var isColorPaletteVisible by remember { mutableStateOf(false) }
+    var isTimerVisible by remember { mutableStateOf(false) }
     var lockHorizontalMovement by remember { mutableStateOf(false) }
 
     val configuration = LocalConfiguration.current
@@ -308,7 +311,6 @@ fun PDFViewerScreen(
                 when (event) {
                     Lifecycle.Event.ON_PAUSE -> {
                         timeGoalViewModel.updateTotalTime(pdfUri, sessionTimeSpent)
-                        Log.d("time spent", "$sessionTimeSpent")
                     }
 
                     Lifecycle.Event.ON_RESUME -> {
@@ -375,6 +377,13 @@ fun PDFViewerScreen(
                                             delay(1000)
                                         }
                                     }
+                                    if (isTimerVisible){
+                                        isTimerVisible = false
+                                        if (isSystemUIVisible) {
+                                            delay(1000)
+                                        }
+                                    }
+
                                     if (!isSystemUIVisible) {
                                         showSystemBars(activity!!)
                                         isSystemUIVisible = true
@@ -462,6 +471,17 @@ fun PDFViewerScreen(
                             },
                         )
                     }
+                    AnimatedVisibility(
+                        visible = isTimerVisible,
+                    ) {
+                        TimeGoalSurface(
+                            currentTimeInSec = (totalTime?.plus(sessionTimeSpent)?.div(1000)?.toInt()!!),
+                            timeGoal = timeGoal!!,
+                            onEditClicked = {
+                                isTimerVisible = false
+                                onTimeGoalClicked() }
+                        )
+                    }
                     Spacer(
                         modifier = Modifier.size(20.dp)
                     )
@@ -476,15 +496,30 @@ fun PDFViewerScreen(
                     ) {
                        PdfBottomBar(
                            isColorPaletteVisible = isColorPaletteVisible,
+                           isTimerVisible = isTimerVisible,
                            isHorizontalLocked = lockHorizontalMovement,
                            onThemeClicked = {
+                               isTimerVisible = false
                                isColorPaletteVisible = !isColorPaletteVisible
                            },
                            onLockClicked = {
+                               if (!lockHorizontalMovement) {
+                                   Toast.makeText(
+                                       context,
+                                       "Horizontal Movement Locked",
+                                       Toast.LENGTH_SHORT
+                                   ).show()
+                               }
                                lockHorizontalMovement = !lockHorizontalMovement
                            },
                            onTimerClicked = {
-                               onTimeGoalClicked()
+                               if (timeGoalAvailable) {
+                                   isTimerVisible = !isTimerVisible
+                               }
+                               isColorPaletteVisible = false
+                               if (!timeGoalAvailable){
+                                   onTimeGoalClicked()
+                               }
                            }
                        )
                     }
@@ -497,8 +532,12 @@ fun PDFViewerScreen(
                     onTimeGoalSet = {
                         timeGoalAvailable = true
                         scope.launch {
+                            timeGoalViewModel.resetTotalTime(pdfUri)
+                            timeGoalViewModel.updateGoalCompleted(pdfUri, 0)
+                            sessionStartTime = System.currentTimeMillis()
+                            sessionTimeSpent = 0
+                            totalTime = 0
                             timeGoal = timeGoalViewModel.getTimeGoal(pdfUri)
-                            Log.d("running", "$timeGoal")
                         }
                     }
 
