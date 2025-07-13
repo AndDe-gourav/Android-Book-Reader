@@ -32,6 +32,7 @@ fun PdfBottomBar(
     isTimerVisible: Boolean,
     isHorizontalLocked: Boolean,
     modifier: Modifier = Modifier,
+    isTimerEnabled: Boolean,
     onThemeClicked: () -> Unit = {},
     onLockClicked: () -> Unit = {},
     onTimerClicked: () -> Unit = {},
@@ -84,6 +85,7 @@ fun PdfBottomBar(
                  colors = IconButtonDefaults.iconButtonColors(
                      if (isTimerVisible) MaterialTheme.colorScheme.surfaceContainerHigh else colorResource(id = R.color.Book)
                  ),
+                 enabled = isTimerEnabled,
                  onClick = { onTimerClicked() }
              ) {
                  Icon(
@@ -92,7 +94,7 @@ fun PdfBottomBar(
                      modifier = Modifier
                          .padding(3.dp)
                          .size(25.dp),
-                     tint = Color.Black
+                     tint = if (isTimerEnabled)Color.Black else Color.Gray
                  )
              }
          }

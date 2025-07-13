@@ -154,15 +154,14 @@ fun TimePicker(
                     }
                     TextButton(
                         shape = RoundedCornerShape(8.dp),
+                        enabled = (hourValue != "" || minuteValue != "") && (hourValue != "00" || minuteValue != "00") && (hourValue != "0" || minuteValue != "0") && hourValue != "" && minuteValue != "" ,
                         onClick = {
-                            if (hourValue != "" || minuteValue != "") {
-                                timeGoalViewModel.updateBookTimeGoal(
-                                    bookDataViewModel.selectedBook.value?.uri!!,
-                                    (hourValue.toInt() * 60 + minuteValue.toInt())
-                                )
-                                onTimeGoalSet()
-                                onDismissRequest()
-                            }
+                            timeGoalViewModel.updateBookTimeGoal(
+                                bookDataViewModel.selectedBook.value?.uri!!,
+                                (hourValue.toInt() * 60 + minuteValue.toInt())
+                            )
+                            onTimeGoalSet()
+                            onDismissRequest()
                         }
                     ) {
                         Text(

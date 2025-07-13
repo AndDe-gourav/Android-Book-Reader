@@ -1,6 +1,7 @@
 package com.example.epubreader
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -17,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,8 +27,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -59,6 +66,13 @@ fun AboutDoucument(
     val listOfCollections by bookDataViewModel.listOfCollections.collectAsState()
     val time = selectedBook?.timestamp?.let { bookDataViewModel.convertMillisToDateTime(it)}
     val fileSize = selectedBook?.uri?.let { bookDataViewModel.getFileSize(context= context, it.toUri())}
+    var timeGoalAvailable by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (selectedBook?.uri?.let { timeGoalViewModel.getTimeGoal(it)} !=0){
+            timeGoalAvailable = true
+        }
+    }
 
     val encodedUri = Uri.encode(selectedBook?.uri)
 
@@ -195,6 +209,26 @@ fun AboutDoucument(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.inverseSurface,
                         )
+                        Spacer(modifier = Modifier.padding(top = 16.dp))
+                        Button(
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ),
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                            enabled = timeGoalAvailable,
+                            onClick = {
+                                timeGoalViewModel.deleteBookFromTimeGoal(selectedBook?.uri!!)
+                                Toast.makeText(context, "Today's Time Goal Removed", Toast.LENGTH_SHORT).show()
+                                timeGoalAvailable = false
+                            }
+                        ) {
+                            Text(
+                                text = "Remove Time Goal",
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (timeGoalAvailable)MaterialTheme.colorScheme.inverseSurface else MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.5f),
+                            )
+                        }
                     }
                 }
             }

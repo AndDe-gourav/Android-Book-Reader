@@ -40,7 +40,7 @@ class TimeGoalViewModel(
     }
 
     suspend fun getTimeGoal(bookUri: String):Int?{
-        return repository.getTimeGoal(bookUri)
+        return repository.getTimeGoal(bookUri, LocalDate.now().toString())
     }
     suspend fun getTotalTime(bookUri: String):Long?{
         return repository.getTotalTime(bookUri)
@@ -52,7 +52,8 @@ class TimeGoalViewModel(
 
     fun deleteBookFromTimeGoal(bookUri: String) {
         viewModelScope.launch {
-            val book = repository.getBookByUri(bookUri).firstOrNull()!!
+            val book = repository.getBookByUri(bookUri).firstOrNull()
+            if (book != null)
             repository.deleteBook(book)
         }
     }
@@ -80,7 +81,7 @@ class TimeGoalViewModel(
                 uri = uri.toString(),
                 date = LocalDate.now().toString(),
                 totalTime = 0,
-                timeGoal = 0,
+                timeGoal = repository.getTimeGoal(bookUri = uri.toString(), date = LocalDate.now().minusDays(1).toString())?:0,
                 goalCompleted = 0,
             )
             repository.insertBook(timeBook)

@@ -9,31 +9,34 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TimeGoalDao {
 
-    @Query("SELECT * FROM TimeGoal WHERE uri = :bookUri")
-    suspend fun getBookGoal(bookUri: String): TimeGoal?
+    @Query("SELECT * FROM TimeGoal WHERE uri = :bookUri AND date = :date")
+    suspend fun getBookGoal(bookUri: String, date: String): TimeGoal?
 
-    @Query("SELECT totalTime FROM TimeGoal WHERE uri = :bookUri")
-    suspend fun getTotalTime(bookUri: String):Long?
+    @Query("SELECT totalTime FROM TimeGoal WHERE uri = :bookUri AND date = :date")
+    suspend fun getTotalTime(bookUri: String, date: String):Long?
 
-    @Query("SELECT goalCompleted FROM TimeGoal WHERE uri = :bookUri")
-    suspend fun getGoalCompleted(bookUri: String):Int?
+    @Query("SELECT goalCompleted FROM TimeGoal WHERE uri = :bookUri AND date = :date")
+    suspend fun getGoalCompleted(bookUri: String, date: String):Int?
 
-    @Query("SELECT * FROM TimeGoal WHERE timeGoal > 0")
-    fun getTimeGoalBooks(): Flow<List<TimeGoal>>
+    @Query("SELECT * FROM TimeGoal WHERE timeGoal > 0 AND date = :date ")
+    fun getTimeGoalBooks(date: String): Flow<List<TimeGoal>>
     @Insert
     suspend fun insertBook(book: TimeGoal):Long?
 
-    @Query("UPDATE TimeGoal SET timeGoal = :time WHERE uri = :bookUri")
-    suspend fun updateBookTimeGoal(bookUri: String, time: Int)
+    @Query("UPDATE TimeGoal SET timeGoal = :time WHERE uri = :bookUri AND date = :date")
+    suspend fun updateBookTimeGoal(bookUri: String, time: Int, date: String)
 
-    @Query("SELECT * FROM TimeGoal WHERE uri = :bookUri")
-    fun getBookByUri(bookUri: String): Flow<TimeGoal?>
+    @Query("SELECT * FROM TimeGoal WHERE uri = :bookUri AND date = :date")
+    fun getBookByUri(bookUri: String, date: String): Flow<TimeGoal?>
 
-    @Query("UPDATE TimeGoal SET totalTime = :totalTime WHERE uri = :bookUri")
-    suspend fun updateTotalTime(bookUri: String, totalTime: Long)
+    @Query("SELECT * FROM TimeGoal WHERE uri = :uri AND date = :date")
+    fun getBookByUriAndDate(uri: String, date: String): Flow<TimeGoal?>
 
-    @Query("UPDATE TimeGoal SET goalCompleted = :goalCompleted WHERE uri = :bookUri")
-    suspend fun updateGoalCompleted(bookUri: String, goalCompleted: Int)
+    @Query("UPDATE TimeGoal SET totalTime = :totalTime WHERE uri = :bookUri AND date = :date")
+    suspend fun updateTotalTime(bookUri: String, totalTime: Long, date: String)
+
+    @Query("UPDATE TimeGoal SET goalCompleted = :goalCompleted WHERE uri = :bookUri AND date = :date")
+    suspend fun updateGoalCompleted(bookUri: String, goalCompleted: Int, date: String)
 
     @Delete
     suspend fun deleteBook(book: TimeGoal)

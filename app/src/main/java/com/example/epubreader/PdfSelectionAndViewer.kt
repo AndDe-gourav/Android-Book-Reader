@@ -223,9 +223,12 @@ fun PDFViewerScreen(
     var sessionTimeSpent by remember { mutableStateOf( 0L) }
     var timeGoalAvailable by remember { mutableStateOf(false) }
     var totalTime: Long? by remember { mutableStateOf(0L) }
+    var isTimerEnabled by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        var timeGoalCompleted = timeGoalViewModel.getGoalCompleted(pdfUri!!)
+        timeGoalViewModel.addTimeGoalBook(pdfUri?.toUri()!!)
+        Log.d("insert", "insert")
+        var timeGoalCompleted = timeGoalViewModel.getGoalCompleted(pdfUri)
         while (true) {
             val now = System.currentTimeMillis()
             sessionTimeSpent = now - sessionStartTime
@@ -242,11 +245,13 @@ fun PDFViewerScreen(
     }
     LaunchedEffect(Unit) {
         if (pdfUri != null) {
+            delay(1000)
             if (timeGoalViewModel.getTimeGoal(pdfUri) != 0) {
                 timeGoalAvailable = true
             }
-            totalTime = timeGoalViewModel.getTotalTime(pdfUri)
             bookDataViewModel.fetchLastPage(pdfUri)
+            totalTime = timeGoalViewModel.getTotalTime(pdfUri)
+            isTimerEnabled = true
         }
     }
 
@@ -341,7 +346,6 @@ fun PDFViewerScreen(
                 }
                 showSystemBars(activity!!)
                 lockHorizontalMovement = false
-
             }
         }
         Box(
@@ -450,37 +454,40 @@ fun PDFViewerScreen(
                         .navigationBarsPadding()
                         .padding( bottom = 4.dp)
                 ) {
-                    AnimatedVisibility(
-                        visible = isColorPaletteVisible,
-                    ) {
-                        val colorToThemeMap = mapOf(
-                            Color.Black to PDFView.Theme.NIGHT,
-                            Color.White to PDFView.Theme.LIGHT,
-                            colorResource(id = R.color.Sepia) to PDFView.Theme.SEPIA,
-                            colorResource(id = R.color.Dark_Sepia) to PDFView.Theme.DARK_SEPIA
-                        )
-                        ThemeSelector(
-                            colorsList = listOf(
-                                Color.White,
-                                colorResource(id = R.color.Sepia),
-                                colorResource(id = R.color.Dark_Sepia),
-                                Color.Black
-                            ),
-                            onColorChange = { color ->
-                                colorTheme = colorToThemeMap[color]
-                            },
-                        )
-                    }
-                    AnimatedVisibility(
-                        visible = isTimerVisible,
-                    ) {
-                        TimeGoalSurface(
-                            currentTimeInSec = (totalTime?.plus(sessionTimeSpent)?.div(1000)?.toInt()!!),
-                            timeGoal = timeGoal!!,
-                            onEditClicked = {
-                                isTimerVisible = false
-                                onTimeGoalClicked() }
-                        )
+                    if(isSystemUIVisible) {
+                        AnimatedVisibility(
+                            visible = isColorPaletteVisible,
+                        ) {
+                            val colorToThemeMap = mapOf(
+                                Color.Black to PDFView.Theme.NIGHT,
+                                Color.White to PDFView.Theme.LIGHT,
+                                colorResource(id = R.color.Sepia) to PDFView.Theme.SEPIA,
+                                colorResource(id = R.color.Dark_Sepia) to PDFView.Theme.DARK_SEPIA
+                            )
+                            ThemeSelector(
+                                colorsList = listOf(
+                                    Color.White,
+                                    colorResource(id = R.color.Sepia),
+                                    colorResource(id = R.color.Dark_Sepia),
+                                    Color.Black
+                                ),
+                                onColorChange = { color ->
+                                    colorTheme = colorToThemeMap[color]
+                                },
+                            )
+                        }
+                        AnimatedVisibility(
+                            visible = isTimerVisible,
+                        ) {
+                            TimeGoalSurface(
+                                currentTimeInSec = (totalTime?.plus(sessionTimeSpent)?.div(1000)?.toInt()?:0),
+                                timeGoal = timeGoal!!,
+                                onEditClicked = {
+                                    isTimerVisible = false
+                                    onTimeGoalClicked()
+                                },
+                            )
+                        }
                     }
                     Spacer(
                         modifier = Modifier.size(20.dp)
@@ -503,6 +510,8 @@ fun PDFViewerScreen(
                                isColorPaletteVisible = !isColorPaletteVisible
                            },
                            onLockClicked = {
+                               isTimerVisible = false
+                               isColorPaletteVisible = false
                                if (!lockHorizontalMovement) {
                                    Toast.makeText(
                                        context,
@@ -520,7 +529,8 @@ fun PDFViewerScreen(
                                if (!timeGoalAvailable){
                                    onTimeGoalClicked()
                                }
-                           }
+                           },
+                           isTimerEnabled = isTimerEnabled,
                        )
                     }
                 }

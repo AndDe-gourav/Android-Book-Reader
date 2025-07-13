@@ -44,7 +44,7 @@ fun TimeGoalSurface(
 
 
     val timeGoalHours = timeGoal/60
-    val timeGoalMinutes = timeGoal
+    val timeGoalMinutes = timeGoal%60
 
     Surface(
         color = MaterialTheme.colorScheme.onBackground,
