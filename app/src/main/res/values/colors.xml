@@ -29,6 +29,6 @@
     <color name="CompleteBar">#85D889</color>
     <color name="LightRed">#E79E9E</color>
     <color name="LightGreen">#85D889</color>
-
+    <color name="TodayColor">#C8AB91</color>
 
 </resources>

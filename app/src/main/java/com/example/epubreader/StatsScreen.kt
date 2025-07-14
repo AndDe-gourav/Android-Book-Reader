@@ -1,5 +1,6 @@
 package com.example.epubreader
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,7 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import java.time.LocalDate
 
 @Composable
 fun StatsScreen(
@@ -47,6 +49,7 @@ fun StatsScreen(
 ) {
 
     val timeGoalsBooks by timeGoalViewModel.allTimeGoalBooks.collectAsState()
+    var expandedItemIndex by remember { mutableStateOf<Int?>(null) }
 
     Box(
         modifier = modifier
@@ -64,9 +67,9 @@ fun StatsScreen(
             modifier = Modifier.zIndex(0f)
         ) {
             item { Spacer(modifier = Modifier.padding(40.dp))  }
-            items(
+            itemsIndexed(
                 items = timeGoalsBooks,
-            ){ book ->
+            ){ index,book ->
 
                 val totalTimeHours = book.totalTime/3600000
                 val totalTimeMinutes = (book.totalTime/60000)%60
@@ -88,105 +91,153 @@ fun StatsScreen(
                     color = MaterialTheme.colorScheme.onBackground,
                     shape = RoundedCornerShape(8.dp),
                     shadowElevation = 2.dp,
+                    onClick = { expandedItemIndex = if (expandedItemIndex == index) null else index },
                     modifier = Modifier
                         .padding(6.dp)
                         .fillMaxWidth()
                 ) {
-                    Row(
-                        modifier = Modifier.padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 2.dp)
-                    ) {
-                        Surface(
-                            color = Color.White,
-                            shape = MaterialTheme.shapes.small,
-                            modifier = Modifier
-                                .height(100.dp)
-                                .fillMaxWidth(0.2f)
-                                .shadow(
-                                    elevation = 4.dp,
-                                    shape = MaterialTheme.shapes.small,
-                                    spotColor = colorResource(R.color.shadow)
-                                )
+                    Column {
+                        Row(
+                            modifier = Modifier.padding(
+                                start = 12.dp,
+                                top = 12.dp,
+                                bottom = 12.dp,
+                                end = 2.dp
+                            )
+                        ) {
+                            Surface(
+                                color = Color.White,
+                                shape = MaterialTheme.shapes.small,
+                                modifier = Modifier
+                                    .height(100.dp)
+                                    .fillMaxWidth(0.2f)
+                                    .shadow(
+                                        elevation = 4.dp,
+                                        shape = MaterialTheme.shapes.small,
+                                        spotColor = colorResource(R.color.shadow)
+                                    )
 
-                        ) {
-                            Image(
-                                painter = rememberAsyncImagePainter(
-                                    model = bookCover
-                                ),
-                                contentDescription = "Book_cover_1",
-                                contentScale = ContentScale.FillBounds,
-                            )
-                        }
-                        Column(
-                            modifier = Modifier
-                                .padding(horizontal = 12.dp)
-                                .fillMaxWidth()
-                        ) {
-                            Text(
-                                text = bookTitle,
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
-                                color = MaterialTheme.colorScheme.inverseSurface,
-                                textAlign = TextAlign.Start,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                            ) {
+                                Image(
+                                    painter = rememberAsyncImagePainter(
+                                        model = bookCover
+                                    ),
+                                    contentDescription = "Book_cover_1",
+                                    contentScale = ContentScale.FillBounds,
+                                )
+                            }
+                            Column(
                                 modifier = Modifier
+                                    .padding(horizontal = 12.dp)
                                     .fillMaxWidth()
-                            )
-                            Text(
-                                text = bookAuthor,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                textAlign = TextAlign.End,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                            )
-                            Spacer(
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                            Column {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
+                            ) {
+                                Text(
+                                    text = bookTitle,
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 14.sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.inverseSurface,
+                                    textAlign = TextAlign.Start,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                )
+                                Text(
+                                    text = bookAuthor,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    textAlign = TextAlign.End,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                )
+                                Spacer(
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                                Column {
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text(
-                                            text = if(book.goalCompleted == 0){ if(totalTimeHours != 0L){ totalTimeHours.toString()  +"h " + totalTimeMinutes.toString() + "m "}else { totalTimeMinutes.toString() + "m "}}else{ "Goal Complete"},
-                                            style = MaterialTheme.typography.bodyMedium.copy(
-                                                fontWeight = FontWeight.SemiBold
-                                            ),
-                                            color = MaterialTheme.colorScheme.inverseSurface,
-                                        )
-                                        Text(
-                                            text = if (book.goalCompleted == 0){"Done"}else{ ""},
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.inverseSurface,
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = if (book.goalCompleted == 0) {
+                                                    if (totalTimeHours != 0L) {
+                                                        totalTimeHours.toString() + "h " + totalTimeMinutes.toString() + "m "
+                                                    } else {
+                                                        totalTimeMinutes.toString() + "m "
+                                                    }
+                                                } else {
+                                                    "Goal Complete"
+                                                },
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontWeight = FontWeight.SemiBold
+                                                ),
+                                                color = MaterialTheme.colorScheme.inverseSurface,
+                                            )
+                                            Text(
+                                                text = if (book.goalCompleted == 0) {
+                                                    "Done"
+                                                } else {
+                                                    ""
+                                                },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.inverseSurface,
+                                            )
+                                        }
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = if (timeGoalHours != 0) {
+                                                    timeGoalHours.toString() + "h " + timeGoalMinutes.toString() + "m "
+                                                } else {
+                                                    timeGoalMinutes.toString() + "m "
+                                                },
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontWeight = FontWeight.SemiBold
+                                                ),
+                                                color = MaterialTheme.colorScheme.inverseSurface,
+                                                textAlign = TextAlign.End,
+                                            )
+                                            Text(
+                                                text = "Time Goal",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.inverseSurface,
+                                                textAlign = TextAlign.End,
+                                            )
+                                        }
                                     }
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = if (timeGoalHours != 0){ timeGoalHours.toString()  +"h " + timeGoalMinutes.toString() + "m "}else { timeGoalMinutes.toString() + "m " },
-                                            style = MaterialTheme.typography.bodyMedium.copy(
-                                                fontWeight = FontWeight.SemiBold
-                                            ),
-                                            color = MaterialTheme.colorScheme.inverseSurface,
-                                            textAlign = TextAlign.End,
-                                        )
-                                        Text(
-                                            text = "Time Goal",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.inverseSurface,
-                                            textAlign = TextAlign.End,
-                                        )
-                                    }
+                                    CustumSlideBar(
+                                        value = (((book.totalTime / 60000) / (book.timeGoal).toFloat())),
+                                        color = if (book.goalCompleted == 1) colorResource(id = R.color.CompleteBar) else MaterialTheme.colorScheme.outline
+                                    )
                                 }
-                                CustumSlideBar(
-                                    value = (((book.totalTime/60000)/(book.timeGoal).toFloat())),
-                                    color = if (book.goalCompleted == 1) colorResource(id= R.color.CompleteBar)else MaterialTheme.colorScheme.outline
+                            }
+                        }
+                        AnimatedVisibility(
+                            visible = expandedItemIndex == index,
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "History",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.SemiBold
+                                    ),
+                                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                )
+                                CalendarView(
+                                    bookURi = book.uri,
+                                    timeGoalViewModel = timeGoalViewModel,
+                                    year = LocalDate.now().year,
+                                    month = 7
                                 )
                             }
                         }

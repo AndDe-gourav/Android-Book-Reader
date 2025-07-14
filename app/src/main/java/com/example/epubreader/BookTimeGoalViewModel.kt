@@ -11,6 +11,7 @@ import com.example.epubreader.model.timeStorage.TimeGoalRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -40,7 +41,7 @@ class TimeGoalViewModel(
     }
 
     suspend fun getTimeGoal(bookUri: String):Int?{
-        return repository.getTimeGoal(bookUri, LocalDate.now().toString())
+        return repository.getTimeGoal(bookUri, LocalDate.now().dayOfMonth)
     }
     suspend fun getTotalTime(bookUri: String):Long?{
         return repository.getTotalTime(bookUri)
@@ -74,14 +75,20 @@ class TimeGoalViewModel(
         }
     }
 
+    suspend fun allTimeGoalBooksToMap(bookUri: String): Map<Int, Int> {
+        return repository.getAllTimeGoalBooks(bookUri).first().associate { it.date to it.goalCompleted }
+    }
+
+
+
     fun addTimeGoalBook(uri: Uri){
         viewModelScope.launch {
 
             val timeBook = TimeGoal(
                 uri = uri.toString(),
-                date = LocalDate.now().toString(),
+                date = LocalDate.now().dayOfMonth,
                 totalTime = 0,
-                timeGoal = repository.getTimeGoal(bookUri = uri.toString(), date = LocalDate.now().minusDays(1).toString())?:0,
+                timeGoal = repository.getTimeGoal(bookUri = uri.toString(), date = LocalDate.now().dayOfMonth.minus(1))?:0,
                 goalCompleted = 0,
             )
             repository.insertBook(timeBook)

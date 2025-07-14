@@ -8,7 +8,7 @@ data class TimeGoal(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val uri: String,
-    val date: String,
+    val date: Int,
     val totalTime: Long,
     val timeGoal: Int,
     val goalCompleted: Int,
