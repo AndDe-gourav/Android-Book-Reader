@@ -2,6 +2,8 @@ package com.example.epubreader
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -91,10 +93,16 @@ fun StatsScreen(
                     color = MaterialTheme.colorScheme.onBackground,
                     shape = RoundedCornerShape(8.dp),
                     shadowElevation = 2.dp,
-                    onClick = { expandedItemIndex = if (expandedItemIndex == index) null else index },
                     modifier = Modifier
                         .padding(6.dp)
                         .fillMaxWidth()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() },
+                            onClick = {
+                                expandedItemIndex = if (expandedItemIndex == index) null else index
+                            },
+                        )
                 ) {
                     Column {
                         Row(
