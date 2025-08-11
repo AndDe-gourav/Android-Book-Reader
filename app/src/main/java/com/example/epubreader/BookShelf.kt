@@ -50,7 +50,6 @@ fun BookShelf(
     currentBookShelf: String,
     modifier: Modifier = Modifier
 ) {
-
     val groupedBooks = remember(currentBookShelf, recentBooks, favouritesBooks, toReadBooks, listOfCollections, completedBooks) {
         when (currentBookShelf) {
             "Recent" -> recentBooks.chunked(3)
@@ -64,6 +63,8 @@ fun BookShelf(
         }
     }
 
+
+
     Column(
         modifier = modifier
             .padding(vertical = dimensionResource(id = R.dimen.padding_large))
@@ -76,13 +77,17 @@ fun BookShelf(
             if ( currentBookShelf != "Collection") {
                 if (groupedBooks.isEmpty()){
                     item {
-                        Text(
-                            text = "This Book Shelf is Empty",
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.align(Alignment.CenterHorizontally).padding(75.dp),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.Black
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "This Book Shelf is Empty",
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = Color.Black
+                            )
+                        }
                     }
                 }
                 items(
@@ -96,28 +101,26 @@ fun BookShelf(
                             ) {
                                 rowBooks.forEach { book ->
                                         if (rowBooks.indexOf(book) != 2 || groupedBooks.indexOf(rowBooks) == 0 || currentBookShelf != "Recent") {
-                                            Surface(
-                                                color = Color.White,
-                                                tonalElevation = 8.dp,
-                                                shadowElevation = 16.dp,
-                                                modifier = Modifier
-                                                    .height(100.dp)
-                                                    .width(65.dp)
-                                                    .clickable(
-                                                        onClick = {
+                                           Surface(
+                                                    color = Color.White,
+                                                    tonalElevation = 8.dp,
+                                                    shadowElevation = 16.dp,
+                                                    modifier = Modifier
+                                                        .height(100.dp)
+                                                        .width(65.dp)
+                                                        .clickable{
                                                             bookDataViewModel.selectBook(book.uri)
                                                         }
+                                                ) {
+                                                    Image(
+                                                        painter = rememberAsyncImagePainter(
+                                                            model = book.bookCover
+                                                        ),
+                                                        contentDescription = "Shelf Book",
+                                                        contentScale = ContentScale.FillBounds,
+                                                        modifier = Modifier.fillMaxSize()
                                                     )
-                                            ) {
-                                                Image(
-                                                    painter = rememberAsyncImagePainter(
-                                                        model = book.bookCover
-                                                    ),
-                                                    contentDescription = "Shelf Book",
-                                                    contentScale = ContentScale.FillBounds,
-                                                    modifier = Modifier.fillMaxSize()
-                                                )
-                                            }
+                                                }
                                         }
                                     if (rowBooks.indexOf(book) == 2 && groupedBooks.indexOf(rowBooks) == 1 && currentBookShelf == "Recent") {
                                         Surface(

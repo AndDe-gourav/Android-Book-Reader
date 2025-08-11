@@ -67,7 +67,7 @@ fun CalendarView(
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(7),
-                    modifier = Modifier.height(200.dp)
+                    modifier = Modifier.height(220.dp)
             ) {
                 items(listOfDays) {
                     Box(modifier = Modifier.fillMaxWidth()) {

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -54,7 +55,7 @@ fun StatsScreen(
     var expandedItemIndex by remember { mutableStateOf<Int?>(null) }
 
     Box(
-        modifier = modifier
+        modifier = modifier.fillMaxSize()
     ) {
         GerenalTopBar(
             titleText = "Stats",
@@ -63,12 +64,30 @@ fun StatsScreen(
             },
             modifier = Modifier.zIndex(1f)
         )
+
         LazyColumn(
             contentPadding = PaddingValues(horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.zIndex(0f)
+            modifier = Modifier.zIndex(0f).fillMaxSize()
         ) {
+
             item { Spacer(modifier = Modifier.padding(40.dp))  }
+            item {
+                if (timeGoalsBooks.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Stats not available",
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.Black
+                        )
+                    }
+                }
+            }
+
             itemsIndexed(
                 items = timeGoalsBooks,
             ){ index,book ->
@@ -245,7 +264,7 @@ fun StatsScreen(
                                     bookURi = book.uri,
                                     timeGoalViewModel = timeGoalViewModel,
                                     year = LocalDate.now().year,
-                                    month = 7
+                                    month = LocalDate.now().monthValue
                                 )
                             }
                         }

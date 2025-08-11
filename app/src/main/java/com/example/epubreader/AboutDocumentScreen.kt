@@ -127,10 +127,12 @@ fun AboutDoucument(
                                     spotColor = colorResource(R.color.shadow)
                                 )
                                 .clickable {
-                                    selectedBook?.let {
-                                        bookDataViewModel.updateBookTime(it)
+                                    if (selectedBook?.uri != null) {
+                                        selectedBook?.let {
+                                            bookDataViewModel.updateBookTime(it)
+                                        }
+                                        navController.navigate("BookScreen/${encodedUri}")
                                     }
-                                    navController.navigate("BookScreen/${encodedUri}")
                                 }
                         ) {
                             Image(
@@ -218,9 +220,15 @@ fun AboutDoucument(
                             modifier = Modifier.align(Alignment.CenterHorizontally),
                             enabled = timeGoalAvailable,
                             onClick = {
-                                timeGoalViewModel.deleteBookFromTimeGoal(selectedBook?.uri!!)
-                                Toast.makeText(context, "Today's Time Goal Removed", Toast.LENGTH_SHORT).show()
-                                timeGoalAvailable = false
+                                if (selectedBook?.uri != null) {
+                                    timeGoalViewModel.deleteBookFromTimeGoal(selectedBook?.uri!!)
+                                    Toast.makeText(
+                                        context,
+                                        "Today's Time Goal Removed",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    timeGoalAvailable = false
+                                }
                             }
                         ) {
                             Text(

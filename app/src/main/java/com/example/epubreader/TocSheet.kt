@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -78,15 +79,22 @@ fun TocSheet(
                     color = Color.Black,
                     modifier = Modifier.padding(16.dp)
                 )
+                if(toc.isEmpty()){
+                    Text(
+                            text = "Table of content not available",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.align(Alignment.CenterHorizontally).padding(75.dp),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.Black
+                        )
+                }
                 LazyColumn(
                     contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 6.dp , bottom = 40.dp),
                     verticalArrangement = Arrangement.SpaceEvenly,
                 ) {
                     toc.forEach { (heading, subheadings) ->
                         var highlited = false
-                        item(
-                            key = heading
-                        ) {
+                        item{
                             Box(
                                 modifier = Modifier
                                     .padding(2.dp)
@@ -162,7 +170,6 @@ fun TocSheet(
                         }
                         items(
                             items = subheadings,
-                            key = { subheading -> subheading }
                         ) { subheadings ->
                             AnimatedVisibility(heading == expanded) {
                                 Box(

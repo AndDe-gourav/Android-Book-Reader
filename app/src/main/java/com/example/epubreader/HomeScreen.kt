@@ -166,7 +166,7 @@ fun HomeScreen(
                                             particularCollection = particularCollection,
                                             completedBooks = completedBooks,
                                             listOfCollections = listOfCollections,
-                                            currentBookShelf = currentBookShelf
+                                            currentBookShelf = currentBookShelf,
                                         )
                                     }
                                 }

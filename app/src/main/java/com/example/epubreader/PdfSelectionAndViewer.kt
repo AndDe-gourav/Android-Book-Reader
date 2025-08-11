@@ -404,8 +404,9 @@ fun PDFViewerScreen(
                                     val meta = this@apply.documentMeta
                                     bookDataViewModel.updateToc( this@apply.tableOfContents )
                                     if (meta != null) {
-                                        val title = meta.title ?: ""
-                                        val author = meta.author ?: ""
+                                        val title = meta.title.orEmpty()
+                                        val author = meta.author.orEmpty()
+
                                         val bookFromUri = bookDataViewModel.getBookFromUri(pdfUri)
 
                                         if (bookFromUri?.title == "Untitled" && title.isNotBlank()) {
