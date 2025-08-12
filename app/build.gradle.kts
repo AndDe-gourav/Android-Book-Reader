@@ -46,6 +46,7 @@ dependencies {
     implementation ("androidx.core:core-splashscreen:1.0.1")
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation(libs.androidx.material3.window.size.class1.android)
+    implementation("com.google.accompanist:accompanist-permissions:0.37.3")
     implementation(libs.androidx.runtime.livedata)
     implementation(libs.firebase.ai)
     ksp ("androidx.room:room-compiler:2.7.0")

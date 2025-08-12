@@ -185,6 +185,7 @@ fun App(
                 ) {
                     HomeScreen(
                         bookDataViewModel = bookDataViewModel,
+                        context = context,
                         timeGoalViewModel = timeGoalViewModel,
                         navController = navController,
                         toCloseDrawer = { scope.launch { drawerState.close() } },
