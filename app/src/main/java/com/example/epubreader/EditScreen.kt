@@ -71,7 +71,7 @@ fun EditScreen(
                 )
             }
             if (openTitleDialog) {
-                titleTextFieldValue?.let {
+                titleTextFieldValue?.let { it ->
                     OnCellClicked(
                         cellName = "Title",
                         value = it,
@@ -97,7 +97,7 @@ fun EditScreen(
                 )
             }
             if (openAuthorDialog) {
-                authorTextFieldValue?.let {
+                authorTextFieldValue?.let { it ->
                     OnCellClicked(
                         cellName = "Author",
                         value = it,

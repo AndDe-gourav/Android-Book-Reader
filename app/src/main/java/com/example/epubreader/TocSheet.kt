@@ -93,7 +93,7 @@ fun TocSheet(
                     verticalArrangement = Arrangement.SpaceEvenly,
                 ) {
                     toc.forEach { (heading, subheadings) ->
-                        var highlited = false
+                        var highlighted = false
                         item{
                             Box(
                                 modifier = Modifier
@@ -102,7 +102,7 @@ fun TocSheet(
                                         color = if (currentPage >= tocPage[heading]!! && currentPage < (tocPage[nextHeadingMap[heading]]
                                                 ?: totalPages)
                                         ) {
-                                            highlited = true
+                                            highlighted = true
                                             MaterialTheme.colorScheme.surfaceContainerHigh
                                         } else {
                                             MaterialTheme.colorScheme.onBackground
@@ -138,9 +138,8 @@ fun TocSheet(
                                         if (subheadings.isNotEmpty())
                                             IconButton(
                                                 onClick = {
-                                                    if (expanded == heading) expanded =
-                                                        "" else {
-                                                        expanded = heading
+                                                    expanded = if (expanded == heading) "" else {
+                                                        heading
                                                     }
                                                 }
                                             ) {
@@ -180,7 +179,7 @@ fun TocSheet(
                                         modifier = Modifier
                                             .padding(2.dp)
                                             .background(
-                                                color = if (highlited == true) {
+                                                color = if (highlighted) {
                                                     if (currentPage >= childPage[subheadings]!! && currentPage < (childPage[nextSubHeadingMap[subheadings]]
                                                             ?: totalPages)
                                                     ) {

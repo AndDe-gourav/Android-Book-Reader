@@ -12,8 +12,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.epubreader.model.bookStorage.Book
 import com.example.epubreader.model.bookStorage.BookRepository
-import com.shockwave.pdfium.PdfDocument
 import kotlinx.coroutines.Job
+import com.shockwave.pdfium.PdfDocument
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

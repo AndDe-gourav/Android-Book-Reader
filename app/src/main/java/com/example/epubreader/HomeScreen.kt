@@ -1,8 +1,8 @@
 package com.example.epubreader
 
-import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -21,10 +21,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,9 +34,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,8 +56,6 @@ import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import com.example.epubreader.model.bookStorage.Book
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -67,7 +63,6 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(
-    context: Context,
     bookDataViewModel: BookDataViewModel,
     timeGoalViewModel: TimeGoalViewModel,
     navController: NavController,
@@ -75,22 +70,7 @@ fun HomeScreen(
     toCloseDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val postNotificationPermission = rememberPermissionState(permission = Manifest.permission.POST_NOTIFICATIONS)
-    val notificationHandler = NotificationHandler(context)
 
-    LaunchedEffect(key1 = true) {
-        if (!postNotificationPermission.status.isGranted) {
-            postNotificationPermission.launchPermissionRequest()
-        }
-    }
-
-    Column(
-        modifier = Modifier.systemBarsPadding().zIndex(1f)
-    ) {
-        Button(onClick = {
-            notificationHandler.showNotification()
-        }) { Text(text = "Simple notification") }
-    }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -111,7 +91,7 @@ fun HomeScreen(
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
 
-    var backPressCount by remember { mutableStateOf(0) }
+    var backPressCount by remember { mutableIntStateOf(0) }
 
     BackHandler {
         backPressCount++
@@ -454,4 +434,6 @@ fun BottomBar(
         }
     }
 }
+
+
 

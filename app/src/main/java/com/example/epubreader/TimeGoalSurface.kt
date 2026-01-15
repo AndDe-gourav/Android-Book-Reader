@@ -29,17 +29,15 @@ fun TimeGoalSurface(
     val currentTimeHours = currentTimeInSec/3600
     val currentTimeMinutes = (currentTimeInSec%3600)/60
     val currentTimeSeconds = currentTimeInSec%60
-    var currentTimeSecondString = ""
-    var currentTimeMinutesString = ""
-    if (currentTimeSeconds < 10 ){
-        currentTimeSecondString = "0$currentTimeSeconds"
+    val currentTimeSecondString: String = if (currentTimeSeconds < 10 ){
+        "0$currentTimeSeconds"
     }else{
-        currentTimeSecondString = currentTimeSeconds.toString()
+        currentTimeSeconds.toString()
     }
-    if (currentTimeMinutes < 10 ){
-        currentTimeMinutesString = "0$currentTimeMinutes"
+    val currentTimeMinutesString: String = if (currentTimeMinutes < 10 ){
+        "0$currentTimeMinutes"
     }else{
-        currentTimeMinutesString = currentTimeMinutes.toString()
+        currentTimeMinutes.toString()
     }
 
 

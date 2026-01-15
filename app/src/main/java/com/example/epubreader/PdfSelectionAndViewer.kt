@@ -1,6 +1,7 @@
 package com.example.epubreader
 
 import android.app.Activity
+import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.res.Configuration
@@ -36,6 +37,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -47,9 +49,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,9 +73,6 @@ import androidx.navigation.NavController
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import com.github.barteksc.pdfviewer.util.FitPolicy
-import com.google.firebase.Firebase
-import com.google.firebase.ai.ai
-import com.google.firebase.ai.type.GenerativeBackend
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -212,18 +213,17 @@ fun getActivity(): Activity? {
 fun PDFViewerScreen(
     bookDataViewModel: BookDataViewModel,
     timeGoalViewModel: TimeGoalViewModel,
-    currentScreen: String,
     pdfUri: String?,
     navController: NavController,
     showTimeGoal: Boolean,
     onTimeGoalClicked: () -> Unit,
 ) {
-    var timeGoal: Int? by remember { mutableStateOf(0) }
-    var sessionStartTime by remember { mutableStateOf(System.currentTimeMillis()) }
-    var sessionTimeSpent by remember { mutableStateOf( 0L) }
-    var timeGoalAvailable by remember { mutableStateOf(false) }
-    var totalTime: Long? by remember { mutableStateOf(0L) }
-    var isTimerEnabled by remember { mutableStateOf(false) }
+    var timeGoal: Int? by rememberSaveable { mutableStateOf(0) }
+    var sessionStartTime by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
+    var sessionTimeSpent by rememberSaveable { mutableLongStateOf( 0L) }
+    var timeGoalAvailable by rememberSaveable { mutableStateOf(false) }
+    var totalTime: Long? by rememberSaveable { mutableStateOf(0L) }
+    var isTimerEnabled by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         timeGoalViewModel.addTimeGoalBook(pdfUri?.toUri()!!)
@@ -256,7 +256,7 @@ fun PDFViewerScreen(
     }
 
 
-    val uri = pdfUri?.toUri()
+    val uri = pdfUri?.toUri()!!
 
     val activity = getActivity()
 
@@ -265,7 +265,7 @@ fun PDFViewerScreen(
 
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    var colorTheme: PDFView.Theme? by remember { mutableStateOf(PDFView.Theme.LIGHT) }
+    var colorTheme: PDFView.Theme? by rememberSaveable { mutableStateOf(PDFView.Theme.LIGHT) }
     var isColorPaletteVisible by remember { mutableStateOf(false) }
     var isTimerVisible by remember { mutableStateOf(false) }
     var lockHorizontalMovement by remember { mutableStateOf(false) }
@@ -276,32 +276,12 @@ fun PDFViewerScreen(
     var isTocSheetVisible by remember { mutableStateOf(false) }
 
     val lastOpenedPageDB by bookDataViewModel.lastPage.collectAsState()
-    var lastOpenedPage by remember { mutableIntStateOf(0) }
+    var lastOpenedPage by rememberSaveable { mutableIntStateOf(0) }
     var jumpToPage by remember { mutableIntStateOf(lastOpenedPageDB) }
 
     var isSystemUIVisible by remember { mutableStateOf(true) }
 
-    val contentResolver = LocalContext.current.contentResolver
 
-    val inputStream = contentResolver.openInputStream(uri!!)
-
-    val model = Firebase.ai(backend = GenerativeBackend.googleAI())
-        .generativeModel("gemini-2.0-flash")
-
-//    LaunchedEffect(Unit) {
-//        inputStream?.use { stream ->
-//            val prompt = content {
-//                inlineData(
-//                    bytes = stream.readBytes(),
-//                    mimeType = "application/pdf"
-//                )
-//                text("can you tell me about the book")
-//            }
-//
-//            val response = model.generateContent(prompt)
-//            Log.d("Result", "${response.text}")
-//        }
-//    }
     BackHandler {
         if (isTocSheetVisible){
             isTocSheetVisible = false
@@ -597,5 +577,41 @@ fun PDFViewerScreen(
 
         }
 
+}
+
+fun openPdf(context: Context, uri: Uri) {
+    val intent = Intent(
+        context,
+        com.artifex.mupdf.viewer.DocumentActivity::class.java
+    ).apply {
+        action = Intent.ACTION_VIEW
+        setDataAndType(uri, "application/pdf")
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
+        addFlags(Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+    }
+
+    context.startActivity(intent)
+}
+
+
+
+
+
+@Composable
+fun PickAndOpenPdf() {
+    val context = LocalContext.current
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { openPdf(context, it) }
+    }
+
+    Button(onClick = {
+        launcher.launch(arrayOf("application/pdf"))
+    }) {
+        Text("Open PDF")
+    }
 }
 

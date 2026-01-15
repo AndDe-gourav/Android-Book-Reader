@@ -34,7 +34,7 @@ fun PdfOptions(
 ) {
     val selectedBook by bookDataViewModel.selectedBook.collectAsState()
     var expanded by remember { mutableStateOf(false) }
-    var context = LocalContext.current
+    val context = LocalContext.current
 
     var openRemoveDialog by remember { mutableStateOf(false) }
 

@@ -27,6 +27,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -41,15 +42,15 @@ android {
     }
 }
 
+
 dependencies {
-    implementation(project(":android-pdf-viewer"))
-    implementation ("androidx.core:core-splashscreen:1.0.1")
     implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation(project(":lib"))
     implementation(libs.androidx.material3.window.size.class1.android)
     implementation("com.google.accompanist:accompanist-permissions:0.37.3")
     implementation(libs.androidx.runtime.livedata)
-    implementation(libs.firebase.ai)
     ksp ("androidx.room:room-compiler:2.7.0")
+    implementation(project(":android-pdf-viewer"))
     implementation("androidx.room:room-ktx:2.7.0")
     implementation ("androidx.room:room-runtime:2.7.0")
     implementation(libs.androidx.lifecycle.viewmodel.compose)

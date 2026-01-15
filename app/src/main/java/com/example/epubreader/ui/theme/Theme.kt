@@ -86,10 +86,7 @@ private val darkScheme = darkColorScheme(
 fun EPUBReaderTheme(
     content: @Composable() () -> Unit
 ) {
-    val colorScheme = when {
-      false -> darkScheme
-      else -> lightScheme
-  }
+    val colorScheme = lightScheme
 
   MaterialTheme(
     colorScheme = colorScheme,

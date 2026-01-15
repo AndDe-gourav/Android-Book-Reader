@@ -16,8 +16,14 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://maven.ghostscript.com") }
+        flatDir {
+            dirs("app/libs")
+        }
     }
 }
 
 rootProject.name = "EPUB Reader"
 include(":app", ":android-pdf-viewer")
+include(":lib")
+

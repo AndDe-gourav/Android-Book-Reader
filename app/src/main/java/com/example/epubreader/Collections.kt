@@ -208,7 +208,7 @@ fun OnInCollectionIconClicked(
                                     checked = !checked!!
                                 }
                             ) {
-                                checked?.let {
+                                checked?.let { it ->
                                     RadioButton(
                                         selected = it,
                                         onClick = {

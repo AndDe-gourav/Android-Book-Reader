@@ -3,7 +3,6 @@ package com.example.epubreader
 import android.app.Application
 import android.graphics.Color
 import android.os.Bundle
-import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -33,8 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -47,7 +44,6 @@ import com.example.epubreader.model.bookStorage.BookRepository
 import com.example.epubreader.model.timeStorage.TimeGoalDatabase
 import com.example.epubreader.model.timeStorage.TimeGoalRepository
 import com.example.epubreader.ui.theme.EPUBReaderTheme
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -55,8 +51,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val splashscreen = installSplashScreen()
-        var keepSplashScreen = true
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
                 Color.TRANSPARENT,
@@ -67,20 +61,6 @@ class MainActivity : ComponentActivity() {
                 Color.TRANSPARENT
             )
         )
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-        )
-
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
-            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
-        )
-        splashscreen.setKeepOnScreenCondition { keepSplashScreen }
-        lifecycleScope.launch {
-            delay(3000)
-            keepSplashScreen = false
-        }
         setContent {
             EPUBReaderTheme {
                 App()
@@ -185,7 +165,6 @@ fun App(
                 ) {
                     HomeScreen(
                         bookDataViewModel = bookDataViewModel,
-                        context = context,
                         timeGoalViewModel = timeGoalViewModel,
                         navController = navController,
                         toCloseDrawer = { scope.launch { drawerState.close() } },
@@ -269,15 +248,7 @@ fun App(
                 ) { backStackEntry ->
 
                     val pdfUri = backStackEntry.arguments?.getString("pdfUri")
-                    PDFViewerScreen(
-                        bookDataViewModel = bookDataViewModel,
-                        timeGoalViewModel = timeGoalViewModel,
-                        currentScreen = currentScreen,
-                        navController = navController,
-                        pdfUri = pdfUri,
-                        showTimeGoal = showTimeGoal,
-                        onTimeGoalClicked = { showTimeGoal = !showTimeGoal},
-                    )
+                    PickAndOpenPdf()
                 }
             }
         }
