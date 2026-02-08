@@ -1,17 +1,18 @@
 plugins {
-    id("com.google.devtools.ksp") version "2.1.10-1.0.29"
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
 }
 
 android {
-    namespace = "com.example.epubreader"
+    namespace = "com.example.bookReader"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.epubreader"
+        applicationId = "com.example.bookReader"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -34,8 +35,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
     buildFeatures {
         compose = true
@@ -49,10 +52,12 @@ dependencies {
     implementation(libs.androidx.material3.window.size.class1.android)
     implementation("com.google.accompanist:accompanist-permissions:0.37.3")
     implementation(libs.androidx.runtime.livedata)
-    ksp ("androidx.room:room-compiler:2.7.0")
+    ksp ("androidx.room:room-compiler:2.8.4")
+    implementation("com.google.dagger:hilt-android:2.59.1")
+    ksp("com.google.dagger:hilt-android-compiler:2.57.1")
     implementation(project(":android-pdf-viewer"))
-    implementation("androidx.room:room-ktx:2.7.0")
-    implementation ("androidx.room:room-runtime:2.7.0")
+    implementation("androidx.room:room-ktx:2.8.4")
+    implementation ("androidx.room:room-runtime:2.8.4")
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

@@ -1,12 +1,12 @@
 <lint-module
     format="1"
-    dir="/home/and-de_gourav/AndroidStudioProjects/EPUBReader/android-pdf-viewer"
+    dir="/home/gourav/StudioProjects/Android-Book-Reader/android-pdf-viewer"
     name=":android-pdf-viewer"
     type="LIBRARY"
     maven="EPUB Reader:android-pdf-viewer:unspecified"
     agpVersion="8.9.2"
     buildFolder="build"
-    bootClassPath="/home/and-de_gourav/Android/Sdk/platforms/android-35/android.jar:/home/and-de_gourav/Android/Sdk/build-tools/35.0.0/core-lambda-stubs.jar"
+    bootClassPath="/home/gourav/Android/Sdk/platforms/android-35/android.jar:/home/gourav/Android/Sdk/build-tools/35.0.0/core-lambda-stubs.jar"
     javaSourceLevel="1.8"
     compileTarget="android-35"
     neverShrinking="true">

@@ -23,7 +23,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "EPUB Reader"
+rootProject.name = "bookReader"
 include(":app", ":android-pdf-viewer")
 include(":lib")
 

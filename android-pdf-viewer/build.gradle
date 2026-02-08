@@ -17,5 +17,4 @@ android {
 dependencies {
     implementation("androidx.core:core:1.16.0")
     api("com.github.mhiew:pdfium-android:1.9.2")
-    implementation libs.androidx.cardview
 }

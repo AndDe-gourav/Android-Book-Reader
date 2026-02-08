@@ -6,7 +6,7 @@
     mergedManifest="build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml"
     proguardFiles="build/intermediates/default_proguard_files/global/proguard-android.txt-8.9.2"
     partialResultsDir="build/intermediates/lint_vital_partial_results/release/lintVitalAnalyzeRelease/out"
-    desugaredMethodsFiles="/home/and-de_gourav/.gradle/caches/8.11.1/transforms/03261540efc11f265d653ed6f1e93179/transformed/D8BackportedDesugaredMethods.txt">
+    desugaredMethodsFiles="/home/gourav/.gradle/caches/8.11.1/transforms/03261540efc11f265d653ed6f1e93179/transformed/D8BackportedDesugaredMethods.txt">
   <buildFeatures
       namespacing="REQUIRED"/>
   <sourceProviders>
@@ -26,6 +26,6 @@
       applicationId="com.example.AndroidPdfViewer"
       generatedSourceFolders="build/generated/ap_generated_sources/release/out"
       generatedResourceFolders="build/generated/res/resValues/release"
-      desugaredMethodsFiles="/home/and-de_gourav/.gradle/caches/8.11.1/transforms/03261540efc11f265d653ed6f1e93179/transformed/D8BackportedDesugaredMethods.txt">
+      desugaredMethodsFiles="/home/gourav/.gradle/caches/8.11.1/transforms/03261540efc11f265d653ed6f1e93179/transformed/D8BackportedDesugaredMethods.txt">
   </artifact>
 </variant>
