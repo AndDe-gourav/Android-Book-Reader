@@ -24,6 +24,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "bookReader"
-include(":app", ":android-pdf-viewer")
+include(":app")
 include(":lib")
 

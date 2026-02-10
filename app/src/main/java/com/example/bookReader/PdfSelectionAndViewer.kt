@@ -60,19 +60,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
-import com.github.barteksc.pdfviewer.PDFView
-import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
-import com.github.barteksc.pdfviewer.util.FitPolicy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -265,7 +260,6 @@ fun PDFViewerScreen(
 
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    var colorTheme: PDFView.Theme? by rememberSaveable { mutableStateOf(PDFView.Theme.LIGHT) }
     var isColorPaletteVisible by remember { mutableStateOf(false) }
     var isTimerVisible by remember { mutableStateOf(false) }
     var lockHorizontalMovement by remember { mutableStateOf(false) }
@@ -337,85 +331,6 @@ fun PDFViewerScreen(
                 modifier = Modifier.align(Alignment.Center)
             )
 
-            AndroidView(
-                factory = { ctx ->
-                    PDFView(ctx, null).apply {
-                        setBackgroundColor(Color.Transparent.hashCode())
-                            fromUri(uri)
-                            .useBestQuality(true)
-                            .pageFitPolicy(FitPolicy.BOTH)
-                            .enableDoubletap(!lockHorizontalMovement)
-                            .enableSwipe(true)
-                            .scrollHandle(DefaultScrollHandle(ctx))
-                            .defaultPage(lastOpenedPageDB)
-                            .spacing(1)
-                            .onPageChange { page, _ ->
-                                lastOpenedPage = page
-                                jumpToPage = page
-                            }
-                            .onTap {
-                                scope.launch {
-                                    if (isColorPaletteVisible) {
-                                        isColorPaletteVisible = false
-                                        if (isSystemUIVisible) {
-                                            delay(1000)
-                                        }
-                                    }
-                                    if (isTimerVisible){
-                                        isTimerVisible = false
-                                        if (isSystemUIVisible) {
-                                            delay(1000)
-                                        }
-                                    }
-
-                                    if (!isSystemUIVisible) {
-                                        showSystemBars(activity!!)
-                                        isSystemUIVisible = true
-                                    } else {
-                                        hideSystemBars(activity!!)
-                                        isSystemUIVisible = false
-                                    }
-                                    }
-                                true
-                            }
-                            .onLoad {
-                                scope.launch {
-                                    Log.d("start ", "$lastOpenedPageDB")
-                                    val meta = this@apply.documentMeta
-                                    bookDataViewModel.updateToc( this@apply.tableOfContents )
-                                    if (meta != null) {
-                                        val title = meta.title.orEmpty()
-                                        val author = meta.author.orEmpty()
-
-                                        val bookFromUri = bookDataViewModel.getBookFromUri(pdfUri)
-
-                                        if (bookFromUri?.title == "Untitled" && title.isNotBlank()) {
-                                            bookDataViewModel.updateBookTitle(bookFromUri, title)
-                                        }
-
-                                        if (bookFromUri?.author == "Unknown Author" && author.isNotBlank()) {
-                                            bookDataViewModel.updateBookAuthor(bookFromUri, author)
-                                        }
-                                    }
-
-                                }
-                            }
-                            .load()
-
-                    }
-                },
-                update = { pdfView ->
-                    if (jumpToPage != lastOpenedPage) {
-                        pdfView.jumpTo(jumpToPage, true)
-                        lastOpenedPage = jumpToPage
-                    }
-                    pdfView.setTheme(colorTheme)
-                    pdfView.lockHorizontalMovement(lockHorizontalMovement)
-                    pdfView.enableDoubletap(!lockHorizontalMovement)
-                    pdfView.invalidate()
-                },
-                modifier = Modifier.fillMaxSize()
-            )
             PdfTopBar(
                 modifier = Modifier
                     .windowInsetsPadding(WindowInsets.safeContent)
@@ -435,41 +350,7 @@ fun PDFViewerScreen(
                         .navigationBarsPadding()
                         .padding( bottom = 4.dp)
                 ) {
-                    if(isSystemUIVisible) {
-                        AnimatedVisibility(
-                            visible = isColorPaletteVisible,
-                        ) {
-                            val colorToThemeMap = mapOf(
-                                Color.Black to PDFView.Theme.NIGHT,
-                                Color.White to PDFView.Theme.LIGHT,
-                                colorResource(id = R.color.Sepia) to PDFView.Theme.SEPIA,
-                                colorResource(id = R.color.Dark_Sepia) to PDFView.Theme.DARK_SEPIA
-                            )
-                            ThemeSelector(
-                                colorsList = listOf(
-                                    Color.White,
-                                    colorResource(id = R.color.Sepia),
-                                    colorResource(id = R.color.Dark_Sepia),
-                                    Color.Black
-                                ),
-                                onColorChange = { color ->
-                                    colorTheme = colorToThemeMap[color]
-                                },
-                            )
-                        }
-                        AnimatedVisibility(
-                            visible = isTimerVisible,
-                        ) {
-                            TimeGoalSurface(
-                                currentTimeInSec = (totalTime?.plus(sessionTimeSpent)?.div(1000)?.toInt()?:0),
-                                timeGoal = timeGoal!!,
-                                onEditClicked = {
-                                    isTimerVisible = false
-                                    onTimeGoalClicked()
-                                },
-                            )
-                        }
-                    }
+
                     Spacer(
                         modifier = Modifier.size(20.dp)
                     )

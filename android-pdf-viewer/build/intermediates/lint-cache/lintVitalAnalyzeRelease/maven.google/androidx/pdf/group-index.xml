@@ -1,8 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<androidx.pdf>
-  <pdf-compose versions="1.0.0-alpha09,1.0.0-alpha10,1.0.0-alpha11,1.0.0-alpha12"/>
-  <pdf-document-service versions="1.0.0-alpha05,1.0.0-alpha06,1.0.0-alpha07,1.0.0-alpha08,1.0.0-alpha09,1.0.0-alpha10,1.0.0-alpha11,1.0.0-alpha12"/>
-  <pdf-ink versions="1.0.0-alpha10,1.0.0-alpha11,1.0.0-alpha12"/>
-  <pdf-viewer versions="1.0.0-alpha01,1.0.0-alpha02,1.0.0-alpha03,1.0.0-alpha04,1.0.0-alpha05,1.0.0-alpha06,1.0.0-alpha07,1.0.0-alpha08,1.0.0-alpha09,1.0.0-alpha10,1.0.0-alpha11,1.0.0-alpha12"/>
-  <pdf-viewer-fragment versions="1.0.0-alpha01,1.0.0-alpha02,1.0.0-alpha03,1.0.0-alpha04,1.0.0-alpha05,1.0.0-alpha06,1.0.0-alpha07,1.0.0-alpha08,1.0.0-alpha09,1.0.0-alpha10,1.0.0-alpha11,1.0.0-alpha12"/>
-</androidx.pdf>

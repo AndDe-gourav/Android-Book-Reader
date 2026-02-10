@@ -5,7 +5,6 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -88,16 +87,7 @@ fun BookInReading(
                     color = Color.White,
                     shape = MaterialTheme.shapes.small,
                     modifier = Modifier
-                        .sharedElement(
-                            state = rememberSharedContentState(key = "bookCover"),
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            boundsTransform = { initial, target ->
-                                spring(
-                                    dampingRatio = 0.9f,
-                                    stiffness = 380f
-                                )
-                            }
-                        )
+
                         .size(
                             dimensionResource(id = R.dimen.book_cover_width),
                             dimensionResource(id = R.dimen.book_cover_height)

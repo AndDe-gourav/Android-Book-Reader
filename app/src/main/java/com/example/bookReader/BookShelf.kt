@@ -30,7 +30,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -100,7 +99,6 @@ fun BookShelf(
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 rowBooks.forEach { book ->
-                                        if (rowBooks.indexOf(book) != 2 || groupedBooks.indexOf(rowBooks) == 0 || currentBookShelf != "Recent") {
                                            Surface(
                                                     color = Color.White,
                                                     tonalElevation = 8.dp,
@@ -121,19 +119,6 @@ fun BookShelf(
                                                         modifier = Modifier.fillMaxSize()
                                                     )
                                                 }
-                                        }
-                                    if (rowBooks.indexOf(book) == 2 && groupedBooks.indexOf(rowBooks) == 1 && currentBookShelf == "Recent") {
-                                        Surface(
-                                            color = Color.Transparent,
-                                            modifier = Modifier.height(100.dp).width(60.dp)
-                                        ) {
-                                            Image(
-                                                painter = painterResource(id = R.drawable.books),
-                                                contentDescription = "LoadMoreBooks",
-                                                contentScale = ContentScale.FillBounds
-                                            )
-                                        }
-                                    }
                                 }
                             }
                             Box(

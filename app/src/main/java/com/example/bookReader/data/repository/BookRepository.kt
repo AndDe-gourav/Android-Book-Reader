@@ -1,5 +1,26 @@
 package com.example.bookReader.data.repository
 
+import android.content.Context
+import android.net.Uri
+import com.example.bookReader.data.dao.BookCollectionDao
+import com.example.bookReader.data.dao.BookDao
+import com.example.bookReader.data.dao.BookStateDao
+import com.example.bookReader.data.dao.CollectionDao
+import com.example.bookReader.data.dao.ReadingSessionDao
+import com.example.bookReader.data.entity.BookCollectionCrossRef
+import com.example.bookReader.data.entity.BookEntity
+import com.example.bookReader.data.entity.BookStateEntity
+import com.example.bookReader.data.entity.CollectionEntity
+import com.example.bookReader.data.entity.ReadingSessionEntity
+import com.example.bookReader.data.entity.ReadingStatus
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.runBlocking
+import java.io.FileNotFoundException
+import java.io.InputStream
+import javax.inject.Inject
+import javax.inject.Singleton
+
 @Singleton
 class BookRepository @Inject constructor(
     private val bookDao: BookDao,
@@ -79,7 +100,7 @@ class BookRepository @Inject constructor(
 
 
     suspend fun createCollection(name: String): Long =
-        collectionDao.insertCollection(CollectionEntity(name))
+        collectionDao.insertCollection(CollectionEntity(name = name))
 
     suspend fun addBookToCollection(bookId: Long, collectionId: Long) {
         bookCollectionDao.addBookToCollection(

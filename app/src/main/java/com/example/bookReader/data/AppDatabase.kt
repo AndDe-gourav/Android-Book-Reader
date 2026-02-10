@@ -6,9 +6,12 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import com.example.bookReader.data.dao.BookCollectionDao
 import com.example.bookReader.data.dao.BookDao
 import com.example.bookReader.data.dao.BookStateDao
 import com.example.bookReader.data.dao.CollectionDao
+import com.example.bookReader.data.dao.ReadingGoalDao
+import com.example.bookReader.data.dao.ReadingSessionDao
 import com.example.bookReader.data.entity.BookCollectionCrossRef
 import com.example.bookReader.data.entity.BookEntity
 import com.example.bookReader.data.entity.BookStateEntity

@@ -13,7 +13,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.bookReader.model.bookStorage.Book
 import com.example.bookReader.model.bookStorage.BookRepository
 import kotlinx.coroutines.Job
-import com.shockwave.pdfium.PdfDocument
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -313,30 +312,8 @@ class BookDataViewModel(
         }
     }
 
-    fun updateToc(toc: List<PdfDocument.Bookmark>) {
-        viewModelScope.launch {
-            val tocMap: MutableMap<String, List<String>> = mutableMapOf()
-            val pageMap: MutableMap<String, Int> = mutableMapOf()
-            val childPageMap: MutableMap<String, Int> = mutableMapOf()
-            toc.forEach { heading ->
-                val key = heading.title
-                if (heading.children.isNotEmpty() ){
-                    val listOfChild: MutableList<String> = mutableListOf()
-                   for( child in heading.children){
-                       listOfChild.add(child.title)
-                       childPageMap[child.title] = child.pageIdx.toInt()
-                   }
-                    tocMap[key] = listOfChild
-                    pageMap[key] = heading.pageIdx.toInt()
-                }else{
-                    tocMap[key] = emptyList()
-                    pageMap[key] = heading.pageIdx.toInt()
-                }
-            }
-            _toc.value = tocMap
-            _tocPage.value = pageMap
-            _childTocPage.value = childPageMap
-        }
+    fun updateToc() {
+
     }
 
 

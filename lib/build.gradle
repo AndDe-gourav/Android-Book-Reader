@@ -17,13 +17,18 @@ android {
 	compileSdkVersion 33
 	defaultConfig {
 		minSdkVersion 21
-		targetSdkVersion 35
-	}
+    }
 	publishing {
 		singleVariant("release") {
 			withSourcesJar()
 		}
 	}
+    lint {
+        targetSdk 35
+    }
+    testOptions {
+        targetSdk 35
+    }
 }
 
 project.afterEvaluate {

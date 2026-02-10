@@ -1,7 +1,0 @@
-com.example.AndroidPdfViewer
-attr sb_handlerColor
-attr sb_horizontal
-attr sb_indicatorColor
-attr sb_indicatorTextColor
-drawable default_scroll_handle
-styleable ScrollBar sb_handlerColor sb_horizontal sb_indicatorColor sb_indicatorTextColor

@@ -1,6 +1,5 @@
 package com.example.bookReader
 
-import android.app.Application
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -29,25 +28,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.bookReader.model.bookStorage.BookDatabase
-import com.example.bookReader.model.bookStorage.BookRepository
-import com.example.bookReader.model.timeStorage.TimeGoalDatabase
-import com.example.bookReader.model.timeStorage.TimeGoalRepository
+import com.example.bookReader.ui.theme.BookStateViewModel
+import com.example.bookReader.ui.theme.CollectionViewModel
+import com.example.bookReader.ui.theme.DrawerContent
 import com.example.bookReader.ui.theme.EPUBReaderTheme
+import com.example.bookReader.ui.theme.EditScreen
+import com.example.bookReader.ui.theme.HomeScreenImproved
+import com.example.bookReader.ui.theme.LibraryViewModel
 import com.example.bookReader.ui.theme.PdfReaderScreen
+import com.example.bookReader.ui.theme.PdfViewerViewModel
+import com.example.bookReader.ui.theme.StatsScreen
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import androidx.core.net.toUri
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,41 +80,32 @@ class MainActivity : ComponentActivity() {
 fun App(
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    val application = context.applicationContext as Application
-
-    val database = BookDatabase.getDatabase(context)
-    val bookDao = database.BookDao()
-    val repository = BookRepository(bookDao)
-    val factory = BookViewModelFactory(application, repository)
-    val bookDataViewModel: BookDataViewModel = viewModel(factory = factory)
-
-    val timeGoalDatabase = TimeGoalDatabase.getDatabase(context)
-    val timeGoalDao = timeGoalDatabase.TimeGoalDao()
-    val timeGoalRepository = TimeGoalRepository(timeGoalDao)
-    val timeGoalFactory = TimeGoalViewModelFactory(application, timeGoalRepository)
-    val timeGoalViewModel: TimeGoalViewModel = viewModel(factory = timeGoalFactory)
-
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentScreen = backStackEntry?.destination?.route ?: "homeScreen"
 
-    var showTimeGoal by remember{ mutableStateOf(false) }
+    // Get ViewModels using Hilt
+    val libraryViewModel: LibraryViewModel = hiltViewModel()
+    val bookStateViewModel: BookStateViewModel = hiltViewModel()
+    val collectionViewModel: CollectionViewModel = hiltViewModel()
+    val pdfViewerViewModel: PdfViewerViewModel = hiltViewModel()
+
+    var showTimeGoal by remember { mutableStateOf(false) }
+
     ModalNavigationDrawer(
-        drawerState =  drawerState,
+        drawerState = drawerState,
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             ModalDrawerSheet(
                 drawerContentColor = MaterialTheme.colorScheme.background,
                 drawerContainerColor = MaterialTheme.colorScheme.onBackground
             ) {
-                Drawer(
-                    bookDataViewModel = bookDataViewModel,
-                    timeGoalViewModel = timeGoalViewModel,
+                DrawerContent(
+                    libraryViewModel = libraryViewModel,
+                    bookStateViewModel = bookStateViewModel,
+                    collectionViewModel = collectionViewModel,
                     navController = navController,
                     onBackPressed = {
                         scope.launch {
@@ -144,13 +138,15 @@ fun App(
             ) {
                 val enterTransitionSpec = tween<IntOffset>(250)
                 val exitTransitionSpec = tween<IntOffset>(250)
+
+                // Home Screen
                 composable(
                     route = "homeScreen",
                     enterTransition = {
-                      slideIntoContainer(
-                          AnimatedContentTransitionScope.SlideDirection.Right,
-                          enterTransitionSpec
-                      )
+                        slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Right,
+                            enterTransitionSpec
+                        )
                     },
                     exitTransition = {
                         slideOutOfContainer(
@@ -165,16 +161,18 @@ fun App(
                         )
                     }
                 ) {
-                    HomeScreen(
-                        bookDataViewModel = bookDataViewModel,
-                        timeGoalViewModel = timeGoalViewModel,
+                    HomeScreenImproved(
                         navController = navController,
                         toCloseDrawer = { scope.launch { drawerState.close() } },
-                        toOpenDrawer = { scope.launch { drawerState.open()} },
-                        modifier = Modifier
-                            .padding(innerPadding),
+                        toOpenDrawer = { scope.launch { drawerState.open() } },
+                        libraryViewModel = libraryViewModel,
+                        bookStateViewModel = bookStateViewModel,
+                        collectionViewModel = collectionViewModel,
+                        modifier = Modifier.padding(innerPadding)
                     )
                 }
+
+                // Stats Screen
                 composable(
                     route = "StatsScreen",
                     enterTransition = {
@@ -195,14 +193,17 @@ fun App(
                             exitTransitionSpec
                         )
                     }
-                    ) {
+                ) {
                     StatsScreen(
                         navController = navController,
-                        bookDataViewModel = bookDataViewModel,
-                        timeGoalViewModel = timeGoalViewModel,
+                        libraryViewModel = libraryViewModel,
+                        bookStateViewModel = bookStateViewModel,
+                        pdfViewerViewModel = pdfViewerViewModel,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
+
+                // Edit Screen
                 composable(
                     route = "EditScreen",
                     enterTransition = {
@@ -223,18 +224,19 @@ fun App(
                             exitTransitionSpec
                         )
                     }
-
                 ) {
                     EditScreen(
                         navController = navController,
-                        bookDataViewModel = bookDataViewModel,
+                        libraryViewModel = libraryViewModel,
+                        bookStateViewModel = bookStateViewModel,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
 
+                // PDF Reader Screen - Updated to use bookId instead of URI
                 composable(
-                    route = "BookScreen/{pdfUri}",
-                    arguments = listOf(navArgument("pdfUri") { type = NavType.StringType }),
+                    route = "pdfReader/{bookId}",
+                    arguments = listOf(navArgument("bookId") { type = NavType.LongType }),
                     enterTransition = {
                         slideIntoContainer(
                             AnimatedContentTransitionScope.SlideDirection.Left,
@@ -248,15 +250,18 @@ fun App(
                         )
                     },
                 ) { backStackEntry ->
+                    val bookId = backStackEntry.arguments?.getLong("bookId") ?: return@composable
 
-                    val pdfUri = backStackEntry.arguments?.getString("pdfUri")
-                    PickAndOpenPdf()
+                    PdfReaderScreen(
+                        bookId = bookId,
+                        navController = navController,
+                        libraryViewModel = libraryViewModel,
+                        pdfViewerViewModel = pdfViewerViewModel,
+                        bookStateViewModel = bookStateViewModel,
+                        showTimeGoal = showTimeGoal,
+                        onTimeGoalClicked = { showTimeGoal = !showTimeGoal }
+                    )
                 }
-                composable("pdfReader/{pdfUri}") { backStackEntry ->
-                    val uri = backStackEntry.arguments!!.getString("pdfUri")!!.toUri()
-                    PdfReaderScreen(uri)
-                }
-
             }
         }
     }
