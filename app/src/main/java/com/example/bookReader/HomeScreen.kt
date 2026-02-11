@@ -242,16 +242,7 @@ fun HomeScreen(
                     )
                 }
             } else {
-                AboutDoucument(
-                    bookDataViewModel = bookDataViewModel,
-                    timeGoalViewModel = timeGoalViewModel,
-                    navController = navController,
-                    showAboutDocument = showAboutDocument,
-                    onAboutDocumentClicked = {showAboutDocument = false},
-                    sharedTransitionScope = this@SharedTransitionLayout,
-                    animatedVisibilityScope = this@AnimatedContent,
-                    modifier = modifier
-                )
+
             }
         }
     }

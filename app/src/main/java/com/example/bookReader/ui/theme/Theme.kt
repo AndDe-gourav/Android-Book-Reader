@@ -83,7 +83,7 @@ private val darkScheme = darkColorScheme(
 
 
 @Composable
-fun EPUBReaderTheme(
+fun BookReaderTheme(
     content: @Composable() () -> Unit
 ) {
     val colorScheme = lightScheme

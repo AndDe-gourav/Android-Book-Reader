@@ -16,10 +16,10 @@ abstract class TimeGoalDatabase : RoomDatabase() {
         fun getDatabase(context: Context): TimeGoalDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    TimeGoalDatabase::class.java,
-                    "time_goal_database"
-                ).fallbackToDestructiveMigration(false).build()
+                                context.applicationContext,
+                                TimeGoalDatabase::class.java,
+                                "time_goal_database"
+                            ).fallbackToDestructiveMigration(false).build()
                 INSTANCE = instance
                 instance
             }

@@ -2,10 +2,9 @@ package com.example.bookReader.ui.theme
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.bookReader.data.dao.BookCollectionDao
-import com.example.bookReader.data.dao.CollectionDao
 import com.example.bookReader.data.entity.CollectionEntity
 import com.example.bookReader.data.entity.CollectionWithBooks
+import com.example.bookReader.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,12 +16,11 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CollectionViewModel @Inject constructor(
-    private val collectionDao: CollectionDao,
-    private val bookCollectionDao: BookCollectionDao
+    private val repository: BookRepository
 ) : ViewModel() {
 
-    // All collections
-    val allCollections: StateFlow<List<CollectionEntity>> = collectionDao.getAllCollections()
+    // All collections - automatically updates when data changes
+    val allCollections: StateFlow<List<CollectionEntity>> = repository.getAllCollections()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -38,9 +36,7 @@ class CollectionViewModel @Inject constructor(
      */
     suspend fun createCollection(name: String): Long {
         return try {
-            collectionDao.insertCollection(
-                CollectionEntity(name = name)
-            )
+            repository.createCollection(name)
         } catch (e: Exception) {
             -1L
         }
@@ -52,12 +48,7 @@ class CollectionViewModel @Inject constructor(
     fun addBookToCollection(bookId: Long, collectionId: Long) {
         viewModelScope.launch {
             try {
-                bookCollectionDao.addBookToCollection(
-                    com.example.bookReader.data.entity.BookCollectionCrossRef(
-                        bookId = bookId,
-                        collectionId = collectionId
-                    )
-                )
+                repository.addBookToCollection(bookId, collectionId)
             } catch (e: Exception) {
                 // Handle error
             }
@@ -70,7 +61,7 @@ class CollectionViewModel @Inject constructor(
     fun removeBookFromCollection(bookId: Long, collectionId: Long) {
         viewModelScope.launch {
             try {
-                bookCollectionDao.removeBookFromCollection(bookId, collectionId)
+                repository.removeBookFromCollection(bookId, collectionId)
             } catch (e: Exception) {
                 // Handle error
             }
@@ -79,10 +70,11 @@ class CollectionViewModel @Inject constructor(
 
     /**
      * Load a specific collection with its books
+     * This will automatically update when the collection changes
      */
     fun loadCollection(collectionId: Long) {
         viewModelScope.launch {
-            collectionDao.getCollectionWithBooks(collectionId)
+            repository.getCollectionWithBooks(collectionId)
                 .collect { collectionWithBooks ->
                     _selectedCollection.value = collectionWithBooks
                 }

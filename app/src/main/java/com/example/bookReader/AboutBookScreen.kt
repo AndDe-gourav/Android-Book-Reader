@@ -1,11 +1,5 @@
 package com.example.bookReader
 
-import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -16,129 +10,92 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.core.net.toUri
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.bookReader.ui.theme.BookStateViewModel
+import com.example.bookReader.ui.theme.CollectionViewModel
 import com.example.bookReader.ui.theme.GeneralTopBar
+import com.example.bookReader.ui.theme.LibraryViewModel
+import java.io.File
 
-@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun AboutDoucument(
-    bookDataViewModel: BookDataViewModel,
-    timeGoalViewModel: TimeGoalViewModel,
+fun AboutBookScreen(
+    bookStateViewModel: BookStateViewModel ,
+    libraryViewModel: LibraryViewModel,
+    collectionViewModel: CollectionViewModel,
     navController: NavController,
-    showAboutDocument: Boolean,
-    onAboutDocumentClicked: () -> Unit,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val selectedBook by bookDataViewModel.selectedBook.collectAsState()
-    val listOfCollections by bookDataViewModel.listOfCollections.collectAsState()
-    val time = selectedBook?.timestamp?.let { bookDataViewModel.convertMillisToDateTime(it)}
-    val fileSize = selectedBook?.uri?.let { bookDataViewModel.getFileSize(context= context, it.toUri())}
-    var timeGoalAvailable by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        if (selectedBook?.uri?.let { timeGoalViewModel.getTimeGoal(it)} !=0){
-            timeGoalAvailable = true
-        }
-    }
-
-    val encodedUri = Uri.encode(selectedBook?.uri)
-
-
-
-    BackHandler {
-        onAboutDocumentClicked()
-    }
-
-    Box(
+    val book by libraryViewModel.selectedBook.collectAsState()
+    Scaffold(
+        topBar = {
+            GeneralTopBar(
+                titleText = "About Book",
+                onBackClicked = { navController.popBackStack()},
+            )
+        },
         modifier = modifier
-    ) {
-        GeneralTopBar(
-            titleText = "About Book",
-            onBackClicked = {
-                onAboutDocumentClicked()
-            },
-            modifier = Modifier.zIndex(1f)
-        )
+    ) { innerPadding ->
         LazyColumn(
             contentPadding = PaddingValues(horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier= Modifier.zIndex(0f)
+            modifier = Modifier.padding(innerPadding).zIndex(0f)
         ) {
             item {
-                Spacer(modifier = Modifier.padding(top = 80.dp))
-                with(sharedTransitionScope) {
-                    Box(
+                Box(
+                    modifier = Modifier
+                ) {
+                    Surface(
+                        color = Color.White,
+                        shape = MaterialTheme.shapes.extraSmall,
                         modifier = Modifier
-                    ) {
-                        Surface(
-                            color = Color.White,
-                            shape = MaterialTheme.shapes.extraSmall,
-                            modifier = Modifier
-                                .size(
-                                    200.dp,
-                                    300.dp
-                                )
-                                .shadow(
-                                    elevation = 8.dp,
-                                    shape = MaterialTheme.shapes.small,
-                                    spotColor = colorResource(R.color.shadow)
-                                )
-                                .clickable {
-                                    if (selectedBook?.uri != null) {
-                                        selectedBook?.let {
-                                            bookDataViewModel.updateBookTime(it)
-                                        }
-                                        navController.navigate("BookScreen/${encodedUri}")
-                                    }
-                                }
-                        ) {
-                            Image(
-                                painter = rememberAsyncImagePainter(
-                                    model = selectedBook?.bookCover
-                                ),
-                                contentDescription = "Book_cover_1",
-                                contentScale = ContentScale.FillBounds
+                            .size(
+                                200.dp,
+                                300.dp
                             )
-                        }
+                            .shadow(
+                                elevation = 8.dp,
+                                shape = MaterialTheme.shapes.small,
+                                spotColor = colorResource(R.color.shadow)
+                            )
+                            .clickable {
+                                if (book?.uri != null) {
+                                }
+                            }
+                    ) {
+                        Image(
+                            painter = rememberAsyncImagePainter(
+                                model = book?.coverImagePath?.let { File(it) }
+                            ),
+                            contentDescription = "Book_cover_1",
+                            contentScale = ContentScale.FillBounds
+                        )
                     }
                 }
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp),
-                ){
+                ) {
                     Text(
-                        text = selectedBook?.title ?: "",
+                        text = book?.title ?: "",
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.inverseSurface,
                         textAlign = TextAlign.Center,
@@ -147,7 +104,7 @@ fun AboutDoucument(
                             .padding(top = 16.dp, bottom = 2.dp)
                     )
                     Text(
-                        text = "L__ ${selectedBook?.author ?: ""}",
+                        text = "L__ ${book?.author ?: ""}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         textAlign = TextAlign.End,
@@ -156,7 +113,17 @@ fun AboutDoucument(
                             .padding(bottom = 8.dp, end = 8.dp)
                     )
                 }
-
+                AnimatedIconRow(
+                    selectedBook = book,
+                    libraryViewModel = libraryViewModel,
+                    bookStateViewModel = bookStateViewModel,
+                    collectionViewModel = collectionViewModel,
+                    navController = navController,
+                    onBookDeleted = {
+                        // Handle book deletion - refresh the list
+                    },
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
@@ -167,7 +134,7 @@ fun AboutDoucument(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "$time",
+                            text = "time",
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.inverseSurface,
                             textAlign = TextAlign.Center,
@@ -179,7 +146,7 @@ fun AboutDoucument(
                             color = MaterialTheme.colorScheme.inverseSurface,
                         )
                         Text(
-                            text = "PDF, $fileSize",
+                            text = "size",
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.inverseSurface,
                             textAlign = TextAlign.Center,
@@ -191,31 +158,6 @@ fun AboutDoucument(
                             color = MaterialTheme.colorScheme.inverseSurface,
                         )
                         Spacer(modifier = Modifier.padding(top = 16.dp))
-                        Button(
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                            ),
-                            modifier = Modifier.align(Alignment.CenterHorizontally),
-                            enabled = timeGoalAvailable,
-                            onClick = {
-                                if (selectedBook?.uri != null) {
-                                    timeGoalViewModel.deleteBookFromTimeGoal(selectedBook?.uri!!)
-                                    Toast.makeText(
-                                        context,
-                                        "Today's Time Goal Removed",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    timeGoalAvailable = false
-                                }
-                            }
-                        ) {
-                            Text(
-                                text = "Remove Time Goal",
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (timeGoalAvailable)MaterialTheme.colorScheme.inverseSurface else MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.5f),
-                            )
-                        }
                     }
                 }
             }

@@ -2,124 +2,57 @@ package com.example.bookReader.ui.theme
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.bookReader.data.dao.BookDao
-import com.example.bookReader.data.dao.BookStateDao
 import com.example.bookReader.data.entity.BookEntity
 import com.example.bookReader.data.entity.BookStateEntity
 import com.example.bookReader.data.entity.ReadingStatus
+import com.example.bookReader.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class BookWithStateInfo(
-    val book: BookEntity,
-    val state: BookStateEntity?
-)
-
 @HiltViewModel
 class BookStateViewModel @Inject constructor(
-    private val bookDao: BookDao,
-    private val bookStateDao: BookStateDao
+    private val repository: BookRepository
 ) : ViewModel() {
 
-    // Combine books with their states
-    private val booksWithState: StateFlow<List<BookWithStateInfo>> = bookDao.getAllBooks()
-        .combine(MutableStateFlow(Unit)) { books, _ ->
-            books.map { book ->
-                val state = try {
-                    bookStateDao.getState(book.bookId)
-                } catch (e: Exception) {
-                    null
-                }
-                BookWithStateInfo(book, state)
-            }
-        }
+    // Favorite books - automatically updates when favorites change
+    val favoriteBooks: StateFlow<List<BookEntity>> = repository.getFavoriteBooks()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    // Get books by reading status
-    fun getBooksByStatus(status: ReadingStatus): StateFlow<List<BookEntity>> {
-        return booksWithState
-            .combine(MutableStateFlow(status)) { booksWithState, targetStatus ->
-                booksWithState
-                    .filter { it.state?.status == targetStatus }
-                    .map { it.book }
-            }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = emptyList()
-            )
-    }
-
-    // Get favorite books
-    val favoriteBooks: StateFlow<List<BookEntity>> = booksWithState
-        .combine(MutableStateFlow(Unit)) { booksWithState, _ ->
-            booksWithState
-                .filter { it.state?.isFavorite == true }
-                .map { it.book }
-        }
+    // Books to read - automatically updates when status changes
+    val toReadBooks: StateFlow<List<BookEntity>> = repository.getBooksByStatus(ReadingStatus.TO_READ)
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    // Get books to read
-    val toReadBooks: StateFlow<List<BookEntity>> = booksWithState
-        .combine(MutableStateFlow(Unit)) { booksWithState, _ ->
-            booksWithState
-                .filter { it.state?.status == ReadingStatus.TO_READ }
-                .map { it.book }
-        }
+    // Currently reading books - automatically updates when status changes
+    val readingBooks: StateFlow<List<BookEntity>> = repository.getBooksByStatus(ReadingStatus.READING)
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    // Get currently reading books
-    val readingBooks: StateFlow<List<BookEntity>> = booksWithState
-        .combine(MutableStateFlow(Unit)) { booksWithState, _ ->
-            booksWithState
-                .filter { it.state?.status == ReadingStatus.READING }
-                .map { it.book }
-        }
+    // Completed books - automatically updates when status changes
+    val completedBooks: StateFlow<List<BookEntity>> = repository.getBooksByStatus(ReadingStatus.COMPLETED)
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    // Get completed books
-    val completedBooks: StateFlow<List<BookEntity>> = booksWithState
-        .combine(MutableStateFlow(Unit)) { booksWithState, _ ->
-            booksWithState
-                .filter { it.state?.status == ReadingStatus.COMPLETED }
-                .map { it.book }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-
-    // Get recent books (sorted by last opened)
-    val recentBooks: StateFlow<List<BookEntity>> = booksWithState
-        .combine(MutableStateFlow(Unit)) { booksWithState, _ ->
-            booksWithState
-                .map { it.book }
-                .sortedByDescending { it.lastOpenedAt ?: 0 }
-                .take(10) // Limit to 10 most recent
-        }
+    // Recent books (sorted by last opened) - automatically updates
+    val recentBooks: StateFlow<List<BookEntity>> = repository.getRecentBooks(limit = 10)
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -127,18 +60,22 @@ class BookStateViewModel @Inject constructor(
         )
 
     /**
-     * Get state for a specific book
+     * Get state for a specific book (one-time query)
      */
-    suspend fun getBookState(bookId: Long): BookStateEntity? {
-        return try {
-            bookStateDao.getState(bookId)
-        } catch (e: Exception) {
-            null
-        }
-    }
+    suspend fun getBookState(bookId: Long): BookStateEntity? =
+        repository.getBookState(bookId)
 
     /**
-     * Update book state
+     * Observe book state changes reactively
+     * Returns a Flow that emits whenever the book state changes
+     * UI will automatically update when state changes
+     */
+    fun observeBookState(bookId: Long): Flow<BookStateEntity?> =
+        repository.observeBookState(bookId)
+
+    /**
+     * Update book state (progress, status, favorite)
+     * UI will automatically update via Flows
      */
     fun updateBookState(
         bookId: Long,
@@ -148,34 +85,28 @@ class BookStateViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
-                val existingState = bookStateDao.getState(bookId)
-
-                if (existingState != null) {
-                    // Update existing state
-                    if (currentPage != null || status != null) {
-                        bookStateDao.updateProgress(
-                            bookId = bookId,
-                            page = currentPage ?: existingState.currentPage,
-                            status = status ?: existingState.status
-                        )
-                    }
-                    if (isFavorite != null) {
-                        bookStateDao.setFavorite(bookId, isFavorite)
-                    }
-                } else {
-                    // Create new state
-                    bookStateDao.insertState(
-                        BookStateEntity(
-                            bookId = bookId,
-                            status = status ?: ReadingStatus.TO_READ,
-                            currentPage = currentPage ?: 0,
-                            isFavorite = isFavorite ?: false
-                        )
-                    )
-                }
+                repository.updateBookState(
+                    bookId = bookId,
+                    currentPage = currentPage,
+                    status = status,
+                    isFavorite = isFavorite
+                )
             } catch (e: Exception) {
                 // Handle error
             }
         }
+    }
+
+    /**
+     * Get books by specific reading status
+     * This returns a new StateFlow for dynamic status filtering
+     */
+    fun getBooksByStatus(status: ReadingStatus): StateFlow<List<BookEntity>> {
+        return repository.getBooksByStatus(status)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = emptyList()
+            )
     }
 }

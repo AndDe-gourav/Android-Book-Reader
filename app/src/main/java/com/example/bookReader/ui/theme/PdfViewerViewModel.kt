@@ -1,11 +1,7 @@
 package com.example.bookReader.ui.theme
 
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.bookReader.data.dao.ReadingGoalDao
-import com.example.bookReader.data.dao.ReadingSessionDao
-import com.example.bookReader.data.entity.ReadingGoalEntity
 import com.example.bookReader.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,9 +23,7 @@ data class ReadingSessionState(
 
 @HiltViewModel
 class PdfViewerViewModel @Inject constructor(
-    private val repository: BookRepository,
-    private val sessionDao: ReadingSessionDao,
-    private val goalDao: ReadingGoalDao
+    private val repository: BookRepository
 ) : ViewModel() {
 
     private val _sessionState = MutableStateFlow<ReadingSessionState?>(null)
@@ -43,8 +37,8 @@ class PdfViewerViewModel @Inject constructor(
      */
     fun startSession(bookId: Long, startPage: Int, totalPages: Int) {
         viewModelScope.launch {
-            val goal = goalDao.getGoal(bookId)
-            val totalTime = sessionDao.getTotalReadingTime(bookId)
+            val goal = repository.getReadingGoal(bookId)
+            val totalTime = repository.getTotalReadingTime(bookId)
 
             _sessionState.value = ReadingSessionState(
                 bookId = bookId,
@@ -76,6 +70,7 @@ class PdfViewerViewModel @Inject constructor(
 
     /**
      * End the current reading session and save it
+     * UI will automatically update via repository Flows
      */
     fun endSession() {
         viewModelScope.launch {
@@ -91,7 +86,7 @@ class PdfViewerViewModel @Inject constructor(
                     endPage = state.currentPage
                 )
 
-                // Update book progress
+                // Update book progress - this will trigger UI updates automatically
                 repository.updateProgress(
                     bookId = state.bookId,
                     page = state.currentPage,
@@ -111,12 +106,7 @@ class PdfViewerViewModel @Inject constructor(
     fun setReadingGoal(bookId: Long, dailyMinutes: Int) {
         viewModelScope.launch {
             try {
-                goalDao.setGoal(
-                    ReadingGoalEntity(
-                        bookId = bookId,
-                        dailyMinutesGoal = dailyMinutes
-                    )
-                )
+                repository.setReadingGoal(bookId, dailyMinutes)
                 _sessionState.value = _sessionState.value?.copy(dailyGoalMinutes = dailyMinutes)
             } catch (e: Exception) {
                 // Handle error
@@ -129,7 +119,7 @@ class PdfViewerViewModel @Inject constructor(
      */
     suspend fun getReadingGoal(bookId: Long): Int? {
         return try {
-            goalDao.getGoal(bookId)?.dailyMinutesGoal
+            repository.getReadingGoal(bookId)?.dailyMinutesGoal
         } catch (e: Exception) {
             null
         }
@@ -140,7 +130,7 @@ class PdfViewerViewModel @Inject constructor(
      */
     suspend fun getTotalReadingTime(bookId: Long): Long {
         return try {
-            sessionDao.getTotalReadingTime(bookId) ?: 0L
+            repository.getTotalReadingTime(bookId)
         } catch (e: Exception) {
             0L
         }

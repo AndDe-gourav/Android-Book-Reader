@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import com.example.bookReader.ui.theme.GeneralTopBar
 import kotlinx.coroutines.delay
 
 @Composable
@@ -56,7 +57,7 @@ fun EditScreen(
         modifier = modifier
     ){
         item {
-            GerenalTopBar(
+            GeneralTopBar(
                 titleText = "Edit Book Details",
                 onBackClicked = { navController.navigateUp() }
             )

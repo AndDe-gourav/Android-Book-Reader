@@ -33,7 +33,7 @@ class LibraryViewModel @Inject constructor(
     private val repository: BookRepository
 ) : ViewModel() {
 
-    // All books from the library
+    // All books from the library - automatically updates when books are added/removed
     val allBooks: StateFlow<List<BookEntity>> = repository.getLibrary()
         .stateIn(
             scope = viewModelScope,
@@ -55,15 +55,17 @@ class LibraryViewModel @Inject constructor(
 
     /**
      * Add a new book to the library
+     * UI will automatically update via allBooks Flow
      */
     suspend fun addBook(
         title: String,
         author: String?,
         uri: Uri,
+        coverImagePath: String?,
         totalPages: Int
     ): Long {
         return try {
-            val bookId = repository.addBook(title, author, uri, totalPages)
+            val bookId = repository.addBook(title, author, uri, coverImagePath, totalPages)
             showSnackbar("Book added to library")
             bookId
         } catch (e: Exception) {
@@ -95,6 +97,7 @@ class LibraryViewModel @Inject constructor(
 
     /**
      * Toggle favorite status for a book
+     * UI will automatically update via repository Flows
      */
     fun toggleFavorite(bookId: Long, isFavorite: Boolean) {
         viewModelScope.launch {
@@ -109,6 +112,7 @@ class LibraryViewModel @Inject constructor(
 
     /**
      * Update reading progress
+     * UI will automatically update via repository Flows
      */
     fun updateProgress(bookId: Long, page: Int, totalPages: Int) {
         viewModelScope.launch {
@@ -136,6 +140,7 @@ class LibraryViewModel @Inject constructor(
 
     /**
      * Add a book to a collection
+     * UI will automatically update via repository Flows
      */
     fun addBookToCollection(bookId: Long, collectionId: Long) {
         viewModelScope.launch {
@@ -144,6 +149,21 @@ class LibraryViewModel @Inject constructor(
                 showSnackbar("Book added to collection")
             } catch (e: Exception) {
                 showSnackbar("Failed to add book to collection")
+            }
+        }
+    }
+
+    /**
+     * Delete a book from library
+     * UI will automatically update via allBooks Flow
+     */
+    fun deleteBook(bookId: Long) {
+        viewModelScope.launch {
+            try {
+                repository.deleteBook(bookId)
+                showSnackbar("Book deleted")
+            } catch (e: Exception) {
+                showSnackbar("Failed to delete book")
             }
         }
     }

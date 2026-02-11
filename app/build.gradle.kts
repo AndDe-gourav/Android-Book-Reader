@@ -33,11 +33,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        }
-    }
+
     buildFeatures {
         compose = true
     }
@@ -50,12 +46,12 @@ dependencies {
     implementation(libs.androidx.material3.window.size.class1.android)
     implementation("com.google.accompanist:accompanist-permissions:0.37.3")
     implementation(libs.androidx.runtime.livedata)
-    ksp ("androidx.room:room-compiler:2.8.4")
+    ksp (libs.androidx.room.compiler)
     implementation("com.google.dagger:hilt-android:2.59.1")
     ksp("com.google.dagger:hilt-android-compiler:2.59.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-    implementation("androidx.room:room-ktx:2.8.4")
-    implementation ("androidx.room:room-runtime:2.8.4")
+    implementation(libs.androidx.room.ktx)
+    implementation (libs.androidx.room.runtime)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

@@ -70,6 +70,7 @@ object DatabaseModule {
         collectionDao: CollectionDao,
         bookCollectionDao: BookCollectionDao,
         sessionDao: ReadingSessionDao,
+        goalDao: ReadingGoalDao,
         @ApplicationContext context: Context
     ): BookRepository {
         return BookRepository(
@@ -78,6 +79,7 @@ object DatabaseModule {
             collectionDao = collectionDao,
             bookCollectionDao = bookCollectionDao,
             sessionDao = sessionDao,
+            goalDao = goalDao,
             context = context
         )
     }

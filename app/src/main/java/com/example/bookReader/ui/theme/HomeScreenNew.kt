@@ -6,9 +6,9 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,6 +34,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -66,25 +67,23 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.bookReader.AnimatedIconRow
 import com.example.bookReader.CustumSlideBar
 import com.example.bookReader.R
 import com.example.bookReader.data.entity.BookEntity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.io.File
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun HomeScreenImproved(
     navController: NavController,
-    toOpenDrawer: () -> Unit,
-    toCloseDrawer: () -> Unit,
     modifier: Modifier = Modifier,
-    libraryViewModel: LibraryViewModel = hiltViewModel(),
-    bookStateViewModel: BookStateViewModel = hiltViewModel(),
-    collectionViewModel: CollectionViewModel = hiltViewModel()
+    libraryViewModel: LibraryViewModel ,
+    bookStateViewModel: BookStateViewModel ,
+    collectionViewModel: CollectionViewModel
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -140,116 +139,107 @@ fun HomeScreenImproved(
         }
     }
 
-    SharedTransitionLayout {
-        AnimatedContent(
-            targetState = showAboutDocument,
-            label = "about_document_animation"
-        ) { aboutDocument ->
-            if (!aboutDocument) {
-                Box(modifier = modifier.fillMaxSize()) {
-                    // Top Bar
-                    GeneralDrawerTopBar(
-                        toOpenDrawer = toOpenDrawer,
-                        text = "Home",
-                        modifier = Modifier.zIndex(1f)
+    Scaffold(
+        topBar = {
+            GeneralDrawerTopBar(
+                text = "Home",
+                modifier = Modifier.zIndex(1f)
+            )
+        },
+        modifier = modifier
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize()) {
+
+            LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                item {
+                    CurrentlyReadingSection(
+                        selectedBook = selectedBook,
+                        bookStateViewModel = bookStateViewModel,
+                        onBookClick = { book ->
+                            libraryViewModel.selectBook(book)
+                            navController.navigate("AboutBookScreen")
+                        },
+                        onFavoriteClick = { book, isFavorite ->
+                            bookStateViewModel.updateBookState(
+                                bookId = book.bookId,
+                                isFavorite = !isFavorite
+                            )
+                        }
                     )
-
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        item { Spacer(modifier = Modifier.size(60.dp)) }
-
-                        // Currently Reading Section
-                        item {
-                            CurrentlyReadingSection(
-                                selectedBook = selectedBook,
-                                bookStateViewModel = bookStateViewModel,
-                                onBookClick = { book ->
-                                    libraryViewModel.selectBook(book)
-                                    showAboutDocument = true
-                                },
-                                onFavoriteClick = { book, isFavorite ->
-                                    bookStateViewModel.updateBookState(
-                                        bookId = book.bookId,
-                                        isFavorite = !isFavorite
-                                    )
-                                }
-                            )
-                            HorizontalDivider(
-                                thickness = 0.5.dp,
-                                color = colorResource(id = R.color.progress_bar_front_color)
-                            )
-                        }
-
-                        // Shelf Navigation
-                        item {
-                            ShelfNavigationSection(
-                                currentShelf = currentBookShelf,
-                                collections = allCollections,
-                                onShelfSelected = { shelfType ->
-                                    libraryViewModel.changeBookShelf(shelfType)
-                                },
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-
-                        // Books based on current shelf
-                        item {
-                            val booksToDisplay = when (currentBookShelf) {
-                                is BookShelfType.Recent -> recentBooks
-                                is BookShelfType.Favorites -> favoriteBooks
-                                is BookShelfType.ToRead -> toReadBooks
-                                is BookShelfType.Completed -> completedBooks
-                                is BookShelfType.Collection -> allBooks // TODO: Filter by collection
-                            }
-
-                            BookShelfSection(
-                                books = booksToDisplay,
-                                onBookClick = { book ->
-                                    libraryViewModel.selectBook(book)
-                                },
-                                onBookLongClick = { book ->
-                                    libraryViewModel.selectBook(book)
-                                    showAboutDocument = true
-                                }
-                            )
-                        }
-
-                        item { Spacer(modifier = Modifier.size(100.dp)) }
-                    }
-
-                    // Snackbar
-                    SnackbarHost(
-                        hostState = snackbarHostState,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 90.dp)
-                    ) { snackBarData ->
-                        CustomSnackBar(
-                            text = snackBarData.visuals.message,
-                            onCancelClicked = { snackBarData.dismiss() }
-                        )
-                    }
-
-                    // Bottom Bar
-                    BottomBar(
+                    AnimatedIconRow(
+                        selectedBook = selectedBook,
                         libraryViewModel = libraryViewModel,
                         bookStateViewModel = bookStateViewModel,
+                        collectionViewModel = collectionViewModel,
                         navController = navController,
-                        toCloseDrawer = toCloseDrawer,
-                        selectedBook = selectedBook,
-                        modifier = Modifier.align(Alignment.BottomCenter)
+                        onBookDeleted = {
+                            // Handle book deletion - refresh the list
+                        },
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                    HorizontalDivider(
+                        thickness = 0.5.dp,
+                        color = colorResource(id = R.color.progress_bar_front_color)
                     )
                 }
-            } else {
-                AboutDocumentScreen(
-                    book = selectedBook,
-                    bookStateViewModel = bookStateViewModel,
-                    onBackClick = { showAboutDocument = false },
-                    onNavigateToReader = { book ->
-                        navController.navigate("pdfReader/${book.bookId}")
-                    },
-                    modifier = modifier
+
+                // Shelf Navigation
+                item {
+                    ShelfNavigationSection(
+                        currentShelf = currentBookShelf,
+                        collections = allCollections,
+                        onShelfSelected = { shelfType ->
+                            libraryViewModel.changeBookShelf(shelfType)
+                        },
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+
+                // Books based on current shelf
+                item {
+                    val booksToDisplay = when (currentBookShelf) {
+                        is BookShelfType.Recent -> recentBooks
+                        is BookShelfType.Favorites -> favoriteBooks
+                        is BookShelfType.ToRead -> toReadBooks
+                        is BookShelfType.Completed -> completedBooks
+                        is BookShelfType.Collection -> allBooks // TODO: Filter by collection
+                    }
+
+                    BookShelfSection(
+                        books = booksToDisplay,
+                        onBookClick = { book ->
+                            libraryViewModel.selectBook(book)
+                        },
+                        onBookLongClick = { book ->
+                            libraryViewModel.selectBook(book)
+                        }
+                    )
+                }
+
+                item { Spacer(modifier = Modifier.size(100.dp)) }
+            }
+
+            // Snackbar
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 90.dp)
+            ) { snackBarData ->
+                CustomSnackBar(
+                    text = snackBarData.visuals.message,
+                    onCancelClicked = { snackBarData.dismiss() }
                 )
             }
+
+            // Bottom Bar
+            BottomBar(
+                libraryViewModel = libraryViewModel,
+                bookStateViewModel = bookStateViewModel,
+                navController = navController,
+                selectedBook = selectedBook,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 }
@@ -264,11 +254,37 @@ fun CurrentlyReadingSection(
 ) {
     var bookState by remember { mutableStateOf<com.example.bookReader.data.entity.BookStateEntity?>(null) }
 
-    LaunchedEffect(selectedBook ) {
+    LaunchedEffect(selectedBook) {
         selectedBook?.let {
             bookState = bookStateViewModel.getBookState(it.bookId)
         }
     }
+
+    val targetProgress = remember(bookState, selectedBook) {
+        val currentPage = bookState?.currentPage?.toFloat() ?: 0f
+        val totalPages = selectedBook?.totalPages?.toFloat() ?: 1f
+        if (totalPages > 0) (currentPage / totalPages).coerceIn(0f, 1f) else 0f
+    }
+
+    val animatedProgress by animateFloatAsState(
+        targetValue = targetProgress,
+        animationSpec = tween(
+            durationMillis = 600,
+            easing = FastOutSlowInEasing
+        ),
+        label = "progress_animation"
+    )
+
+    val percentage = remember(bookState, selectedBook) {
+        val currentPage = bookState?.currentPage ?: 0
+        val totalPages = selectedBook?.totalPages ?: 0
+        if (totalPages > 0) {
+            ((currentPage.toFloat() / totalPages.toFloat()) * 100).toInt()
+        } else {
+            0
+        }
+    }
+
     Column {
         Row(
             modifier = modifier.padding(top = 16.dp, start = 16.dp, bottom = 8.dp)
@@ -286,18 +302,24 @@ fun CurrentlyReadingSection(
                         shape = MaterialTheme.shapes.small,
                         spotColor = colorResource(R.color.shadow)
                     )
-
             ) {
                 Image(
                     painter = rememberAsyncImagePainter(
-                        model = selectedBook?.title
+                        model = selectedBook?.coverImagePath?.let { File(it) }
                     ),
                     contentDescription = "Book_cover_1",
                     contentScale = ContentScale.FillBounds,
                 )
             }
+
             Column(
-                modifier = Modifier.padding( top = 2.dp, start = 16.dp, end = 8.dp)
+                modifier = Modifier
+                    .padding(top = 2.dp, start = 16.dp, end = 8.dp)
+                    .clickable(
+                        onClick = {
+                            selectedBook?.let { onBookClick(it) }
+                        }
+                    ),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -309,45 +331,20 @@ fun CurrentlyReadingSection(
                             style = MaterialTheme.typography.titleLarge.copy(fontSize = 14.sp),
                             color = MaterialTheme.colorScheme.inverseSurface,
                             overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.book),
-                            contentDescription = "Read",
-                            tint = MaterialTheme.colorScheme.inverseSurface,
-                            modifier = Modifier
-                                .size(26.dp)
-                                .clickable(
-                                    onClick = {
-                                        onBookClick(selectedBook!!)
-                                    }
-                                ),
-                        )
-                        Text(
-                            text = "About",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.inverseSurface
+                            maxLines = 2,
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
-                Spacer(
-                    modifier = Modifier.size(20.dp)
-                )
+
+                Spacer(modifier = Modifier.size(20.dp))
+
                 CustumSlideBar(
-                    value = bookState?.currentPage?.toFloat() ?: 0.0f,
+                    value = animatedProgress,
                     color = MaterialTheme.colorScheme.outline
                 )
                 Text(
-                    text = if (selectedBook?.totalPages != 0) {
-                        val percentage = (bookState?.currentPage?.div(selectedBook?.totalPages!!)
-                            ?.times(100))
-                        "${bookState?.currentPage}/${selectedBook?.totalPages} Completed ($percentage%)"
-                    } else {
-                        " Completed (0%)"
-                    },
+                    text = "${bookState?.currentPage ?: 0}/${selectedBook?.totalPages ?: 0} • $percentage% Complete",
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                     modifier = Modifier
                         .align(Alignment.End)
@@ -356,7 +353,6 @@ fun CurrentlyReadingSection(
                 )
             }
         }
-
     }
 }
 
@@ -450,56 +446,58 @@ fun BookShelfSection(
         }
     } else {
         Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                books.forEach { book ->
-                    Surface(
-                        color = Color.White,
-                        tonalElevation = 8.dp,
-                        shadowElevation = 16.dp,
-                        modifier = Modifier
-                            .height(100.dp)
-                            .width(65.dp)
-                            .clickable{
-                                onBookClick(book)
-                            }
-                    ) {
-                        Image(
-                            painter = rememberAsyncImagePainter(
-                                model = book.title
-                            ),
-                            contentDescription = "Shelf Book",
-                            contentScale = ContentScale.FillBounds,
-                            modifier = Modifier.fillMaxSize()
-                        )
+            books.chunked(3).forEach { rowBooks ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    rowBooks.forEach { book ->
+                        Surface(
+                            color = Color.White,
+                            tonalElevation = 8.dp,
+                            shadowElevation = 16.dp,
+                            modifier = Modifier
+                                .height(100.dp)
+                                .width(65.dp)
+                                .clickable {
+                                    onBookClick(book)
+                                }
+                        ) {
+                            Image(
+                                painter = rememberAsyncImagePainter(
+                                    model = book.coverImagePath?.let { File(it) }
+                                ),
+                                contentDescription = "Shelf Book",
+                                contentScale = ContentScale.FillBounds,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .background(color = MaterialTheme.colorScheme.surfaceContainer)
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(14.dp)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.surfaceContainerHigh,
-                                MaterialTheme.colorScheme.surfaceContainerHighest
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .background(color = MaterialTheme.colorScheme.surfaceContainer)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(14.dp)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    MaterialTheme.colorScheme.surfaceContainerHighest
+                                )
                             )
                         )
-                    )
-            )
-            HorizontalDivider(
-                thickness = 0.5.dp,
-                color = colorResource(id = R.color.shadow)
-            )
+                )
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = colorResource(id = R.color.shadow)
+                )
+            }
         }
     }
 }
@@ -538,7 +536,6 @@ fun CustomSnackBar(
 
 @Composable
 fun GeneralDrawerTopBar(
-    toOpenDrawer: () -> Unit,
     text: String,
     modifier: Modifier = Modifier
 ) {
@@ -550,14 +547,15 @@ fun GeneralDrawerTopBar(
         Surface(
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .clickable { toOpenDrawer() },
+                .align(Alignment.TopStart),
             shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
             shadowElevation = 4.dp,
         ) {
-            IconButton(onClick = { toOpenDrawer() }) {
+            IconButton(
+                onClick = { }
+            ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.menu),
+                    painter = painterResource(id = R.drawable.home),
                     contentDescription = "Menu",
                     tint = MaterialTheme.colorScheme.inverseSurface,
                     modifier = Modifier.size(24.dp)
@@ -586,7 +584,6 @@ fun BottomBar(
     libraryViewModel: LibraryViewModel,
     bookStateViewModel: BookStateViewModel,
     navController: NavController,
-    toCloseDrawer: () -> Unit,
     selectedBook: BookEntity?,
     modifier: Modifier = Modifier
 ) {
@@ -646,20 +643,18 @@ fun BottomBar(
                     color = MaterialTheme.colorScheme.inverseSurface
                 )
             }
-            QuickPdfSelection(
+            PdfSelection(
                 libraryViewModel = libraryViewModel,
                 navController = navController,
-                toCloseDrawer = toCloseDrawer
             )
         }
     }
 }
 
 @Composable
-fun QuickPdfSelection(
+fun PdfSelection(
     libraryViewModel: LibraryViewModel,
     navController: NavController,
-    toCloseDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -682,6 +677,7 @@ fun QuickPdfSelection(
                         title = meta.title,
                         author = meta.author,
                         uri = it,
+                        coverImagePath = meta.coverImagePath,
                         totalPages = meta.totalPages
                     )
 
@@ -713,7 +709,6 @@ fun QuickPdfSelection(
                 modifier = Modifier
                     .clickable {
                         pdfLauncher.launch(arrayOf("application/pdf"))
-                        toCloseDrawer()
                     }
                     .padding(4.dp)
             )
@@ -724,114 +719,5 @@ fun QuickPdfSelection(
             color = MaterialTheme.colorScheme.inverseSurface,
             modifier = Modifier.offset(y = (-4).dp)
         )
-    }
-}
-
-@Composable
-fun AboutDocumentScreen(
-    book: BookEntity?,
-    bookStateViewModel: BookStateViewModel,
-    onBackClick: () -> Unit,
-    onNavigateToReader: (BookEntity) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        contentPadding = PaddingValues(horizontal = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.zIndex(0f)
-    ) {
-        item {
-            Spacer(modifier = Modifier.padding(top = 80.dp))
-            Box(
-                modifier = Modifier
-            ) {
-                Surface(
-                    color = Color.White,
-                    shape = MaterialTheme.shapes.extraSmall,
-                    modifier = Modifier
-                        .size(
-                            200.dp,
-                            300.dp
-                        )
-                        .shadow(
-                            elevation = 8.dp,
-                            shape = MaterialTheme.shapes.small,
-                            spotColor = colorResource(R.color.shadow)
-                        )
-                        .clickable {
-                            if (book?.uri != null) {
-                            }
-                        }
-                ) {
-                    Image(
-                        painter = rememberAsyncImagePainter(
-                            model = book?.title
-                        ),
-                        contentDescription = "Book_cover_1",
-                        contentScale = ContentScale.FillBounds
-                    )
-                }
-            }
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-            ) {
-                Text(
-                    text = book?.title ?: "",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.inverseSurface,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp, bottom = 2.dp)
-                )
-                Text(
-                    text = "L__ ${book?.author ?: ""}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp, end = 8.dp)
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 12.dp)
-                    .fillMaxWidth()
-
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "time",
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.inverseSurface,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 1.dp)
-                    )
-                    Text(
-                        text = "Last read time",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.inverseSurface,
-                    )
-                    Text(
-                        text = "size",
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.inverseSurface,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 1.dp)
-                    )
-                    Text(
-                        text = "File format and size",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.inverseSurface,
-                    )
-                    Spacer(modifier = Modifier.padding(top = 16.dp))
-                }
-            }
-        }
     }
 }

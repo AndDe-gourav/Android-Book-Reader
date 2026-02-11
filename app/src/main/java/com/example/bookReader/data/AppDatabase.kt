@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import com.example.bookReader.data.dao.BookCollectionDao
 import com.example.bookReader.data.dao.BookDao
@@ -18,7 +17,6 @@ import com.example.bookReader.data.entity.BookStateEntity
 import com.example.bookReader.data.entity.CollectionEntity
 import com.example.bookReader.data.entity.ReadingGoalEntity
 import com.example.bookReader.data.entity.ReadingSessionEntity
-import com.example.bookReader.data.entity.ReadingStatus
 
 @Database(
     entities = [
@@ -30,7 +28,7 @@ import com.example.bookReader.data.entity.ReadingStatus
         ReadingGoalEntity::class
     ],
     version = 1,
-    exportSchema = true
+    exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -54,14 +52,4 @@ abstract class AppDatabase : RoomDatabase() {
                 ).build().also { INSTANCE = it }
             }
     }
-}
-class Converters {
-
-    @TypeConverter
-    fun toStatus(value: String): ReadingStatus =
-        ReadingStatus.valueOf(value)
-
-    @TypeConverter
-    fun fromStatus(status: ReadingStatus): String =
-        status.name
 }

@@ -179,15 +179,6 @@ fun BookInReading(
                 )
             }
         }
-        AnimatedIconRow(
-            bookDataViewModel = bookDataViewModel,
-            timeGoalViewModel = timeGoalViewModel,
-            showAboutDocument = showAboutDocument,
-            navController = navController,
-            snackBarContent = snackBarContent,
-            selectedBook = selectedBook,
-            listOfCollections = listOfCollections
-        )
     }
 }
 

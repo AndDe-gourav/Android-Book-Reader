@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.bookReader.data.entity.BookStateEntity
 import com.example.bookReader.data.entity.ReadingStatus
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BookStateDao {
@@ -15,6 +16,10 @@ interface BookStateDao {
 
     @Query("SELECT * FROM book_state WHERE bookId = :bookId")
     suspend fun getState(bookId: Long): BookStateEntity?
+
+    // NEW: Observe book state changes reactively
+    @Query("SELECT * FROM book_state WHERE bookId = :bookId")
+    fun observeState(bookId: Long): Flow<BookStateEntity?>
 
     @Query("""
         UPDATE book_state

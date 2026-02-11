@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.bookReader.ui.theme.GeneralTopBar
 import java.time.LocalDate
 
 @Composable
@@ -57,7 +58,7 @@ fun StatsScreen(
     Box(
         modifier = modifier.fillMaxSize()
     ) {
-        GerenalTopBar(
+        GeneralTopBar(
             titleText = "Stats",
             onBackClicked = {
                 navController.navigate("homeScreen")

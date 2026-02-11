@@ -18,7 +18,7 @@ data class BookEntity(
     val uri: String,
 
     val totalPages: Int,
-
+    val coverImagePath: String?,
     val addedAt: Long = System.currentTimeMillis(),
     val lastOpenedAt: Long? = null
 )
