@@ -20,8 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,7 +37,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -47,6 +44,7 @@ import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.bookReader.ui.theme.GeneralTopBar
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -84,7 +82,7 @@ fun AboutDoucument(
     Box(
         modifier = modifier
     ) {
-        GerenalTopBar(
+        GeneralTopBar(
             titleText = "About Book",
             onBackClicked = {
                 onAboutDocumentClicked()
@@ -158,15 +156,7 @@ fun AboutDoucument(
                             .padding(bottom = 8.dp, end = 8.dp)
                     )
                 }
-                AnimatedIconRow(
-                    bookDataViewModel = bookDataViewModel,
-                    showAboutDocument = showAboutDocument,
-                    navController = navController,
-                    selectedBook = selectedBook,
-                    listOfCollections = listOfCollections,
-                    snackBarContent = {},
-                    timeGoalViewModel = timeGoalViewModel
-                )
+
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
@@ -233,54 +223,4 @@ fun AboutDoucument(
     }
 }
 
-@Composable
-fun GerenalTopBar(
-    onBackClicked: () -> Unit,
-    titleText: String,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-    ) {
-        Surface(
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .clickable {
-                    onBackClicked()
-                }
-            ,
-            shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
-            shadowElevation = 4.dp,
-        ) {
-            IconButton(
-                onClick = { onBackClicked() }
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.sign_out_circle),
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.inverseSurface,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-        Surface(
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.align(Alignment.TopEnd),
-            shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp),
-            shadowElevation = 4.dp,
-        ) {
-            Text(
-                text = titleText,
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.inverseSurface,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(vertical = 13.dp, horizontal = 34.dp)
-            )
-
-        }
-    }
-}
 
