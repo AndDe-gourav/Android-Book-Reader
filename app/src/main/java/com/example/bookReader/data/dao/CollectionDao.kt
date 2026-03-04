@@ -20,4 +20,8 @@ interface CollectionDao {
     @Transaction
     @Query("SELECT * FROM collections WHERE collectionId = :id")
     fun getCollectionWithBooks(id: Long): Flow<CollectionWithBooks>
+
+    @Transaction
+    @Query("SELECT * FROM collections")
+    fun getAllCollectionsWithBooks(): Flow<List<CollectionWithBooks>>
 }

@@ -1,29 +1,24 @@
-package com.example.bookReader.ui.theme
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -31,192 +26,230 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.window.Dialog
+import androidx.core.net.toUri
 import androidx.navigation.NavController
-import com.example.bookReader.R
-import com.example.bookReader.data.entity.BookEntity
+import com.example.bookReader.OnCellClicked
+import com.example.bookReader.ui.theme.GeneralTopBar
+import com.example.bookReader.ui.theme.LibraryViewModel
+import kotlinx.coroutines.delay
+
+enum class EditField {
+    TITLE,
+    AUTHOR
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditScreen(
     navController: NavController,
-    libraryViewModel: LibraryViewModel = hiltViewModel(),
-    bookStateViewModel: BookStateViewModel = hiltViewModel(),
+    libraryViewModel: LibraryViewModel,
     modifier: Modifier = Modifier
 ) {
-    val allBooks by libraryViewModel.allBooks.collectAsState()
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var bookToDelete by remember { mutableStateOf<BookEntity?>(null) }
+
+    val selectedBook by libraryViewModel.selectedBook.collectAsState()
+
+    var editingField by remember { mutableStateOf<EditField?>(null) }
+    var editValue by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Edit Library") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                            contentDescription = "Back"
-                        )
-                    }
-                }
+            GeneralTopBar(
+                titleText = "Edit Book",
+                onBackClicked = { navController.popBackStack() }
             )
         },
         modifier = modifier
     ) { paddingValues ->
-        if (allBooks.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "No books in library",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(allBooks, key = { it.bookId }) { book ->
-                    EditableBookItem(
-                        book = book,
-                        onDeleteClick = {
-                            bookToDelete = book
-                            showDeleteDialog = true
-                        },
-                        onToggleFavorite = { isFavorite ->
-                            bookStateViewModel.updateBookState(
-                                bookId = book.bookId,
-                                isFavorite = !isFavorite
-                            )
+
+        LazyColumn(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
+        ) {
+
+            item {
+
+                selectedBook?.title?.let { title ->
+                    EditCell(
+                        titleText = title,
+                        cellName = "Title",
+                        onCellClicked = {
+                            editValue = title
+                            editingField = EditField.TITLE
+                        }
+                    )
+                }
+
+                selectedBook?.author?.let { author ->
+                    EditCell(
+                        titleText = author,
+                        cellName = "Author",
+                        onCellClicked = {
+                            editValue = author
+                            editingField = EditField.AUTHOR
                         }
                     )
                 }
             }
         }
+    }
 
-        // Delete confirmation dialog
-        if (showDeleteDialog && bookToDelete != null) {
-            AlertDialog(
-                onDismissRequest = { showDeleteDialog = false },
-                title = { Text("Delete Book") },
-                text = { Text("Are you sure you want to delete \"${bookToDelete?.title}\"?") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            // TODO: Implement delete functionality in LibraryViewModel
-                            // libraryViewModel.deleteBook(bookToDelete!!.bookId)
-                            showDeleteDialog = false
-                            bookToDelete = null
-                        }
-                    ) {
-                        Text("Delete")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteDialog = false }) {
-                        Text("Cancel")
+    editingField?.let { field ->
+
+        OnCellClicked(
+            cellName = if (field == EditField.AUTHOR) "Author" else "Title",
+            value = editValue,
+            onValueChange = { editValue = it },
+            onDismiss = { editingField = null },
+            onSaveClicked = {
+
+                selectedBook?.let { book ->
+
+                    val uri = book.uri.toUri()
+
+                    when (field) {
+
+                        EditField.TITLE ->
+                            libraryViewModel.updateBookTitle(uri, editValue)
+
+                        EditField.AUTHOR ->
+                            libraryViewModel.updateBookAuthor(uri, editValue)
                     }
                 }
+
+                editingField = null
+            }
+        )
+    }
+}
+
+@Composable
+fun EditCell(
+    modifier: Modifier = Modifier,
+    titleText: String = "",
+    cellName: String = "",
+    onCellClicked: () -> Unit = {},
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.onBackground,
+        shape = RoundedCornerShape(8.dp),
+        shadowElevation = 8.dp,
+        modifier = modifier
+            .padding(12.dp)
+            .fillMaxWidth()
+            .clickable(
+                onClick = { onCellClicked() }
+            )
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            Text(
+                text = cellName,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.outline
+            )
+            Spacer(
+                modifier = Modifier.padding(4.dp)
+            )
+            Text(
+                text = titleText,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.inverseSurface,
             )
         }
     }
 }
 
 @Composable
-private fun EditableBookItem(
-    book: BookEntity,
-    onDeleteClick: () -> Unit,
-    onToggleFavorite: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+fun OnCellClicked(
+    modifier: Modifier = Modifier,
+    cellName: String = "",
+    value: String ,
+    onValueChange: (String) -> Unit = {},
+    onDismiss: () -> Unit = {},
+    onSaveClicked: () -> Unit = {},
 ) {
-    var isFavorite by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusRequester = remember { FocusRequester() }
 
-    // TODO: Get actual favorite status from BookStateViewModel
-    LaunchedEffect(book.bookId) {
-        // Fetch favorite status
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+        delay(100)
+        keyboardController?.show()
     }
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    Dialog(
+        onDismissRequest = { onDismiss() }
     ) {
-        Row(
-            modifier = Modifier
+        Card(
+            modifier = modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(12.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.outline
+            )
         ) {
-            // Book icon
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.primaryContainer
+            Column(
+                modifier = Modifier.padding(12.dp)
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(8.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Book info
-            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = book.title,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                    maxLines = 1
+                    text = cellName,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    modifier = Modifier.padding(top = 10.dp, bottom = 20.dp)
                 )
-                book.author?.let { author ->
-                    Text(
-                        text = author,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                }
-                Text(
-                    text = "${book.totalPages} pages",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Actions
-            IconButton(onClick = { onToggleFavorite(isFavorite) }) {
-                Icon(
-                    painter = painterResource(
-                        id = if (isFavorite) R.drawable.ic_launcher_foreground
-                        else R.drawable.ic_launcher_foreground
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.onBackground,
                     ),
-                    contentDescription = "Favorite",
-                    tint = if (isFavorite) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+                    maxLines = 3,
+                    label = { Text(text = if (cellName == "Author") "Author's name" else "Title") },
+                    modifier = Modifier.focusRequester(focusRequester)
                 )
-            }
-
-            IconButton(onClick = onDeleteClick) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error
+                Spacer(
+                    modifier = modifier.padding(8.dp)
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        shape = RoundedCornerShape(8.dp),
+                        onClick = { onDismiss() },
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                        )
+                    }
+                    Spacer(
+                        modifier = Modifier.padding(2.dp)
+                    )
+                    TextButton(
+                        shape = RoundedCornerShape(8.dp),
+                        onClick = { onSaveClicked() }
+                    ) {
+                        Text(
+                            text = "Save",
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                        )
+                    }
+                }
             }
         }
     }

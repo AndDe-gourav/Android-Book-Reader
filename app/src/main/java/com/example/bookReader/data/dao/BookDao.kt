@@ -55,4 +55,31 @@ interface BookDao {
     // NEW: Get recent books with reactive Flow
     @Query("SELECT * FROM books ORDER BY lastOpenedAt DESC LIMIT :limit")
     fun getRecentBooks(limit: Int): Flow<List<BookEntity>>
+
+    @Query("""
+    SELECT * FROM books
+    ORDER BY lastOpenedAt DESC
+    LIMIT 1
+""")
+    suspend fun getLastOpenedBook(): BookEntity?
+
+    @Query("""
+        UPDATE books
+        SET title = :title
+        WHERE uri = :uri
+    """)
+    suspend fun updateBookTitle(
+        uri: String,
+        title: String
+    )
+
+    @Query("""
+        UPDATE books
+        SET author = :author
+        WHERE uri = :uri
+    """)
+    suspend fun updateBookAuthor(
+        uri: String,
+        author: String
+    )
 }

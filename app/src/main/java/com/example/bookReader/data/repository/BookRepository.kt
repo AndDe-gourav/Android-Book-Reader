@@ -38,15 +38,9 @@ class BookRepository @Inject constructor(
 
     // ==================== BOOK OPERATIONS ====================
 
-    /**
-     * Get all books as Flow for automatic UI updates
-     */
     fun getLibrary(): Flow<List<BookEntity>> =
         bookDao.getAllBooks()
 
-    /**
-     * Add a new book to the library
-     */
     suspend fun addBook(
         title: String,
         author: String?,
@@ -63,34 +57,22 @@ class BookRepository @Inject constructor(
                 coverImagePath = coverImagePath,
             )
         )
-
-        // Initialize book state as TO_READ
         bookStateDao.insertState(
             BookStateEntity(
                 bookId = bookId,
                 status = ReadingStatus.TO_READ
             )
         )
-
         return bookId
     }
 
-    /**
-     * Get a specific book by ID
-     */
     suspend fun getBookById(bookId: Long): BookEntity? =
         bookDao.getBookById(bookId)
 
-    /**
-     * Delete a book
-     */
     suspend fun deleteBook(bookId: Long) {
         bookDao.deleteBook(bookId)
     }
 
-    /**
-     * Open PDF input stream for reading
-     */
     fun openPdf(bookId: Long): InputStream {
         val book = runBlocking {
             bookDao.getBookById(bookId)
@@ -101,35 +83,33 @@ class BookRepository @Inject constructor(
             ?: throw FileNotFoundException()
     }
 
+    suspend fun getLastOpenedBook(): BookEntity? {
+        return bookDao.getLastOpenedBook()
+    }
+
+    suspend fun updateBookTitle(uri: Uri, title: String) {
+        bookDao.updateBookTitle(uri.toString(), title)
+    }
+
+    suspend fun updateBookAuthor(uri: Uri, author: String) {
+        bookDao.updateBookAuthor(uri.toString(), author)
+    }
+
     // ==================== BOOK STATE OPERATIONS ====================
 
-    /**
-     * Get book state (one-time query)
-     */
     suspend fun getBookState(bookId: Long): BookStateEntity? =
         bookStateDao.getState(bookId)
 
-    /**
-     * Observe book state changes reactively
-     * UI will automatically update when state changes
-     */
     fun observeBookState(bookId: Long): Flow<BookStateEntity?> =
         bookStateDao.observeState(bookId)
 
-    /**
-     * Update book progress
-     */
     suspend fun updateProgress(bookId: Long, page: Int, totalPages: Int) {
         val status =
             if (page >= totalPages - 1) ReadingStatus.COMPLETED
             else ReadingStatus.READING
-
         bookStateDao.updateProgress(bookId, page, status)
     }
 
-    /**
-     * Update book state (progress, status, favorite)
-     */
     suspend fun updateBookState(
         bookId: Long,
         currentPage: Int? = null,
@@ -137,9 +117,7 @@ class BookRepository @Inject constructor(
         isFavorite: Boolean? = null
     ) {
         val existingState = bookStateDao.getState(bookId)
-
         if (existingState != null) {
-            // Update existing state
             if (currentPage != null || status != null) {
                 bookStateDao.updateProgress(
                     bookId = bookId,
@@ -151,7 +129,6 @@ class BookRepository @Inject constructor(
                 bookStateDao.setFavorite(bookId, isFavorite)
             }
         } else {
-            // Create new state
             bookStateDao.insertState(
                 BookStateEntity(
                     bookId = bookId,
@@ -163,75 +140,42 @@ class BookRepository @Inject constructor(
         }
     }
 
-    /**
-     * Toggle favorite status for a book
-     */
-    suspend fun setFavorite(bookId: Long, favorite: Boolean) {
-        bookStateDao.setFavorite(bookId, favorite)
-    }
-
-    /**
-     * Get favorite books as reactive Flow
-     * UI automatically updates when favorites change
-     */
     fun getFavoriteBooks(): Flow<List<BookEntity>> =
         bookDao.getFavoriteBooks()
 
-    /**
-     * Get books by reading status as reactive Flow
-     * UI automatically updates when status changes
-     */
     fun getBooksByStatus(status: ReadingStatus): Flow<List<BookEntity>> =
         bookDao.getBooksByStatus(status)
 
-    /**
-     * Get recent books (sorted by last opened) as reactive Flow
-     * UI automatically updates when books are opened
-     */
     fun getRecentBooks(limit: Int = 10): Flow<List<BookEntity>> =
         bookDao.getRecentBooks(limit)
 
     // ==================== COLLECTION OPERATIONS ====================
 
-    /**
-     * Get all collections as Flow
-     */
     fun getAllCollections(): Flow<List<CollectionEntity>> =
         collectionDao.getAllCollections()
 
-    /**
-     * Get collection with books as Flow
-     */
     fun getCollectionWithBooks(collectionId: Long): Flow<CollectionWithBooks> =
         collectionDao.getCollectionWithBooks(collectionId)
 
-    /**
-     * Create a new collection
-     */
+    /** Returns every collection together with its books — used for the Collection shelf view. */
+    fun getAllCollectionsWithBooks(): Flow<List<CollectionWithBooks>> =
+        collectionDao.getAllCollectionsWithBooks()
+
     suspend fun createCollection(name: String): Long =
         collectionDao.insertCollection(CollectionEntity(name = name))
 
-    /**
-     * Add a book to a collection
-     */
     suspend fun addBookToCollection(bookId: Long, collectionId: Long) {
         bookCollectionDao.addBookToCollection(
             BookCollectionCrossRef(bookId, collectionId)
         )
     }
 
-    /**
-     * Remove a book from a collection
-     */
     suspend fun removeBookFromCollection(bookId: Long, collectionId: Long) {
         bookCollectionDao.removeBookFromCollection(bookId, collectionId)
     }
 
     // ==================== READING SESSION OPERATIONS ====================
 
-    /**
-     * Save a reading session
-     */
     suspend fun saveSession(
         bookId: Long,
         startTime: Long,
@@ -250,23 +194,14 @@ class BookRepository @Inject constructor(
         )
     }
 
-    /**
-     * Get total reading time for a book
-     */
     suspend fun getTotalReadingTime(bookId: Long): Long =
         sessionDao.getTotalReadingTime(bookId)
 
-    /**
-     * Get reading sessions between time range
-     */
     suspend fun getSessionsBetween(from: Long, to: Long): List<ReadingSessionEntity> =
         sessionDao.getSessionsBetween(from, to)
 
     // ==================== READING GOAL OPERATIONS ====================
 
-    /**
-     * Set reading goal for a book
-     */
     suspend fun setReadingGoal(bookId: Long, dailyMinutes: Int) {
         goalDao.setGoal(
             ReadingGoalEntity(
@@ -276,9 +211,6 @@ class BookRepository @Inject constructor(
         )
     }
 
-    /**
-     * Get reading goal for a book
-     */
     suspend fun getReadingGoal(bookId: Long): ReadingGoalEntity? =
         goalDao.getGoal(bookId)
 }

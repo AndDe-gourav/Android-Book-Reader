@@ -120,7 +120,8 @@ fun AboutBookScreen(
                     collectionViewModel = collectionViewModel,
                     navController = navController,
                     onBookDeleted = {
-                        // Handle book deletion - refresh the list
+                        libraryViewModel.deleteBook(book?.bookId!!)
+                        navController.popBackStack()
                     },
                     modifier = Modifier.padding(vertical = 4.dp)
                 )

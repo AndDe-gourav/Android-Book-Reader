@@ -49,7 +49,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,6 +72,7 @@ import com.example.bookReader.AnimatedIconRow
 import com.example.bookReader.CustumSlideBar
 import com.example.bookReader.R
 import com.example.bookReader.data.entity.BookEntity
+import com.example.bookReader.data.entity.CollectionWithBooks
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
@@ -81,36 +81,31 @@ import java.io.File
 fun HomeScreenImproved(
     navController: NavController,
     modifier: Modifier = Modifier,
-    libraryViewModel: LibraryViewModel ,
-    bookStateViewModel: BookStateViewModel ,
+    libraryViewModel: LibraryViewModel,
+    bookStateViewModel: BookStateViewModel,
     collectionViewModel: CollectionViewModel
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Collect state from ViewModels
     val allBooks by libraryViewModel.allBooks.collectAsState()
     val selectedBook by libraryViewModel.selectedBook.collectAsState()
     val currentBookShelf by libraryViewModel.currentBookShelf.collectAsState()
 
-    // Book state collections
     val recentBooks by bookStateViewModel.recentBooks.collectAsState()
     val favoriteBooks by bookStateViewModel.favoriteBooks.collectAsState()
     val toReadBooks by bookStateViewModel.toReadBooks.collectAsState()
-    val readingBooks by bookStateViewModel.readingBooks.collectAsState()
     val completedBooks by bookStateViewModel.completedBooks.collectAsState()
 
-    val allCollections by collectionViewModel.allCollections.collectAsState()
-    val snackbarMessage by libraryViewModel.snackbarMessage.collectAsState()
+    // Collect all collections with their books for the Collection shelf
+    val collectionsWithBooks by collectionViewModel.allCollectionsWithBooks.collectAsState()
 
-    // UI state
-    var showAboutDocument by rememberSaveable { mutableStateOf(false) }
+    val snackbarMessage by libraryViewModel.snackbarMessage.collectAsState()
 
     val activity = context as? Activity
     var backPressCount by remember { mutableIntStateOf(0) }
 
-    // Handle snackbar messages
     LaunchedEffect(snackbarMessage) {
         snackbarMessage?.let { message ->
             snackbarHostState.currentSnackbarData?.dismiss()
@@ -126,12 +121,8 @@ fun HomeScreenImproved(
     BackHandler {
         backPressCount++
         when (backPressCount) {
-            1 -> {
-                Toast.makeText(context, "Press back again to exit", Toast.LENGTH_SHORT).show()
-            }
-            2 -> {
-                activity?.finish()
-            }
+            1 -> Toast.makeText(context, "Press back again to exit", Toast.LENGTH_SHORT).show()
+            2 -> activity?.finish()
         }
         coroutineScope.launch {
             delay(3000)
@@ -159,12 +150,6 @@ fun HomeScreenImproved(
                             libraryViewModel.selectBook(book)
                             navController.navigate("AboutBookScreen")
                         },
-                        onFavoriteClick = { book, isFavorite ->
-                            bookStateViewModel.updateBookState(
-                                bookId = book.bookId,
-                                isFavorite = !isFavorite
-                            )
-                        }
                     )
                     AnimatedIconRow(
                         selectedBook = selectedBook,
@@ -173,7 +158,7 @@ fun HomeScreenImproved(
                         collectionViewModel = collectionViewModel,
                         navController = navController,
                         onBookDeleted = {
-                            // Handle book deletion - refresh the list
+                            libraryViewModel.deleteBook(selectedBook?.bookId!!)
                         },
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
@@ -183,11 +168,9 @@ fun HomeScreenImproved(
                     )
                 }
 
-                // Shelf Navigation
                 item {
                     ShelfNavigationSection(
                         currentShelf = currentBookShelf,
-                        collections = allCollections,
                         onShelfSelected = { shelfType ->
                             libraryViewModel.changeBookShelf(shelfType)
                         },
@@ -195,31 +178,30 @@ fun HomeScreenImproved(
                     )
                 }
 
-                // Books based on current shelf
                 item {
-                    val booksToDisplay = when (currentBookShelf) {
-                        is BookShelfType.Recent -> recentBooks
-                        is BookShelfType.Favorites -> favoriteBooks
-                        is BookShelfType.ToRead -> toReadBooks
-                        is BookShelfType.Completed -> completedBooks
-                        is BookShelfType.Collection -> allBooks // TODO: Filter by collection
-                    }
-
-                    BookShelfSection(
-                        books = booksToDisplay,
-                        onBookClick = { book ->
-                            libraryViewModel.selectBook(book)
-                        },
-                        onBookLongClick = { book ->
-                            libraryViewModel.selectBook(book)
+                    if (currentBookShelf is BookShelfType.Collection) {
+                        CollectionShelfSection(
+                            collectionsWithBooks = collectionsWithBooks,
+                            onBookClick = { book -> libraryViewModel.selectBook(book) }
+                        )
+                    } else {
+                        val booksToDisplay = when (currentBookShelf) {
+                            is BookShelfType.Recent -> recentBooks
+                            is BookShelfType.Favorites -> favoriteBooks
+                            is BookShelfType.ToRead -> toReadBooks
+                            is BookShelfType.Completed -> completedBooks
+                            else -> emptyList()
                         }
-                    )
+                        BookShelfSection(
+                            books = booksToDisplay,
+                            onBookClick = { book -> libraryViewModel.selectBook(book) },
+                        )
+                    }
                 }
 
                 item { Spacer(modifier = Modifier.size(100.dp)) }
             }
 
-            // Snackbar
             SnackbarHost(
                 hostState = snackbarHostState,
                 modifier = Modifier
@@ -232,7 +214,6 @@ fun HomeScreenImproved(
                 )
             }
 
-            // Bottom Bar
             BottomBar(
                 libraryViewModel = libraryViewModel,
                 bookStateViewModel = bookStateViewModel,
@@ -244,12 +225,193 @@ fun HomeScreenImproved(
     }
 }
 
+
+@Composable
+fun CollectionShelfSection(
+    collectionsWithBooks: List<CollectionWithBooks>,
+    onBookClick: (BookEntity) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val nonEmpty = collectionsWithBooks.filter { it.books.isNotEmpty() }
+
+    if (nonEmpty.isEmpty()) {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "No books in any collection yet.\nTap the folder icon on a book to add it.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+        return
+    }
+
+    Column(modifier = modifier) {
+        nonEmpty.forEach { cwb ->
+
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(cwb.books) { book ->
+                    Surface(
+                        color = Color.White,
+                        tonalElevation = 8.dp,
+                        shadowElevation = 16.dp,
+                        modifier = Modifier
+                            .height(100.dp)
+                            .width(65.dp)
+                            .clickable { onBookClick(book) }
+                    ) {
+                        Image(
+                            painter = rememberAsyncImagePainter(
+                                model = book.coverImagePath?.let { File(it) }
+                            ),
+                            contentDescription = book.title,
+                            contentScale = ContentScale.FillBounds,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .background(color = MaterialTheme.colorScheme.surfaceContainer)
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(14.dp)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surfaceContainerHigh,
+                                MaterialTheme.colorScheme.surfaceContainerHighest
+                            )
+                        )
+                    )
+            )
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = colorResource(id = R.color.shadow)
+            )
+
+            Surface(
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(start = 12.dp),
+                shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
+                shadowElevation = 4.dp
+            ) {
+                Text(
+                    text = cwb.collection.name,
+                    modifier = Modifier.padding(vertical = 3.dp, horizontal = 10.dp),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp),
+                    color = MaterialTheme.colorScheme.inverseSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+fun BookShelfSection(
+    books: List<BookEntity>,
+    onBookClick: (BookEntity) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (books.isEmpty()) {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "No books in this shelf",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    } else {
+        Column {
+            books.chunked(3).forEach { rowBooks ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    rowBooks.forEach { book ->
+                        Surface(
+                            color = Color.White,
+                            tonalElevation = 8.dp,
+                            shadowElevation = 16.dp,
+                            modifier = Modifier
+                                .height(100.dp)
+                                .width(65.dp)
+                                .clickable { onBookClick(book) }
+                        ) {
+                            Image(
+                                painter = rememberAsyncImagePainter(
+                                    model = book.coverImagePath?.let { File(it) }
+                                ),
+                                contentDescription = "Shelf Book",
+                                contentScale = ContentScale.FillBounds,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .background(color = MaterialTheme.colorScheme.surfaceContainer)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(14.dp)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    MaterialTheme.colorScheme.surfaceContainerHighest
+                                )
+                            )
+                        )
+                )
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = colorResource(id = R.color.shadow)
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Remaining composables (unchanged)
+// ---------------------------------------------------------------------------
+
 @Composable
 fun CurrentlyReadingSection(
     selectedBook: BookEntity?,
     bookStateViewModel: BookStateViewModel,
     onBookClick: (BookEntity) -> Unit,
-    onFavoriteClick: (BookEntity, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var bookState by remember { mutableStateOf<com.example.bookReader.data.entity.BookStateEntity?>(null) }
@@ -268,26 +430,21 @@ fun CurrentlyReadingSection(
 
     val animatedProgress by animateFloatAsState(
         targetValue = targetProgress,
-        animationSpec = tween(
-            durationMillis = 600,
-            easing = FastOutSlowInEasing
-        ),
+        animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
         label = "progress_animation"
     )
 
     val percentage = remember(bookState, selectedBook) {
         val currentPage = bookState?.currentPage ?: 0
         val totalPages = selectedBook?.totalPages ?: 0
-        if (totalPages > 0) {
-            ((currentPage.toFloat() / totalPages.toFloat()) * 100).toInt()
-        } else {
-            0
-        }
+        if (totalPages > 0) ((currentPage.toFloat() / totalPages.toFloat()) * 100).toInt() else 0
     }
 
     Column {
         Row(
-            modifier = modifier.padding(top = 16.dp, start = 16.dp, bottom = 8.dp)
+            modifier = modifier
+                .padding(top = 16.dp, start = 16.dp, bottom = 8.dp)
+                .clickable { selectedBook?.let { onBookClick(it) } }
         ) {
             Surface(
                 color = Color.White,
@@ -301,7 +458,7 @@ fun CurrentlyReadingSection(
                         elevation = 4.dp,
                         shape = MaterialTheme.shapes.small,
                         spotColor = colorResource(R.color.shadow)
-                    )
+                    ),
             ) {
                 Image(
                     painter = rememberAsyncImagePainter(
@@ -313,13 +470,7 @@ fun CurrentlyReadingSection(
             }
 
             Column(
-                modifier = Modifier
-                    .padding(top = 2.dp, start = 16.dp, end = 8.dp)
-                    .clickable(
-                        onClick = {
-                            selectedBook?.let { onBookClick(it) }
-                        }
-                    ),
+                modifier = Modifier.padding(top = 2.dp, start = 16.dp, end = 8.dp),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -336,9 +487,7 @@ fun CurrentlyReadingSection(
                         )
                     }
                 }
-
                 Spacer(modifier = Modifier.size(20.dp))
-
                 CustumSlideBar(
                     value = animatedProgress,
                     color = MaterialTheme.colorScheme.outline
@@ -359,7 +508,6 @@ fun CurrentlyReadingSection(
 @Composable
 fun ShelfNavigationSection(
     currentShelf: BookShelfType,
-    collections: List<com.example.bookReader.data.entity.CollectionEntity>,
     onShelfSelected: (BookShelfType) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -396,13 +544,11 @@ fun ShelfNavigationSection(
                 onClick = { onShelfSelected(BookShelfType.Completed) }
             )
         }
-
-        items(collections) { collection ->
+        item {
             ShelfChip(
-                text = collection.name,
-                isSelected = currentShelf is BookShelfType.Collection &&
-                        currentShelf.collectionId == collection.collectionId,
-                onClick = { onShelfSelected(BookShelfType.Collection(collection.collectionId)) }
+                text = "Collection",
+                isSelected = currentShelf is BookShelfType.Collection,
+                onClick = { onShelfSelected(BookShelfType.Collection) }
             )
         }
     }
@@ -421,85 +567,6 @@ fun ShelfChip(
         label = { Text(text) },
         modifier = modifier
     )
-}
-
-@Composable
-fun BookShelfSection(
-    books: List<BookEntity>,
-    onBookClick: (BookEntity) -> Unit,
-    onBookLongClick: (BookEntity) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    if (books.isEmpty()) {
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(32.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "No books in this shelf",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-        }
-    } else {
-        Column {
-            books.chunked(3).forEach { rowBooks ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    rowBooks.forEach { book ->
-                        Surface(
-                            color = Color.White,
-                            tonalElevation = 8.dp,
-                            shadowElevation = 16.dp,
-                            modifier = Modifier
-                                .height(100.dp)
-                                .width(65.dp)
-                                .clickable {
-                                    onBookClick(book)
-                                }
-                        ) {
-                            Image(
-                                painter = rememberAsyncImagePainter(
-                                    model = book.coverImagePath?.let { File(it) }
-                                ),
-                                contentDescription = "Shelf Book",
-                                contentScale = ContentScale.FillBounds,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.dp)
-                        .background(color = MaterialTheme.colorScheme.surfaceContainer)
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(14.dp)
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.surfaceContainerHigh,
-                                    MaterialTheme.colorScheme.surfaceContainerHighest
-                                )
-                            )
-                        )
-                )
-                HorizontalDivider(
-                    thickness = 0.5.dp,
-                    color = colorResource(id = R.color.shadow)
-                )
-            }
-        }
-    }
 }
 
 @Composable
@@ -546,14 +613,11 @@ fun GeneralDrawerTopBar(
     ) {
         Surface(
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier
-                .align(Alignment.TopStart),
+            modifier = Modifier.align(Alignment.TopStart),
             shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
             shadowElevation = 4.dp,
         ) {
-            IconButton(
-                onClick = { }
-            ) {
+            IconButton(onClick = { }) {
                 Icon(
                     painter = painterResource(id = R.drawable.home),
                     contentDescription = "Menu",
@@ -664,12 +728,10 @@ fun PdfSelection(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
-            // Take persistable permission
             val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
                     Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             context.contentResolver.takePersistableUriPermission(it, takeFlags)
 
-            // Extract PDF metadata and add to library
             coroutineScope.launch {
                 val metadata = PdfUtil.extractPdfMetadata(context, it)
                 metadata?.let { meta ->
@@ -680,9 +742,8 @@ fun PdfSelection(
                         coverImagePath = meta.coverImagePath,
                         totalPages = meta.totalPages
                     )
-
                     if (bookId != -1L) {
-                        // Navigate to PDF reader
+                        libraryViewModel.restoreLastOpenedBook()
                         navController.navigate("pdfReader/$bookId")
                     }
                 }
@@ -707,9 +768,7 @@ fun PdfSelection(
                 contentDescription = "Add new Book",
                 tint = MaterialTheme.colorScheme.inverseSurface,
                 modifier = Modifier
-                    .clickable {
-                        pdfLauncher.launch(arrayOf("application/pdf"))
-                    }
+                    .clickable { pdfLauncher.launch(arrayOf("application/pdf")) }
                     .padding(4.dp)
             )
         }

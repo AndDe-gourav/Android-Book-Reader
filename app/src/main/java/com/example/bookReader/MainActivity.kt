@@ -1,5 +1,6 @@
 package com.example.bookReader
 
+import EditScreen
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -28,7 +29,6 @@ import androidx.navigation.navArgument
 import com.example.bookReader.ui.theme.BookReaderTheme
 import com.example.bookReader.ui.theme.BookStateViewModel
 import com.example.bookReader.ui.theme.CollectionViewModel
-import com.example.bookReader.ui.theme.EditScreen
 import com.example.bookReader.ui.theme.HomeScreenImproved
 import com.example.bookReader.ui.theme.LibraryViewModel
 import com.example.bookReader.ui.theme.PdfReaderScreen
@@ -105,6 +105,8 @@ fun App(
         ) {
             StatsScreen(
                 navController = navController,
+                libraryViewModel = libraryViewModel,
+                bookStateViewModel = bookStateViewModel,
                 modifier = modifier
             )
         }
@@ -114,6 +116,7 @@ fun App(
         ) {
             EditScreen(
                 navController = navController,
+                libraryViewModel = libraryViewModel,
                 modifier = modifier
             )
         }

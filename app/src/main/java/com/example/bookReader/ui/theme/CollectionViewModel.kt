@@ -19,7 +19,7 @@ class CollectionViewModel @Inject constructor(
     private val repository: BookRepository
 ) : ViewModel() {
 
-    // All collections - automatically updates when data changes
+    /** Flat list of all collection entities (name + id). */
     val allCollections: StateFlow<List<CollectionEntity>> = repository.getAllCollections()
         .stateIn(
             scope = viewModelScope,
@@ -27,24 +27,34 @@ class CollectionViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    // Currently selected collection with books
+    /**
+     * Every collection together with its member books.
+     * Consumed by the Collection shelf view and the "add to collection" dialog
+     * to know which collections already contain the selected book.
+     */
+    val allCollectionsWithBooks: StateFlow<List<CollectionWithBooks>> =
+        repository.getAllCollectionsWithBooks()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = emptyList()
+            )
+
     private val _selectedCollection = MutableStateFlow<CollectionWithBooks?>(null)
     val selectedCollection: StateFlow<CollectionWithBooks?> = _selectedCollection.asStateFlow()
 
-    /**
-     * Create a new collection
-     */
-    suspend fun createCollection(name: String): Long {
-        return try {
-            repository.createCollection(name)
-        } catch (e: Exception) {
-            -1L
+    /** Create a new collection (fire-and-forget from the UI). */
+    fun createCollection(name: String) {
+        viewModelScope.launch {
+            try {
+                repository.createCollection(name)
+            } catch (e: Exception) {
+                // Handle error
+            }
         }
     }
 
-    /**
-     * Add a book to a collection
-     */
+    /** Add a book to a collection. */
     fun addBookToCollection(bookId: Long, collectionId: Long) {
         viewModelScope.launch {
             try {
@@ -55,9 +65,7 @@ class CollectionViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Remove a book from a collection
-     */
+    /** Remove a book from a collection. */
     fun removeBookFromCollection(bookId: Long, collectionId: Long) {
         viewModelScope.launch {
             try {
@@ -69,9 +77,18 @@ class CollectionViewModel @Inject constructor(
     }
 
     /**
-     * Load a specific collection with its books
-     * This will automatically update when the collection changes
+     * Toggle a book's membership in a collection.
+     * If the book is already in the collection it is removed, otherwise it is added.
      */
+    fun toggleBookInCollection(bookId: Long, collectionId: Long, currentlyIn: Boolean) {
+        if (currentlyIn) {
+            removeBookFromCollection(bookId, collectionId)
+        } else {
+            addBookToCollection(bookId, collectionId)
+        }
+    }
+
+    /** Load a specific collection with its books (updates [selectedCollection] reactively). */
     fun loadCollection(collectionId: Long) {
         viewModelScope.launch {
             repository.getCollectionWithBooks(collectionId)
@@ -81,9 +98,6 @@ class CollectionViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Clear the selected collection
-     */
     fun clearSelectedCollection() {
         _selectedCollection.value = null
     }

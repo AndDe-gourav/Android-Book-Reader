@@ -1,6 +1,7 @@
 package com.example.bookReader.ui.theme
 
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bookReader.data.entity.BookEntity
@@ -15,17 +16,13 @@ import kotlinx.coroutines.launch
 import java.io.InputStream
 import javax.inject.Inject
 
-data class BookShelf(
-    val name: String,
-    val books: List<BookEntity>
-)
-
 sealed class BookShelfType {
     object Recent : BookShelfType()
     object Favorites : BookShelfType()
     object ToRead : BookShelfType()
     object Completed : BookShelfType()
-    data class Collection(val collectionId: Long) : BookShelfType()
+
+    object Collection : BookShelfType()
 }
 
 @HiltViewModel
@@ -33,6 +30,9 @@ class LibraryViewModel @Inject constructor(
     private val repository: BookRepository
 ) : ViewModel() {
 
+    init {
+        restoreLastOpenedBook()
+    }
     // All books from the library - automatically updates when books are added/removed
     val allBooks: StateFlow<List<BookEntity>> = repository.getLibrary()
         .stateIn(
@@ -81,6 +81,7 @@ class LibraryViewModel @Inject constructor(
         _selectedBook.value = book
     }
 
+
     /**
      * Clear the selected book
      */
@@ -95,60 +96,26 @@ class LibraryViewModel @Inject constructor(
         _currentBookShelf.value = shelfType
     }
 
-    /**
-     * Toggle favorite status for a book
-     * UI will automatically update via repository Flows
-     */
-    fun toggleFavorite(bookId: Long, isFavorite: Boolean) {
+    fun updateBookTitle(uri: Uri, newTitle: String) {
         viewModelScope.launch {
             try {
-                repository.setFavorite(bookId, !isFavorite)
-                showSnackbar(if (!isFavorite) "Added to Favorites" else "Removed from Favorites")
+                repository.updateBookTitle(uri, newTitle)
+                restoreLastOpenedBook()
+                showSnackbar("Title updated")
             } catch (e: Exception) {
-                showSnackbar("Failed to update favorite status")
+                showSnackbar("Failed to update title")
             }
         }
     }
 
-    /**
-     * Update reading progress
-     * UI will automatically update via repository Flows
-     */
-    fun updateProgress(bookId: Long, page: Int, totalPages: Int) {
+    fun updateBookAuthor(uri: Uri, newAuthor: String) {
         viewModelScope.launch {
             try {
-                repository.updateProgress(bookId, page, totalPages)
+                repository.updateBookAuthor(uri, newAuthor)
+                restoreLastOpenedBook()
+                showSnackbar("Author updated")
             } catch (e: Exception) {
-                showSnackbar("Failed to update progress")
-            }
-        }
-    }
-
-    /**
-     * Create a new collection
-     */
-    suspend fun createCollection(name: String): Long {
-        return try {
-            val collectionId = repository.createCollection(name)
-            showSnackbar("Collection \"$name\" created")
-            collectionId
-        } catch (e: Exception) {
-            showSnackbar("Failed to create collection")
-            -1L
-        }
-    }
-
-    /**
-     * Add a book to a collection
-     * UI will automatically update via repository Flows
-     */
-    fun addBookToCollection(bookId: Long, collectionId: Long) {
-        viewModelScope.launch {
-            try {
-                repository.addBookToCollection(bookId, collectionId)
-                showSnackbar("Book added to collection")
-            } catch (e: Exception) {
-                showSnackbar("Failed to add book to collection")
+                showSnackbar("Failed to update author")
             }
         }
     }
@@ -161,6 +128,7 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repository.deleteBook(bookId)
+                restoreLastOpenedBook()
                 showSnackbar("Book deleted")
             } catch (e: Exception) {
                 showSnackbar("Failed to delete book")
@@ -177,6 +145,16 @@ class LibraryViewModel @Inject constructor(
         } catch (e: Exception) {
             showSnackbar("Failed to open PDF: ${e.message}")
             null
+        }
+    }
+
+
+
+    fun restoreLastOpenedBook() {
+        viewModelScope.launch {
+            Log.d("recent", "run")
+            val lastBook = repository.getLastOpenedBook()
+            _selectedBook.value = lastBook
         }
     }
 
