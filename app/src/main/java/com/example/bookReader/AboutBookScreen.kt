@@ -76,7 +76,8 @@ fun AboutBookScreen(
                                 spotColor = colorResource(R.color.shadow)
                             )
                             .clickable {
-                                if (book?.uri != null) {
+                                book?.let { book ->
+                                    navController.navigate("pdfReader/${book.bookId}")
                                 }
                             }
                     ) {
@@ -115,7 +116,6 @@ fun AboutBookScreen(
                 }
                 AnimatedIconRow(
                     selectedBook = book,
-                    libraryViewModel = libraryViewModel,
                     bookStateViewModel = bookStateViewModel,
                     collectionViewModel = collectionViewModel,
                     navController = navController,

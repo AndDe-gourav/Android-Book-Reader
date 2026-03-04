@@ -29,11 +29,6 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name="com.artifex.mupdf.viewer.DocumentActivity"
-            android:exported="false"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            tools:replace="android:exported,android:configChanges" />
     </application>
 
 </manifest>

@@ -46,7 +46,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.bookReader.CustumSlideBar
@@ -63,10 +62,8 @@ import java.util.Locale
 @Composable
 fun StatsScreen(
     navController: NavController,
-    libraryViewModel: LibraryViewModel,
-    bookStateViewModel: BookStateViewModel,
-    pdfViewerViewModel: PdfViewerViewModel = hiltViewModel(),
-    statsViewModel: StatsViewModel = hiltViewModel(),
+    pdfViewerViewModel: PdfViewerViewModel,
+    statsViewModel: StatsViewModel,
     modifier: Modifier = Modifier
 ) {
     var expandedItemIndex by remember { mutableStateOf<Int?>(null) }

@@ -15,10 +15,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
@@ -32,7 +28,9 @@ import com.example.bookReader.ui.theme.CollectionViewModel
 import com.example.bookReader.ui.theme.HomeScreenImproved
 import com.example.bookReader.ui.theme.LibraryViewModel
 import com.example.bookReader.ui.theme.PdfReaderScreen
+import com.example.bookReader.ui.theme.PdfViewerViewModel
 import com.example.bookReader.ui.theme.StatsScreen
+import com.example.bookReader.ui.theme.StatsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -69,11 +67,11 @@ fun App(
     modifier: Modifier = Modifier,
     libraryViewModel: LibraryViewModel = hiltViewModel(),
     bookStateViewModel: BookStateViewModel = hiltViewModel(),
-    collectionViewModel: CollectionViewModel = hiltViewModel()
+    collectionViewModel: CollectionViewModel = hiltViewModel(),
+    pdfViewerViewModel: PdfViewerViewModel = hiltViewModel(),
+    statsViewModel: StatsViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
-
-    var showTimeGoal by remember { mutableStateOf(false) }
 
     NavHost(
         navController = navController,
@@ -105,8 +103,8 @@ fun App(
         ) {
             StatsScreen(
                 navController = navController,
-                libraryViewModel = libraryViewModel,
-                bookStateViewModel = bookStateViewModel,
+                pdfViewerViewModel = pdfViewerViewModel,
+                statsViewModel = statsViewModel,
                 modifier = modifier
             )
         }
@@ -142,8 +140,10 @@ fun App(
             PdfReaderScreen(
                 bookId = bookId,
                 navController = navController,
-                showTimeGoal = showTimeGoal,
-                onTimeGoalClicked = { showTimeGoal = !showTimeGoal }
+                libraryViewModel = libraryViewModel,
+                bookStateViewModel = bookStateViewModel,
+                pdfViewerViewModel = pdfViewerViewModel,
+                modifier = modifier
             )
         }
     }

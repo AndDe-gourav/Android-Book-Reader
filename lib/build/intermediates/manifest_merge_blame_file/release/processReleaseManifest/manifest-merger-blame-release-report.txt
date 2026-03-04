@@ -1,0 +1,73 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.artifex.mupdf.viewer" >
+4
+5    <uses-sdk android:minSdkVersion="21" />
+6
+7    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+7-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:3:2-77
+7-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:3:19-74
+8
+9    <application>
+9-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:4:2-32:16
+10        <activity
+10-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:5:3-26:14
+11            android:name="com.artifex.mupdf.viewer.DocumentActivity"
+11-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:6:4-36
+12            android:configChanges="orientation|screenSize|keyboardHidden"
+12-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:7:4-65
+13            android:exported="true" >
+13-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:8:4-27
+14            <intent-filter>
+14-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:10:4-25:20
+15                <action android:name="android.intent.action.VIEW" />
+15-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:11:5-57
+15-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:11:13-54
+16
+17                <category android:name="android.intent.category.BROWSABLE" />
+17-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:12:5-66
+17-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:12:15-63
+18                <category android:name="android.intent.category.DEFAULT" />
+18-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:13:5-64
+18-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:13:15-61
+19                <!-- list the mime-types we know about -->
+20                <data android:mimeType="application/pdf" />
+20-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:5-48
+20-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:11-45
+21                <data android:mimeType="application/vnd.ms-xpsdocument" />
+21-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:5-48
+21-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:11-45
+22                <data android:mimeType="application/oxps" />
+22-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:5-48
+22-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:11-45
+23                <data android:mimeType="application/vnd.comicbook+zip" />
+23-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:5-48
+23-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:11-45
+24                <data android:mimeType="application/x-cbz" />
+24-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:5-48
+24-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:11-45
+25                <data android:mimeType="application/epub+zip" />
+25-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:5-48
+25-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:11-45
+26                <data android:mimeType="application/x-fictionbook" />
+26-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:5-48
+26-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:11-45
+27                <data android:mimeType="application/x-mobipocket-ebook" />
+27-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:5-48
+27-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:11-45
+28                <!-- list application/octet-stream to catch the ones android doesn't recognize -->
+29                <data android:mimeType="application/octet-stream" />
+29-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:5-48
+29-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:11-45
+30            </intent-filter>
+31        </activity>
+32        <activity
+32-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:27:3-31:14
+33            android:name="com.artifex.mupdf.viewer.OutlineActivity"
+33-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:28:4-35
+34            android:configChanges="orientation|screenSize|keyboardHidden" >
+34-->/home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:29:4-65
+35        </activity>
+36    </application>
+37
+38</manifest>

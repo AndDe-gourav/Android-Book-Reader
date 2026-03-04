@@ -38,7 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,11 +48,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -66,19 +62,16 @@ import com.example.bookReader.data.entity.BookStateEntity
 import com.example.bookReader.data.entity.ReadingStatus
 import com.example.bookReader.ui.theme.BookStateViewModel
 import com.example.bookReader.ui.theme.CollectionViewModel
-import com.example.bookReader.ui.theme.LibraryViewModel
-import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun AnimatedIconRow(
     selectedBook: BookEntity?,
-    libraryViewModel: LibraryViewModel,
     bookStateViewModel: BookStateViewModel,
     collectionViewModel: CollectionViewModel,
     navController: NavController,
+    modifier: Modifier = Modifier,
     onBookDeleted: () -> Unit = {},
-    modifier: Modifier = Modifier
 ) {
     var openCollectionDialog by remember { mutableStateOf(false) }
 
@@ -166,7 +159,6 @@ fun AnimatedIconRow(
 
         OptionsDropDownMenu(
             selectedBook = selectedBook,
-            libraryViewModel = libraryViewModel,
             navController = navController,
             onBookDeleted = onBookDeleted
         )
@@ -400,7 +392,6 @@ fun AnimatedIconButton(
 @Composable
 fun OptionsDropDownMenu(
     selectedBook: BookEntity?,
-    libraryViewModel: LibraryViewModel,
     navController: NavController,
     onBookDeleted: () -> Unit,
     modifier: Modifier = Modifier
@@ -526,134 +517,4 @@ fun RemoveBookDialog(
         },
         modifier = modifier
     )
-}
-
-// ---------------------------------------------------------------------------
-// Legacy dialogs kept for compatibility (only used by old BookDataViewModel)
-// ---------------------------------------------------------------------------
-
-@Composable
-fun CreateCollectionDialog(
-    value: String,
-    onValueChange: (String) -> Unit,
-    existingCollections: List<String>,
-    onDismiss: () -> Unit,
-    onCreate: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "Create Collection",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-            )
-        },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = {
-                        onValueChange(it)
-                        errorMessage = null
-                    },
-                    label = { Text("Collection Name") },
-                    singleLine = true,
-                    isError = errorMessage != null,
-                    supportingText = errorMessage?.let { { Text(it) } },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    when {
-                        value.isBlank() -> errorMessage = "Collection name cannot be empty"
-                        existingCollections.any { it.equals(value, ignoreCase = true) } ->
-                            errorMessage = "Collection already exists"
-                        else -> onCreate(value)
-                    }
-                }
-            ) { Text("Create") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
-        modifier = modifier
-    )
-}
-
-@Composable
-fun OnNotInCollectionsIconClicked(
-    modifier: Modifier = Modifier,
-    value: String,
-    onValueChange: (String) -> Unit = {},
-    onDismiss: () -> Unit = {},
-    onCreateClicked: () -> Unit,
-) {
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-        delay(100)
-        keyboardController?.show()
-    }
-
-    Dialog(onDismissRequest = { onDismiss() }) {
-        Card(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            shape = RoundedCornerShape(8.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.background,
-                contentColor = MaterialTheme.colorScheme.outline
-            )
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "New collection",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.Black,
-                        modifier = Modifier.padding(top = 10.dp, bottom = 20.dp)
-                    )
-                }
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.onBackground,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.onBackground
-                    ),
-                    maxLines = 1,
-                    placeholder = { Text(text = "Enter collection name") },
-                    modifier = Modifier.focusRequester(focusRequester)
-                )
-                Spacer(modifier = modifier.padding(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(
-                        shape = RoundedCornerShape(8.dp),
-                        onClick = { onCreateClicked() },
-                    ) {
-                        Text(
-                            text = "Create",
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                        )
-                    }
-                    Spacer(modifier = Modifier.padding(2.dp))
-                }
-            }
-        }
-    }
 }

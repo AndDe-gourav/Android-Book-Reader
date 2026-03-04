@@ -153,7 +153,6 @@ fun HomeScreenImproved(
                     )
                     AnimatedIconRow(
                         selectedBook = selectedBook,
-                        libraryViewModel = libraryViewModel,
                         bookStateViewModel = bookStateViewModel,
                         collectionViewModel = collectionViewModel,
                         navController = navController,

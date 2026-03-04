@@ -1,34 +1,57 @@
 package com.example.bookReader.ui.theme
 
-import android.graphics.Bitmap
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTransformGestures
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.FrameLayout
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddLink
+import androidx.compose.material.icons.filled.NorthEast
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -40,117 +63,131 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
-import com.artifex.mupdf.fitz.Document
+import com.artifex.mupdf.viewer.ContentInputStream
+import com.artifex.mupdf.viewer.MuPDFCore
+import com.artifex.mupdf.viewer.OutlineActivity
 import com.example.bookReader.R
 import com.example.bookReader.data.entity.ReadingStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TOC tree helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+private data class TocNode(
+    val item: OutlineActivity.Item,
+    val depth: Int,
+    val children: MutableList<TocNode> = mutableListOf()
+)
+
+private fun buildTocTree(outline: List<OutlineActivity.Item>): List<TocNode> {
+    val nodes = outline.map { item ->
+        val leading = item.title.length - item.title.trimStart().length
+        val depth = leading / 4
+        TocNode(OutlineActivity.Item(item.title.trimStart(), item.page), depth)
+    }
+    val roots = mutableListOf<TocNode>()
+    val stack = mutableListOf<TocNode>()
+    for (node in nodes) {
+        while (stack.size > node.depth) stack.removeLast()
+        if (stack.isEmpty()) roots.add(node) else stack.last().children.add(node)
+        stack.add(node)
+    }
+    return roots
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main screen
+// ─────────────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PdfReaderScreen(
     bookId: Long,
     navController: NavController,
-    libraryViewModel: LibraryViewModel = hiltViewModel(),
-    pdfViewerViewModel: PdfViewerViewModel = hiltViewModel(),
-    bookStateViewModel: BookStateViewModel = hiltViewModel(),
-    showTimeGoal: Boolean,
-    onTimeGoalClicked: () -> Unit,
+    libraryViewModel: LibraryViewModel,
+    pdfViewerViewModel: PdfViewerViewModel,
+    bookStateViewModel: BookStateViewModel,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
+
     val allBooks by libraryViewModel.allBooks.collectAsState()
     val book = remember(bookId, allBooks) { allBooks.find { it.bookId == bookId } }
 
-    var pdfDocument by remember { mutableStateOf<Document?>(null) }
+    // ── State ─────────────────────────────────────────────────────────────────
+    var core by remember { mutableStateOf<MuPDFCore?>(null) }
     var totalPages by remember { mutableStateOf(0) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var savedPage by remember { mutableStateOf(0) }
+    var sessionStartTime by remember { mutableStateOf(System.currentTimeMillis()) }
+    var outline by remember { mutableStateOf<List<OutlineActivity.Item>?>(null) }
 
-    val sessionState by pdfViewerViewModel.sessionState.collectAsState()
     val currentPage by pdfViewerViewModel.currentPage.collectAsState()
+    val sessionState by pdfViewerViewModel.sessionState.collectAsState()
 
+    var isChromeVisible by remember { mutableStateOf(true) }
     var showPageJumpDialog by remember { mutableStateOf(false) }
     var showGoalDialog by remember { mutableStateOf(false) }
+    var showTocSheet by remember { mutableStateOf(false) }
+    var showSearchBar by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var jumpToPage by remember { mutableStateOf<Int?>(null) }
+    var readerViewRef by remember { mutableStateOf<MuPdfReaderView?>(null) }
 
-    // Get saved reading progress from BookStateViewModel
-    LaunchedEffect(bookId) {
-        try {
-            val bookState = bookStateViewModel.getBookState(bookId)
-            savedPage = bookState?.currentPage ?: 0
-        } catch (e: Exception) {
-            savedPage = 0
+    // New feature states
+    var linksEnabled by remember { mutableStateOf(true) }
+    var horizontalScrolling by remember { mutableStateOf(true) }
+    var showCopySheet by remember { mutableStateOf(false) }
+    var snackbarMessage by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show snackbar when message is set
+    LaunchedEffect(snackbarMessage) {
+        snackbarMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            snackbarMessage = null
         }
     }
 
-    // Timer for reading session
-    LaunchedEffect(sessionState) {
-        if (sessionState != null) {
-            while (true) {
-                delay(1000) // Update every second
-                val elapsed = System.currentTimeMillis() - (sessionState?.startTime ?: 0L)
-                pdfViewerViewModel.updateSessionTime(elapsed)
-            }
-        }
-    }
-
-    // Load PDF document
+    // ── 1. Open document ──────────────────────────────────────────────────────
     LaunchedEffect(bookId, book) {
-        if (book == null) {
-            errorMessage = "Book not found"
-            isLoading = false
-            return@LaunchedEffect
-        }
-
-        isLoading = true
-        errorMessage = null
-
+        if (book == null) { errorMessage = "Book not found"; isLoading = false; return@LaunchedEffect }
+        isLoading = true; errorMessage = null
         try {
             withContext(Dispatchers.IO) {
-                // Get PDF input stream
-                val inputStream = libraryViewModel.openPdf(bookId)
-                if (inputStream == null) {
-                    errorMessage = "Failed to open PDF"
-                    return@withContext
-                }
-
-                // Create a temporary file for MuPDF
-                val tempFile = File(context.cacheDir, "temp_pdf_$bookId.pdf")
-                FileOutputStream(tempFile).use { output ->
-                    inputStream.copyTo(output)
-                }
-                inputStream.close()
-
-                // Open with MuPDF
-                val bytes = tempFile.readBytes()
-                val document = Document.openDocument(bytes, "application/pdf")
-
-                pdfDocument = document
-                totalPages = document.countPages()
-
-                // Start reading session with saved page
+                val uri = book.uri.toUri()
+                val fileSize: Long = try {
+                    context.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: -1L
+                } catch (_: Exception) { -1L }
+                val stream = ContentInputStream(context.contentResolver, uri, fileSize)
+                val mupdfCore = MuPDFCore(stream, "application/pdf")
+                val pages = mupdfCore.countPages()
+                val toc: List<OutlineActivity.Item>? =
+                    if (mupdfCore.hasOutline()) mupdfCore.getOutline() else null
                 withContext(Dispatchers.Main) {
-                    pdfViewerViewModel.startSession(
-                        bookId = bookId,
-                        startPage = savedPage,
-                        totalPages = totalPages
-                    )
+                    core = mupdfCore; totalPages = pages; outline = toc
+                    val savedPage = bookStateViewModel.getBookState(bookId)?.currentPage ?: 0
+                    pdfViewerViewModel.startSession(bookId = bookId, startPage = savedPage, totalPages = pages)
+                    if (savedPage > 0) jumpToPage = savedPage
                 }
             }
         } catch (e: Exception) {
@@ -160,60 +197,174 @@ fun PdfReaderScreen(
         }
     }
 
-    // Cleanup
+    // ── 2. Session timer ──────────────────────────────────────────────────────
+    LaunchedEffect(sessionState) {
+        if (sessionState != null) {
+            while (true) {
+                delay(1000L)
+                pdfViewerViewModel.updateSessionTime(System.currentTimeMillis() - sessionStartTime)
+            }
+        }
+    }
+
+    // ── 3. Lifecycle ──────────────────────────────────────────────────────────
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) sessionStartTime = System.currentTimeMillis()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     DisposableEffect(bookId) {
-        onDispose {
-            pdfDocument?.destroy()
-            pdfViewerViewModel.endSession()
+        onDispose { core?.onDestroy(); pdfViewerViewModel.endSession() }
+    }
+
+    BackHandler {
+        when {
+            showCopySheet -> showCopySheet = false
+            showSearchBar -> { showSearchBar = false; searchQuery = ""; readerViewRef?.clearSearch() }
+            showTocSheet -> showTocSheet = false
+            else -> navController.navigateUp()
         }
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = book?.title ?: "Loading...",
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1
-                        )
-                        Text(
-                            text = "Page ${currentPage + 1} of $totalPages",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                actions = {
-                    // Jump to page
-                    IconButton(onClick = { showPageJumpDialog = true }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                            contentDescription = "Jump to page"
-                        )
-                    }
+            AnimatedVisibility(
+                visible = isChromeVisible,
+                enter = fadeIn() + slideInVertically { -it },
+                exit = fadeOut() + slideOutVertically { -it }
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.onBackground,
+                    shape = RoundedCornerShape(8.dp),
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp)
+                    ) {
+                            Row(
+                                horizontalArrangement = Arrangement.Start,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ){
+                                IconButton(onClick = { navController.navigateUp() }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.sign_out_circle),
+                                    contentDescription = "Back",
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                }
+                                Text(
+                                    text = book?.title ?: "Loading…",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                IconButton(onClick = {
+                                    showSearchBar = !showSearchBar
+                                    if (!showSearchBar) { searchQuery = ""; readerViewRef?.clearSearch() }
+                                }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.search_alt),
+                                        contentDescription = "Search",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                if (outline != null) {
+                                    IconButton(onClick = { showTocSheet = true }) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.sort),
+                                            contentDescription = "Table of contents",
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
+                                IconButton(onClick = {
+                                    linksEnabled = !linksEnabled
+                                    readerViewRef?.setLinksEnabled(linksEnabled)
+                                }) {
+                                    Icon(
+                                        imageVector = Icons.Default.AddLink,
+                                        contentDescription = if (linksEnabled) "Disable links" else "Enable links",
+                                        modifier = Modifier.size(24.dp),
+                                        tint = if (linksEnabled)
+                                            MaterialTheme.colorScheme.primary
+                                        else
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    horizontalScrolling = !horizontalScrolling
+                                    readerViewRef?.setScrollHorizontal(horizontalScrolling)
+                                }) {
+                                    Icon(
+                                        imageVector = if (horizontalScrolling)
+                                            Icons.Rounded.ArrowBack
+                                        else
+                                            Icons.Rounded.ArrowUpward,
+                                        contentDescription = if (horizontalScrolling)
+                                            "Switch to vertical scroll"
+                                        else
+                                            "Switch to horizontal scroll",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                IconButton(onClick = { showPageJumpDialog = true }) {
+                                    Icon(
+                                        imageVector = Icons.Default.NorthEast,
+                                        contentDescription = "Jump to page",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                IconButton(onClick = { showGoalDialog = true }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.fluent_timer_12_regular),
+                                        contentDescription = "Reading goal",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
 
-                    // Reading goal
-                    IconButton(onClick = { showGoalDialog = true }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                            contentDescription = "Reading goal"
-                        )
+                        AnimatedVisibility(
+                            visible = showSearchBar,
+                            enter = slideInVertically { -it },
+                            exit = slideOutVertically { -it }
+                        ) {
+                            SearchBar(
+                                query = searchQuery,
+                                onQueryChange = { searchQuery = it },
+                                onSearchForward = {
+                                    if (searchQuery.isNotBlank())
+                                        readerViewRef?.search(searchQuery, direction = +1)
+                                },
+                                onSearchBackward = {
+                                    if (searchQuery.isNotBlank())
+                                        readerViewRef?.search(searchQuery, direction = -1)
+                                },
+                                onClose = {
+                                    showSearchBar = false
+                                    searchQuery = ""
+                                    readerViewRef?.clearSearch()
+                                },
+                            )
+                        }
                     }
                 }
-            )
+            }
         },
         bottomBar = {
-            if (sessionState != null) {
+            AnimatedVisibility(
+                visible = isChromeVisible && sessionState != null,
+                enter = fadeIn() + slideInVertically { it },
+                exit = fadeOut() + slideOutVertically { it }
+            ) {
                 ReadingProgressBar(
                     currentPage = currentPage,
                     totalPages = totalPages,
@@ -231,204 +382,382 @@ fun PdfReaderScreen(
                 .padding(paddingValues)
         ) {
             when {
-                isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                errorMessage != null -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = errorMessage ?: "Unknown error",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { navController.navigateUp() }) {
-                            Text("Go Back")
-                        }
-                    }
-                }
-                pdfDocument != null -> {
-                    PdfPageViewer(
-                        document = pdfDocument!!,
-                        currentPage = currentPage,
-                        totalPages = totalPages,
-                        onPageChanged = { newPage ->
-                            pdfViewerViewModel.updatePage(newPage)
-                            // Update progress using BookStateViewModel
-                            bookStateViewModel.updateBookState(
-                                bookId = bookId,
-                                currentPage = newPage,
-                                status = if (newPage >= totalPages - 1) ReadingStatus.COMPLETED
-                                else ReadingStatus.READING
-                            )
-                        }
+                isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+
+                errorMessage != null -> ErrorState(
+                    message = errorMessage!!,
+                    onBack = { navController.navigateUp() },
+                    modifier = Modifier.align(Alignment.Center)
+                )
+
+                core != null -> {
+                    AndroidView(
+                        factory = { ctx ->
+                            MuPdfReaderView(
+                                context = ctx,
+                                core = core!!,
+                                onPageChanged = { page ->
+                                    pdfViewerViewModel.updatePage(page)
+                                    bookStateViewModel.updateBookState(
+                                        bookId = bookId,
+                                        currentPage = page,
+                                        status = if (page >= totalPages - 1)
+                                            ReadingStatus.COMPLETED
+                                        else
+                                            ReadingStatus.READING
+                                    )
+                                },
+                                onChromeTap = { isChromeVisible = !isChromeVisible },
+                                onLongPress = { showCopySheet = true }
+                            ).also { view ->
+                                view.layoutParams = FrameLayout.LayoutParams(
+                                    FrameLayout.LayoutParams.MATCH_PARENT,
+                                    FrameLayout.LayoutParams.MATCH_PARENT
+                                )
+                                view.setLinksEnabled(linksEnabled)
+                                view.setScrollHorizontal(horizontalScrolling)
+                                readerViewRef = view
+                            }
+                        },
+                        update = { view ->
+                            jumpToPage?.let { page ->
+                                view.setDisplayedViewIndex(page)
+                                jumpToPage = null
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
             }
         }
 
-        // Page Jump Dialog
+        // ── Dialogs ───────────────────────────────────────────────────────────
         if (showPageJumpDialog) {
             PageJumpDialog(
                 currentPage = currentPage,
                 totalPages = totalPages,
                 onDismiss = { showPageJumpDialog = false },
-                onPageSelected = { page ->
-                    pdfViewerViewModel.updatePage(page)
-                    showPageJumpDialog = false
-                }
+                onPageSelected = { page -> jumpToPage = page; showPageJumpDialog = false }
             )
         }
-
-        // Reading Goal Dialog
         if (showGoalDialog) {
             ReadingGoalDialog(
-                bookId = bookId,
                 currentGoal = sessionState?.dailyGoalMinutes,
                 onDismiss = { showGoalDialog = false },
-                onGoalSet = { minutes ->
-                    pdfViewerViewModel.setReadingGoal(bookId, minutes)
-                    showGoalDialog = false
-                }
+                onGoalSet = { minutes -> pdfViewerViewModel.setReadingGoal(bookId, minutes); showGoalDialog = false }
+            )
+        }
+        if (showTocSheet && outline != null) {
+            TocBottomSheet(
+                outline = outline!!,
+                currentPage = currentPage,
+                onPageSelected = { page -> jumpToPage = page; showTocSheet = false },
+                onDismiss = { showTocSheet = false }
+            )
+        }
+        // Text copy bottom sheet (triggered by long-press on the PDF)
+        if (showCopySheet) {
+            CopyTextSheet(
+                onCopyPage = {
+                    showCopySheet = false
+                    scope.launch(Dispatchers.IO) {
+                        val text = readerViewRef?.getCurrentPageText() ?: ""
+                        withContext(Dispatchers.Main) {
+                            if (text.isBlank()) {
+                                snackbarMessage = "No selectable text on this page"
+                            } else {
+                                val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                cm.setPrimaryClip(ClipData.newPlainText("PDF page text", text))
+                                snackbarMessage = "Page text copied to clipboard"
+                            }
+                        }
+                    }
+                },
+                onDismiss = { showCopySheet = false }
             )
         }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Search bar
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
-private fun PdfPageViewer(
-    document: Document,
-    currentPage: Int,
-    totalPages: Int,
-    onPageChanged: (Int) -> Unit,
+private fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSearchForward: () -> Unit,
+    onSearchBackward: () -> Unit,
+    onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = currentPage)
-
-    // Track page changes
-    LaunchedEffect(listState.firstVisibleItemIndex) {
-        if (listState.firstVisibleItemIndex != currentPage) {
-            onPageChanged(listState.firstVisibleItemIndex)
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                placeholder = { Text("Search in document…", fontSize = 14.sp) },
+                singleLine = true,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            IconButton(onClick = onSearchBackward) {
+                Icon(
+                    imageVector = Icons.Rounded.ArrowUpward,
+                    contentDescription = "Previous result",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            IconButton(onClick = onSearchForward) {
+                Icon(
+                    imageVector = Icons.Rounded.ArrowDownward,
+                    contentDescription = "Next result",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            IconButton(onClick = onClose) {
+                Icon(
+                    painter = painterResource(R.drawable.close_ring),
+                    contentDescription = "Close search",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
+}
 
-    var scale by remember { mutableStateOf(1f) }
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
+// ─────────────────────────────────────────────────────────────────────────────
+// Copy text bottom sheet
+// ─────────────────────────────────────────────────────────────────────────────
 
-    LazyColumn(
-        state = listState,
-        modifier = modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    scale = (scale * zoom).coerceIn(1f, 3f)
-                    if (scale > 1f) {
-                        offsetX += pan.x
-                        offsetY += pan.y
-                    } else {
-                        offsetX = 0f
-                        offsetY = 0f
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CopyTextSheet(
+    onCopyPage: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Text Actions",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            HorizontalDivider()
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onCopyPage)
+                    .padding(vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.sort),
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Column {
+                    Text(
+                        text = "Copy page text",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "Copies all selectable text from this page",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Collapsible TOC bottom sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TocBottomSheet(
+    outline: List<OutlineActivity.Item>,
+    currentPage: Int,
+    onPageSelected: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val tocTree = remember(outline) { buildTocTree(outline) }
+    val expandedNodes = remember { mutableStateOf(setOf<Int>()) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+    ) {
+        Text(
+            text = "Table of Contents",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .align(Alignment.CenterHorizontally),
+            color = Color.Black
+        )
+        HorizontalDivider()
+
+        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            tocTree.forEachIndexed { rootIdx, rootNode ->
+                val isExpanded = expandedNodes.value.contains(rootIdx)
+                item(key = "root_$rootIdx") {
+                    TocRow(
+                        title = rootNode.item.title,
+                        page = rootNode.item.page,
+                        depth = 0,
+                        isCurrentChapter = rootNode.item.page == currentPage,
+                        hasChildren = rootNode.children.isNotEmpty(),
+                        isExpanded = isExpanded,
+                        onToggle = {
+                            expandedNodes.value = if (isExpanded)
+                                expandedNodes.value - rootIdx
+                            else
+                                expandedNodes.value + rootIdx
+                        },
+                        onPageSelected = onPageSelected
+                    )
+                }
+                if (isExpanded) {
+                    rootNode.children.forEachIndexed { childIdx, childNode ->
+                        item(key = "child_${rootIdx}_$childIdx") {
+                            TocRow(
+                                title = childNode.item.title,
+                                page = childNode.item.page,
+                                depth = 1,
+                                isCurrentChapter = childNode.item.page == currentPage,
+                                hasChildren = false,
+                                isExpanded = false,
+                                onToggle = {},
+                                onPageSelected = onPageSelected
+                            )
+                        }
+                        // Grandchildren (depth 2)
+                        childNode.children.forEachIndexed { grandIdx, grandNode ->
+                            item(key = "grand_${rootIdx}_${childIdx}_$grandIdx") {
+                                TocRow(
+                                    title = grandNode.item.title,
+                                    page = grandNode.item.page,
+                                    depth = 2,
+                                    isCurrentChapter = grandNode.item.page == currentPage,
+                                    hasChildren = false,
+                                    isExpanded = false,
+                                    onToggle = {},
+                                    onPageSelected = onPageSelected
+                                )
+                            }
+                        }
                     }
                 }
             }
-    ) {
-        items(totalPages) { pageIndex ->
-            PdfPage(
-                document = document,
-                pageIndex = pageIndex,
-                scale = scale,
-                offsetX = offsetX,
-                offsetY = offsetY
-            )
+            item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
 }
 
 @Composable
-private fun PdfPage(
-    document: Document,
-    pageIndex: Int,
-    scale: Float,
-    offsetX: Float,
-    offsetY: Float,
-    modifier: Modifier = Modifier
+private fun TocRow(
+    title: String,
+    page: Int,
+    depth: Int,
+    isCurrentChapter: Boolean,
+    hasChildren: Boolean,
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    onPageSelected: (Int) -> Unit,
 ) {
-    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(pageIndex) {
-        scope.launch(Dispatchers.IO) {
-            try {
-                val page = document.loadPage(pageIndex)
-                val bounds = page.getBounds()
-                val pageWidth = bounds.x1 - bounds.x0
-                val pageHeight = bounds.y1 - bounds.y0
-
-                // Calculate bitmap dimensions
-                val dpi = 150f
-                val renderScale = dpi / 72f
-                val width = (pageWidth * renderScale).toInt()
-                val height = (pageHeight * renderScale).toInt()
-
-                // Create bitmap
-                val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-
-                // Create Android DrawDevice for rendering
-                val matrix = com.artifex.mupdf.fitz.Matrix(renderScale)
-                val androidDevice = com.artifex.mupdf.fitz.android.AndroidDrawDevice(bmp, 0, 0, width, height, 0, width)
-
-                try {
-                    // Run the page through the device
-                    page.run(androidDevice, matrix, null)
-                } finally {
-                    androidDevice.destroy()
-                }
-
-                withContext(Dispatchers.Main) {
-                    bitmap = bmp
-                }
-
-                page.destroy()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    Box(
-        modifier = modifier
+    val indent = (depth * 20).dp
+    Row(
+        modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.707f) // A4 aspect ratio
-            .padding(8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        bitmap?.let { bmp ->
-            Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer(
-                        scaleX = scale,
-                        scaleY = scale,
-                        translationX = offsetX,
-                        translationY = offsetY
-                    )
-            ) {
-                drawImage(
-                    image = bmp.asImageBitmap(),
-                    topLeft = Offset.Zero
-                )
+            .background(
+                if (isCurrentChapter)
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                else
+                    MaterialTheme.colorScheme.onBackground
+            )
+            .clickable {
+                if (hasChildren) onToggle()
+                else onPageSelected(page)
             }
-        } ?: CircularProgressIndicator()
+            .padding(start = 16.dp + indent, end = 16.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            // Expand/collapse arrow for parents, dot for leaves
+            if (hasChildren) {
+                Icon(
+                    imageVector = if (isExpanded)
+                        Icons.Rounded.KeyboardArrowDown
+                    else
+                        Icons.Rounded.KeyboardArrowRight,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(6.dp))
+            } else {
+                Spacer(Modifier.width(24.dp))
+            }
+            Text(
+                text = title,
+                style = if (depth == 0)
+                    MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
+                else
+                    MaterialTheme.typography.bodySmall,
+                color = if (isCurrentChapter)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Text(
+            text = "${page + 1}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 8.dp)
+        )
     }
+    HorizontalDivider(thickness = 0.5.dp)
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reading progress bottom bar
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun ReadingProgressBar(
@@ -440,48 +769,43 @@ private fun ReadingProgressBar(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 3.dp
+        color = MaterialTheme.colorScheme.onBackground,
+        shape = RoundedCornerShape(8.dp),
+        shadowElevation = 4.dp,
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            // Reading progress
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Progress",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = "Page ${currentPage + 1} / $totalPages",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Black
                 )
                 Text(
-                    text = "${((currentPage.toFloat() / totalPages) * 100).toInt()}%",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                    text = "${((currentPage.toFloat() / totalPages.coerceAtLeast(1)) * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                    color = Color.Black
                 )
             }
             LinearProgressIndicator(
-                progress = currentPage.toFloat() / totalPages,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                progress = { currentPage.toFloat() / totalPages.coerceAtLeast(1) },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
             )
-
-            // Session time and goal
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Session: ${formatTime(sessionTime)}",
+                    text = "Session: ${formatReadingTime(sessionTime)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (goalProgress > 0) {
+                if (goalProgress > 0f) {
                     Text(
-                        text = if (isGoalMet) "Goal Met! ✓" else "Goal: ${(goalProgress * 100).toInt()}%",
+                        text = if (isGoalMet) "Goal Met ✓" else "Goal: ${(goalProgress * 100).toInt()}%",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isGoalMet) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant
@@ -489,6 +813,22 @@ private fun ReadingProgressBar(
                 }
             }
         }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dialogs
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun ErrorState(message: String, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(text = message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyLarge)
+        Button(onClick = onBack) { Text("Go Back") }
     }
 }
 
@@ -500,89 +840,74 @@ private fun PageJumpDialog(
     onPageSelected: (Int) -> Unit
 ) {
     var pageInput by remember { mutableStateOf((currentPage + 1).toString()) }
-
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Jump to Page") },
+        title = { Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) { Text("Jump to Page") } },
         text = {
             OutlinedTextField(
                 value = pageInput,
-                onValueChange = { pageInput = it },
-                label = { Text("Page number (1-$totalPages)") },
-                singleLine = true
+                onValueChange = { pageInput = it.filter { c -> c.isDigit() } },
+                label = { Text("Page number (1–$totalPages)") },
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.onBackground,
+                ),
             )
         },
+        shape = RoundedCornerShape(8.dp),
+        containerColor = MaterialTheme.colorScheme.background,
         confirmButton = {
-            TextButton(
-                onClick = {
-                    val page = pageInput.toIntOrNull()
-                    if (page != null && page in 1..totalPages) {
-                        onPageSelected(page - 1)
-                    }
-                }
-            ) {
-                Text("Go")
-            }
+            TextButton(onClick = {
+                val page = pageInput.toIntOrNull()
+                if (page != null && page in 1..totalPages) onPageSelected(page - 1)
+            }) { Text("Go") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
 
 @Composable
 private fun ReadingGoalDialog(
-    bookId: Long,
     currentGoal: Int?,
     onDismiss: () -> Unit,
     onGoalSet: (Int) -> Unit
 ) {
     var goalInput by remember { mutableStateOf(currentGoal?.toString() ?: "30") }
-
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Set Reading Goal") },
+        title = { Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) { Text("Daily Reading Goal") } },
         text = {
             Column {
-                Text("Set your daily reading goal in minutes")
+                Text("How many minutes do you want to read today?")
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = goalInput,
-                    onValueChange = { goalInput = it },
+                    onValueChange = { goalInput = it.filter { c -> c.isDigit() } },
                     label = { Text("Minutes per day") },
-                    singleLine = true
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.onBackground,
+                    ),
                 )
             }
         },
+        shape = RoundedCornerShape(8.dp),
+        containerColor = MaterialTheme.colorScheme.background,
         confirmButton = {
-            TextButton(
-                onClick = {
-                    val minutes = goalInput.toIntOrNull()
-                    if (minutes != null && minutes > 0) {
-                        onGoalSet(minutes)
-                    }
-                }
-            ) {
-                Text("Set Goal")
-            }
+            TextButton(onClick = {
+                val minutes = goalInput.toIntOrNull()
+                if (minutes != null && minutes > 0) onGoalSet(minutes)
+            }) { Text("Set Goal") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
 
-private fun formatTime(milliseconds: Long): String {
-    val seconds = (milliseconds / 1000) % 60
-    val minutes = (milliseconds / (1000 * 60)) % 60
-    val hours = milliseconds / (1000 * 60 * 60)
-
-    return when {
-        hours > 0 -> String.format("%d:%02d:%02d", hours, minutes, seconds)
-        else -> String.format("%d:%02d", minutes, seconds)
-    }
+private fun formatReadingTime(ms: Long): String {
+    val s = (ms / 1000) % 60
+    val m = (ms / 60_000) % 60
+    val h = ms / 3_600_000
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
