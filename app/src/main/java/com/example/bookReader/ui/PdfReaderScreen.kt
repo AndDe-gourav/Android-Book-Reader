@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
@@ -77,6 +78,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.artifex.mupdf.viewer.ContentInputStream
 import com.artifex.mupdf.viewer.MuPDFCore
@@ -142,7 +144,7 @@ fun PdfReaderScreen(
     modifier: Modifier = Modifier
 ) {
     val context       = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val scope          = rememberCoroutineScope()
 
     val allBooks by libraryViewModel.allBooks.collectAsState()
@@ -153,7 +155,12 @@ fun PdfReaderScreen(
     var totalPages   by remember { mutableStateOf(0) }
     var isLoading    by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var sessionStartTime by remember { mutableStateOf(System.currentTimeMillis()) }
+    // BUG FIX #6: The old single `sessionStartTime` was reset to System.currentTimeMillis()
+    // on every ON_RESUME, which wiped out all time accumulated before the app was backgrounded.
+    // We now keep a separate `accumulatedSessionTime` that is updated on pause, so the timer
+    // resumes from where it left off rather than restarting from zero.
+    var sessionPeriodStart by remember { mutableStateOf(System.currentTimeMillis()) }
+    var accumulatedSessionTime by remember { mutableStateOf(0L) }
     var outline      by remember { mutableStateOf<List<OutlineActivity.Item>?>(null) }
 
     val currentPage  by pdfViewerViewModel.currentPage.collectAsState()
@@ -216,20 +223,59 @@ fun PdfReaderScreen(
         }
     }
 
-    // ── 2. Session timer ──────────────────────────────────────────────────────
-    LaunchedEffect(sessionState) {
-        if (sessionState != null) {
+    // ── 2. Session timer + midnight reset ────────────────────────────────────
+    // Keyed on isSessionActive so page changes (which update sessionState) don't
+    // restart the coroutine and reset the period-start timestamp mid-session.
+    val isSessionActive = sessionState != null
+    LaunchedEffect(isSessionActive) {
+        if (isSessionActive) {
+            sessionPeriodStart    = System.currentTimeMillis()
+            accumulatedSessionTime = 0L
+
+            // Snapshot the day we started on.  If the clock crosses midnight while
+            // the user is still reading we detect it below and fire onMidnightCrossed.
+            var trackedDayStart = pdfViewerViewModel.todayStartMs()
+
             while (true) {
                 delay(1000L)
-                pdfViewerViewModel.updateSessionTime(System.currentTimeMillis() - sessionStartTime)
+
+                val newDayStart = pdfViewerViewModel.todayStartMs()
+                if (newDayStart != trackedDayStart) {
+                    // ── Midnight crossed ──────────────────────────────────────
+                    // 1. Compute total minutes read on the day that just ended.
+                    val totalMsBeforeMidnight =
+                        accumulatedSessionTime + (System.currentTimeMillis() - sessionPeriodStart)
+                    val minutesBefore = totalMsBeforeMidnight / 60_000L
+
+                    // 2. Notify the ViewModel so it can persist the result and
+                    //    reset its own todayReadingTimeMs / sessionTimeSpent.
+                    pdfViewerViewModel.onMidnightCrossed(trackedDayStart, minutesBefore)
+
+                    // 3. Reset the local timer accumulators for the new day.
+                    accumulatedSessionTime = 0L
+                    sessionPeriodStart     = System.currentTimeMillis()
+                    trackedDayStart        = newDayStart
+                }
+
+                pdfViewerViewModel.updateSessionTime(
+                    accumulatedSessionTime + (System.currentTimeMillis() - sessionPeriodStart)
+                )
             }
         }
     }
 
     // ── 3. Lifecycle ──────────────────────────────────────────────────────────
+    // BUG FIX #6 (cont.): ON_PAUSE snapshots elapsed time into accumulatedSessionTime;
+    // ON_RESUME resets the period-start clock so the timer continues from the snapshot.
     DisposableEffect(lifecycleOwner) {
         val obs = LifecycleEventObserver { _, ev ->
-            if (ev == Lifecycle.Event.ON_RESUME) sessionStartTime = System.currentTimeMillis()
+            when (ev) {
+                Lifecycle.Event.ON_PAUSE ->
+                    accumulatedSessionTime += System.currentTimeMillis() - sessionPeriodStart
+                Lifecycle.Event.ON_RESUME ->
+                    sessionPeriodStart = System.currentTimeMillis()
+                else -> Unit
+            }
         }
         lifecycleOwner.lifecycle.addObserver(obs)
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
@@ -320,14 +366,15 @@ fun PdfReaderScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         ){
             Column() {
-                if(showThemes)
-                ThemeSelector(
-                    onThemeSelected = { theme ->
-                        currentTheme = theme
-                        readerViewRef?.applyTheme(theme)
-                        showThemes = false
-                    },
-                )
+                if(showThemes) {
+                    ThemeSelector(
+                        onThemeSelected = { theme ->
+                            currentTheme = theme
+                            readerViewRef?.applyTheme(theme)
+                            showThemes = false
+                        },
+                    )
+                }
                 if (showSearchBar)
                     SearchBar(
                         query = searchQuery,
@@ -430,8 +477,6 @@ fun PdfReaderScreen(
                                                 tint = Color.Black
                                             )
                                         }
-                                    // Theme picker
-
 
                                     FilledIconButton(
                                         shape = RoundedCornerShape(8.dp),
@@ -515,23 +560,23 @@ fun PdfReaderScreen(
     }
 
 
-        if (showPageJumpDialog)
-            PageJumpDialog(currentPage, totalPages,
-                onDismiss = { showPageJumpDialog = false },
-                onPageSelected = { jumpToPage = it; showPageJumpDialog = false })
+    if (showPageJumpDialog)
+        PageJumpDialog(currentPage, totalPages,
+            onDismiss = { showPageJumpDialog = false },
+            onPageSelected = { jumpToPage = it; showPageJumpDialog = false })
 
-        if (showGoalDialog)
-            ReadingGoalDialog(
-                currentGoal = sessionState?.dailyGoalMinutes,
-                onDismiss = { showGoalDialog = false },
-                onGoalSet = { pdfViewerViewModel.setReadingGoal(bookId, it); showGoalDialog = false })
+    if (showGoalDialog)
+        ReadingGoalDialog(
+            currentGoal = sessionState?.dailyGoalMinutes,
+            onDismiss = { showGoalDialog = false },
+            onGoalSet = { pdfViewerViewModel.setReadingGoal(bookId, it); showGoalDialog = false })
 
-        if (showTocSheet && outline != null)
-            TocBottomSheet(outline!!, currentPage,
-                onPageSelected = { jumpToPage = it; showTocSheet = false },
-                onDismiss = { showTocSheet = false })
+    if (showTocSheet && outline != null)
+        TocBottomSheet(outline!!, currentPage,
+            onPageSelected = { jumpToPage = it; showTocSheet = false },
+            onDismiss = { showTocSheet = false })
 
-    }
+}
 
 @Composable
 fun ThemeSelector(
@@ -699,7 +744,7 @@ private fun TocRow(
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
             if (hasChildren) {
                 Icon(
-                    if (isExpanded) Icons.Rounded.KeyboardArrowDown else Icons.Rounded.KeyboardArrowRight,
+                    if (isExpanded) Icons.Rounded.KeyboardArrowDown else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                     null, modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(6.dp))
@@ -724,43 +769,39 @@ private fun TocRow(
     HorizontalDivider(thickness = 0.5.dp)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Reading progress bar (bottom)
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun ReadingProgressBar(
     currentPage: Int, totalPages: Int, sessionTime: Long,
     goalProgress: Float, isGoalMet: Boolean, modifier: Modifier = Modifier
 ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Page ${currentPage + 1} / $totalPages",
-                    style = MaterialTheme.typography.bodySmall)
-                Text("${((currentPage.toFloat() / totalPages.coerceAtLeast(1)) * 100).toInt()}%",
-                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
-            }
-            LinearProgressIndicator(
-                progress = { currentPage.toFloat() / totalPages.coerceAtLeast(1) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Session: ${formatReadingTime(sessionTime)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (goalProgress > 0f)
-                    Text(
-                        if (isGoalMet) "Goal Met ✓" else "Goal: ${(goalProgress * 100).toInt()}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isGoalMet) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Page ${currentPage + 1} / $totalPages",
+                style = MaterialTheme.typography.bodySmall)
+            Text("${((currentPage.toFloat() / totalPages.coerceAtLeast(1)) * 100).toInt()}%",
+                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
         }
+        LinearProgressIndicator(
+            progress = { currentPage.toFloat() / totalPages.coerceAtLeast(1) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Session: ${formatReadingTime(sessionTime)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (goalProgress > 0f)
+                Text(
+                    if (isGoalMet) "Goal Met ✓" else "Goal: ${(goalProgress * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isGoalMet) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 }
 
 @Composable

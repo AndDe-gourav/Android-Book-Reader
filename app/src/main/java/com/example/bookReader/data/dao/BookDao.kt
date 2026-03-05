@@ -66,20 +66,20 @@ interface BookDao {
     @Query("""
         UPDATE books
         SET title = :title
-        WHERE uri = :uri
+        WHERE bookId = :bookId
     """)
     suspend fun updateBookTitle(
-        uri: String,
+        bookId: Long,
         title: String
     )
 
     @Query("""
         UPDATE books
         SET author = :author
-        WHERE uri = :uri
+        WHERE bookId = :bookId
     """)
     suspend fun updateBookAuthor(
-        uri: String,
+        bookId: Long,
         author: String
     )
 }

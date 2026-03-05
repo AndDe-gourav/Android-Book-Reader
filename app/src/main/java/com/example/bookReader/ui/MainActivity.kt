@@ -94,7 +94,6 @@ fun App(
         ) {
             StatsScreen(
                 navController = navController,
-                pdfViewerViewModel = pdfViewerViewModel,
                 statsViewModel = statsViewModel,
                 modifier = modifier
             )

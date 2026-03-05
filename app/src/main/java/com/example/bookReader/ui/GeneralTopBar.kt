@@ -1,7 +1,6 @@
 package com.example.bookReader.ui
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -17,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.bookReader.R
 
@@ -26,24 +26,18 @@ fun GeneralTopBar(
     titleText: String,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .clickable {
-                    onBackClicked()
-                },
             shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
-            shadowElevation = 4.dp,
+            shadowElevation = 4.dp
         ) {
-            IconButton(
-                onClick = { onBackClicked() }
-            ) {
+            IconButton(onClick = onBackClicked) {
                 Icon(
                     painter = painterResource(R.drawable.sign_out_circle),
                     contentDescription = "Back",
@@ -52,20 +46,24 @@ fun GeneralTopBar(
                 )
             }
         }
+
         Surface(
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.align(Alignment.TopEnd),
             shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp),
             shadowElevation = 4.dp,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 8.dp)
         ) {
             Text(
                 text = titleText,
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.inverseSurface,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(vertical = 13.dp, horizontal = 34.dp)
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(vertical = 13.dp, horizontal = 16.dp)
             )
-
         }
     }
 }

@@ -35,7 +35,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.core.net.toUri
 import androidx.navigation.NavController
 import kotlinx.coroutines.delay
 
@@ -108,22 +107,16 @@ fun EditScreen(
             onValueChange = { editValue = it },
             onDismiss = { editingField = null },
             onSaveClicked = {
-
                 selectedBook?.let { book ->
-
-                    val uri = book.uri.toUri()
-
                     when (field) {
-
                         EditField.TITLE ->
-                            libraryViewModel.updateBookTitle(uri, editValue)
-
+                            libraryViewModel.updateBookTitle(book.bookId, editValue)
                         EditField.AUTHOR ->
-                            libraryViewModel.updateBookAuthor(uri, editValue)
+                            libraryViewModel.updateBookAuthor(book.bookId, editValue)
                     }
                 }
-
                 editingField = null
+                navController.popBackStack()
             }
         )
     }

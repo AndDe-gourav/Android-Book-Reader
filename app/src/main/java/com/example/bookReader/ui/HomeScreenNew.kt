@@ -87,7 +87,6 @@ fun HomeScreenImproved(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    val allBooks by libraryViewModel.allBooks.collectAsState()
     val selectedBook by libraryViewModel.selectedBook.collectAsState()
     val currentBookShelf by libraryViewModel.currentBookShelf.collectAsState()
 
@@ -213,7 +212,6 @@ fun HomeScreenImproved(
 
             BottomBar(
                 libraryViewModel = libraryViewModel,
-                bookStateViewModel = bookStateViewModel,
                 navController = navController,
                 selectedBook = selectedBook,
                 modifier = Modifier.align(Alignment.BottomCenter)
@@ -400,9 +398,6 @@ fun BookShelfSection(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Remaining composables (unchanged)
-// ---------------------------------------------------------------------------
 
 @Composable
 fun CurrentlyReadingSection(
@@ -480,6 +475,7 @@ fun CurrentlyReadingSection(
                             color = MaterialTheme.colorScheme.inverseSurface,
                             overflow = TextOverflow.Ellipsis,
                             maxLines = 2,
+                            lineHeight = 20.sp,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -645,14 +641,14 @@ fun GeneralDrawerTopBar(
     text: String,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.align(Alignment.TopStart),
             shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
             shadowElevation = 4.dp,
         ) {
@@ -667,15 +663,19 @@ fun GeneralDrawerTopBar(
         }
         Surface(
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.align(Alignment.TopEnd),
             shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp),
             shadowElevation = 4.dp,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 8.dp)
         ) {
             Text(
                 text = text,
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.inverseSurface,
                 textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(vertical = 13.dp, horizontal = 34.dp)
             )
         }
@@ -685,7 +685,6 @@ fun GeneralDrawerTopBar(
 @Composable
 fun BottomBar(
     libraryViewModel: LibraryViewModel,
-    bookStateViewModel: BookStateViewModel,
     navController: NavController,
     selectedBook: BookEntity?,
     modifier: Modifier = Modifier

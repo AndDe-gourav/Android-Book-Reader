@@ -22,46 +22,47 @@ object PdfUtil {
     /**
      * Extract metadata and cover from a PDF file
      */
-    suspend fun extractPdfMetadata(context: Context, uri: Uri): PdfMetadata? = withContext(Dispatchers.IO) {
-        try {
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                // Read the PDF into a byte array
-                val bytes = inputStream.readBytes()
-                // Open document from byte array
-                val document = Document.openDocument(bytes, "application/pdf")
+    suspend fun extractPdfMetadata(context: Context, uri: Uri): PdfMetadata? =
+        withContext(Dispatchers.IO) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    // Read the PDF into a byte array
+                    val bytes = inputStream.readBytes()
+                    // Open document from byte array
+                    val document = Document.openDocument(bytes, "application/pdf")
 
-                val title = document.getMetaData(Document.META_INFO_TITLE)
-                    ?.takeIf { it.isNotBlank() }
-                    ?: getFileNameFromUri(context, uri)
+                    val title = document.getMetaData(Document.META_INFO_TITLE)
+                        ?.takeIf { it.isNotBlank() }
+                        ?: getFileNameFromUri(context, uri)
 
-                val author = document.getMetaData(Document.META_INFO_AUTHOR)
-                    ?.takeIf { it.isNotBlank() }
+                    val author = document.getMetaData(Document.META_INFO_AUTHOR)
+                        ?.takeIf { it.isNotBlank() }
 
-                val pageCount = document.countPages()
+                    val pageCount = document.countPages()
 
-                // Extract and save cover image
-                val coverPath = extractAndSaveCover(context, document, uri)
+                    // Extract and save cover image
+                    val coverPath = extractAndSaveCover(context, document, uri)
 
-                document.destroy()
+                    document.destroy()
 
+                    PdfMetadata(
+                        title = title,
+                        author = author,
+                        totalPages = pageCount,
+                        coverImagePath = coverPath
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // If metadata extraction fails, return basic info
                 PdfMetadata(
-                    title = title,
-                    author = author,
-                    totalPages = pageCount,
-                    coverImagePath = coverPath
+                    title = getFileNameFromUri(context, uri),
+                    author = null,
+                    totalPages = 0,
+                    coverImagePath = null
                 )
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            // If metadata extraction fails, return basic info
-            PdfMetadata(
-                title = getFileNameFromUri(context, uri),
-                author = null,
-                totalPages = 0,
-                coverImagePath = null
-            )
         }
-    }
 
     /**
      * Extract cover and save to internal storage
@@ -137,118 +138,6 @@ object PdfUtil {
         }
     }
 
-    /**
-     * Load cover image from file path
-     */
-    fun loadCoverImage(coverPath: String?): Bitmap? {
-        return try {
-            if (coverPath == null) return null
-            val file = File(coverPath)
-            if (file.exists()) {
-                android.graphics.BitmapFactory.decodeFile(coverPath)
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    /**
-     * Delete cover image file
-     */
-    fun deleteCoverImage(coverPath: String?): Boolean {
-        return try {
-            if (coverPath == null) return false
-            val file = File(coverPath)
-            if (file.exists()) {
-                file.delete()
-            } else {
-                false
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
-    }
-
-    /**
-     * Clear all cover images
-     */
-    fun clearAllCovers(context: Context): Boolean {
-        return try {
-            val coversDir = File(context.filesDir, COVER_IMAGES_DIR)
-            if (coversDir.exists()) {
-                coversDir.listFiles()?.forEach { it.delete() }
-                true
-            } else {
-                false
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
-    }
-
-    /**
-     * Extract only the cover image from a PDF and return as Bitmap
-     */
-    /**
-     * Extract only the cover image from a PDF and return as Bitmap
-     */
-    suspend fun extractPdfCover(context: Context, uri: Uri, width: Int = 300): Bitmap? = withContext(Dispatchers.IO) {
-        try {
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                val bytes = inputStream.readBytes()
-                val document = Document.openDocument(bytes, "application/pdf")
-
-                if (document.countPages() == 0) {
-                    document.destroy()
-                    return@withContext null
-                }
-
-                val page = document.loadPage(0)
-                val bounds = page.bounds
-                val scale = width / bounds.x1
-                val height = (bounds.y1 * scale).toInt()
-
-                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                bitmap.eraseColor(Color.WHITE) // Fill white
-
-                val matrix = Matrix(scale)
-
-                val device = AndroidDrawDevice(bitmap)
-                page.run(device, matrix, null)
-                device.close()
-                device.destroy()
-                page.destroy()
-                document.destroy()
-
-                bitmap
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    /**
-     * Get total page count from PDF
-     */
-    suspend fun getPdfPageCount(context: Context, uri: Uri): Int = withContext(Dispatchers.IO) {
-        try {
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                val bytes = inputStream.readBytes()
-                val document = Document.openDocument(bytes, "application/pdf")
-                val count = document.countPages()
-                document.destroy()
-                count
-            } ?: 0
-        } catch (e: Exception) {
-            e.printStackTrace()
-            0
-        }
-    }
 
     /**
      * Get file name from URI
@@ -265,72 +154,7 @@ object PdfUtil {
             uri.lastPathSegment ?: "Unknown"
         }
     }
-
-    /**
-     * Validate if URI points to a valid PDF
-     */
-    suspend fun isValidPdf(context: Context, uri: Uri): Boolean = withContext(Dispatchers.IO) {
-        try {
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                val bytes = inputStream.readBytes()
-                val document = Document.openDocument(bytes, "application/pdf")
-                val isValid = document.countPages() > 0
-                document.destroy()
-                isValid
-            } ?: false
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
-    }
-
-    /**
-     * Render a specific page from PDF
-     */
-    /**
-     * Render a specific page from PDF
-     */
-    suspend fun renderPage(
-        context: Context,
-        uri: Uri,
-        pageNumber: Int,
-        width: Int = 600
-    ): Bitmap? = withContext(Dispatchers.IO) {
-        try {
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                val bytes = inputStream.readBytes()
-                val document = Document.openDocument(bytes, "application/pdf")
-
-                if (pageNumber >= document.countPages()) {
-                    document.destroy()
-                    return@withContext null
-                }
-
-                val page = document.loadPage(pageNumber)
-                val bounds = page.bounds
-                val scale = width / bounds.x1
-                val height = (bounds.y1 * scale).toInt()
-
-                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                bitmap.eraseColor(Color.WHITE)
-
-                val matrix = Matrix(scale)
-
-                val device = AndroidDrawDevice(bitmap)
-                page.run(device, matrix, null)
-                device.close()
-                device.destroy()
-                page.destroy()
-                document.destroy()
-
-                bitmap
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }}
-
+}
 /**
  * Data class to hold PDF metadata
  */

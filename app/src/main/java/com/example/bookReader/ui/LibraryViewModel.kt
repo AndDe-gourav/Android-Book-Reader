@@ -83,23 +83,16 @@ class LibraryViewModel @Inject constructor(
 
 
     /**
-     * Clear the selected book
-     */
-    fun clearSelectedBook() {
-        _selectedBook.value = null
-    }
-
-    /**
      * Change the current bookshelf view
      */
     fun changeBookShelf(shelfType: BookShelfType) {
         _currentBookShelf.value = shelfType
     }
 
-    fun updateBookTitle(uri: Uri, newTitle: String) {
+    fun updateBookTitle(bookId: Long, newTitle: String) {
         viewModelScope.launch {
             try {
-                repository.updateBookTitle(uri, newTitle)
+                repository.updateBookTitle(bookId, newTitle)
                 restoreLastOpenedBook()
                 showSnackbar("Title updated")
             } catch (e: Exception) {
@@ -108,10 +101,10 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun updateBookAuthor(uri: Uri, newAuthor: String) {
+    fun updateBookAuthor(bookId: Long, newAuthor: String) {
         viewModelScope.launch {
             try {
-                repository.updateBookAuthor(uri, newAuthor)
+                repository.updateBookAuthor(bookId, newAuthor)
                 restoreLastOpenedBook()
                 showSnackbar("Author updated")
             } catch (e: Exception) {

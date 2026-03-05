@@ -22,8 +22,6 @@ import java.util.ArrayList;
 
 public class MuPDFCore
 {
-    private final String APP = "MuPDF";
-
     private final int MAXIMUM_OUTLINE_ITEMS = 1000;
     private final int MAXIMUM_OUTLINE_DEPTH = 4;
 
@@ -54,7 +52,7 @@ public class MuPDFCore
         currentPage = -1;
     }
 
-    public MuPDFCore(byte buffer[], String magic) {
+    public MuPDFCore(byte[] buffer, String magic) {
         this(Document.openDocument(buffer, magic));
     }
 

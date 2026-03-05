@@ -61,7 +61,6 @@ import java.util.Locale
 @Composable
 fun StatsScreen(
     navController: NavController,
-    pdfViewerViewModel: PdfViewerViewModel,
     statsViewModel: StatsViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -69,12 +68,6 @@ fun StatsScreen(
 
     val booksWithStats by statsViewModel.booksWithStats.collectAsState()
     val isLoading by statsViewModel.isLoading.collectAsState()
-
-    // Refresh whenever a session state changes (e.g. just ended a session)
-    val sessionState by pdfViewerViewModel.sessionState.collectAsState()
-    LaunchedEffect(sessionState) {
-        if (sessionState == null) statsViewModel.refresh()
-    }
 
     Box(modifier = modifier.fillMaxSize()) {
         GeneralTopBar(
@@ -141,9 +134,6 @@ fun StatsScreen(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Book stat card
-// ---------------------------------------------------------------------------
 
 @Composable
 fun BookStatCard(
@@ -153,8 +143,8 @@ fun BookStatCard(
     onToggleExpand: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val totalTimeHours = entry.totalReadingTimeMs / 3_600_000L
-    val totalTimeMinutes = (entry.totalReadingTimeMs / 60_000L) % 60
+    val totalTimeHours = entry.todayReadingTimeMs / 3_600_000L
+    val totalTimeMinutes = (entry.todayReadingTimeMs / 60_000L) % 60
 
     val goalMinutes = entry.dailyGoalMinutes ?: 0
     val goalHours = goalMinutes / 60
@@ -174,13 +164,11 @@ fun BookStatCard(
             )
     ) {
         Column {
-            // ── Main info row ────────────────────────────────────────────────
             Row(
                 modifier = Modifier.padding(
                     start = 12.dp, top = 12.dp, bottom = 12.dp, end = 2.dp
                 )
             ) {
-                // Book cover
                 Surface(
                     color = Color.White,
                     shape = MaterialTheme.shapes.small,
@@ -202,7 +190,6 @@ fun BookStatCard(
                     )
                 }
 
-                // Title / author / progress
                 Column(
                     modifier = Modifier
                         .padding(horizontal = 12.dp)
@@ -231,12 +218,10 @@ fun BookStatCard(
 
                     Spacer(modifier = Modifier.padding(vertical = 8.dp))
 
-                    // Time done ↔ goal
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // Left: time done
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = if (entry.isGoalMet) {
@@ -260,7 +245,6 @@ fun BookStatCard(
                             }
                         }
 
-                        // Right: goal
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = if (goalHours > 0) "${goalHours}h ${goalMins}m"
@@ -279,7 +263,6 @@ fun BookStatCard(
                         }
                     }
 
-                    // Progress bar
                     CustumSlideBar(
                         value = entry.goalProgress,
                         color = if (entry.isGoalMet)
@@ -290,7 +273,6 @@ fun BookStatCard(
                 }
             }
 
-            // ── Expandable calendar ──────────────────────────────────────────
             AnimatedVisibility(visible = isExpanded) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
@@ -302,7 +284,6 @@ fun BookStatCard(
                     )
                     StatsCalendarView(
                         bookId = entry.book.bookId,
-                        dailyGoalMinutes = entry.dailyGoalMinutes ?: 0,
                         statsViewModel = statsViewModel,
                         year = LocalDate.now().year,
                         month = LocalDate.now().monthValue
@@ -313,14 +294,10 @@ fun BookStatCard(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Calendar view — per-day goal indicator
-// ---------------------------------------------------------------------------
 
 @Composable
 fun StatsCalendarView(
     bookId: Long,
-    dailyGoalMinutes: Int,
     statsViewModel: StatsViewModel,
     year: Int,
     month: Int
@@ -330,7 +307,6 @@ fun StatsCalendarView(
     val firstDayOfMonth = LocalDate.of(year, month, 1).dayOfWeek.value % 7
     val dayLabels = listOf("S", "M", "T", "W", "T", "F", "S")
 
-    // Map of day-of-month → goal met (true/false). Absent days = no session.
     var goalMap by remember { mutableStateOf(mapOf<Int, Boolean>()) }
 
     LaunchedEffect(bookId, year, month) {
@@ -339,7 +315,6 @@ fun StatsCalendarView(
                 bookId = bookId,
                 year = year,
                 month = month,
-                dailyGoalMinutes = dailyGoalMinutes
             )
         }
     }
@@ -351,7 +326,6 @@ fun StatsCalendarView(
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Month + year header
             Text(
                 text = "${Month.of(month).getDisplayName(TextStyle.FULL, Locale.getDefault())} $year",
                 fontWeight = FontWeight.Bold,
@@ -365,7 +339,6 @@ fun StatsCalendarView(
                 columns = GridCells.Fixed(7),
                 modifier = Modifier.height(220.dp)
             ) {
-                // Day-of-week headers
                 items(dayLabels) { label ->
                     Box(
                         modifier = Modifier.fillMaxWidth(),
@@ -375,19 +348,16 @@ fun StatsCalendarView(
                     }
                 }
 
-                // Empty cells before the 1st
                 items(firstDayOfMonth) {
                     Box(modifier = Modifier.fillMaxWidth())
                 }
 
-                // Day cells
                 items(daysInMonth) { index ->
                     val day = index + 1
-                    StatsDateCell(day = day, goalMet = goalMap[day])
+                    StatsDateCell(day = day, goalMet = goalMap[day], year = year, month = month)
                 }
             }
 
-            // Legend
             Spacer(Modifier.height(8.dp))
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -413,11 +383,14 @@ fun StatsCalendarView(
 @Composable
 fun StatsDateCell(
     day: Int,
-    goalMet: Boolean?   // null = no session recorded
+    goalMet: Boolean?,
+    year: Int,
+    month: Int
 ) {
-    val today = LocalDate.now().dayOfMonth
+    val today = LocalDate.now()
+    val isToday = day == today.dayOfMonth && year == today.year && month == today.monthValue
     val bgColor = when {
-        day == today -> colorResource(id = R.color.TodayColor)
+        isToday -> colorResource(id = R.color.TodayColor)
         goalMet == true -> colorResource(id = R.color.LightGreen)
         goalMet == false -> colorResource(id = R.color.LightRed)
         else -> Color.White
@@ -439,13 +412,8 @@ fun LegendDot(color: Color, label: String) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .height(12.dp)
-                .fillMaxWidth(0f)
-                .background(color = color, shape = RoundedCornerShape(2.dp))
-                .padding(horizontal = 6.dp)
-        )
+        // BUG FIX #10: The old composable had TWO Boxes — the first used fillMaxWidth(0f)
+        // making it completely invisible (zero width). Only one dot Box is needed.
         Box(
             modifier = Modifier
                 .height(12.dp)

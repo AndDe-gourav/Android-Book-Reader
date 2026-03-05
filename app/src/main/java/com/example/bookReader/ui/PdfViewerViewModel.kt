@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import javax.inject.Inject
 
 data class ReadingSessionState(
@@ -18,7 +19,8 @@ data class ReadingSessionState(
     val totalPages: Int = 0,
     val sessionTimeSpent: Long = 0L,
     val dailyGoalMinutes: Int? = null,
-    val totalReadingTime: Long = 0L
+    /** Previously-saved reading time for TODAY only (not all-time). */
+    val todayReadingTimeMs: Long = 0L
 )
 
 @HiltViewModel
@@ -32,13 +34,15 @@ class PdfViewerViewModel @Inject constructor(
     private val _currentPage = MutableStateFlow(0)
     val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
 
-    /**
-     * Start a new reading session
-     */
+    // ── Session management ────────────────────────────────────────────────────
+
     fun startSession(bookId: Long, startPage: Int, totalPages: Int) {
         viewModelScope.launch {
             val goal = repository.getReadingGoal(bookId)
-            val totalTime = repository.getTotalReadingTime(bookId)
+            val todayStart = todayStartMs()
+            val todayTime = runCatching {
+                repository.getReadingTimeBetween(bookId, todayStart, todayStart + 86_400_000L)
+            }.getOrDefault(0L)
 
             _sessionState.value = ReadingSessionState(
                 bookId = bookId,
@@ -47,37 +51,35 @@ class PdfViewerViewModel @Inject constructor(
                 currentPage = startPage,
                 totalPages = totalPages,
                 dailyGoalMinutes = goal?.dailyMinutesGoal,
-                totalReadingTime = totalTime
+                todayReadingTimeMs = todayTime
             )
             _currentPage.value = startPage
         }
     }
 
-    /**
-     * Update current page
-     */
     fun updatePage(page: Int) {
         _currentPage.value = page
         _sessionState.value = _sessionState.value?.copy(currentPage = page)
     }
 
-    /**
-     * Update session time spent
-     */
     fun updateSessionTime(timeSpent: Long) {
         _sessionState.value = _sessionState.value?.copy(sessionTimeSpent = timeSpent)
     }
 
     /**
-     * End the current reading session and save it
-     * UI will automatically update via repository Flows
+     * End the session, persist it to the DB, then upsert today's DailyGoalResultEntity.
+     *
+     * The daily result is written AFTER the session row is inserted so the DB query for
+     * today's total already includes the just-finished session.
      */
     fun endSession() {
         viewModelScope.launch {
             val state = _sessionState.value ?: return@launch
+            // Null out immediately so onCleared() cannot fire a second save.
+            _sessionState.value = null
 
             try {
-                // Save the reading session
+                // 1. Persist the raw reading session.
                 repository.saveSession(
                     bookId = state.bookId,
                     startTime = state.startTime,
@@ -86,79 +88,117 @@ class PdfViewerViewModel @Inject constructor(
                     endPage = state.currentPage
                 )
 
-                // Update book progress - this will trigger UI updates automatically
+                // 2. Update book read-progress / status.
                 repository.updateProgress(
                     bookId = state.bookId,
                     page = state.currentPage,
                     totalPages = state.totalPages
                 )
+
+                // 3. Upsert today's goal result (only when a goal has been set).
+                val goalMinutes = state.dailyGoalMinutes ?: return@launch
+                val todayStart = todayStartMs()
+                // Re-query the DB so the total includes the session just saved above.
+                val minutesReadToday = repository.getReadingTimeBetween(
+                    bookId = state.bookId,
+                    from  = todayStart,
+                    to    = todayStart + 86_400_000L
+                ) / 60_000L
+
+                repository.saveDailyGoalResult(
+                    bookId     = state.bookId,
+                    dayStartMs = todayStart,
+                    goalMinutes = goalMinutes,
+                    minutesRead = minutesReadToday
+                )
             } catch (e: Exception) {
-                // Handle error silently or log it
-            } finally {
-                _sessionState.value = null
+                // Surface via a SharedFlow<UiEvent> if you want error snackbars
             }
         }
     }
 
     /**
-     * Set a daily reading goal for a book
+     * Called by the UI timer when midnight is detected mid-session.
+     *
+     * Responsibilities:
+     *  1. Persists a DailyGoalResultEntity for the day that just ended, using
+     *     [minutesReadBeforeMidnight] as the final tally for that day.
+     *  2. Resets todayReadingTimeMs and sessionTimeSpent to 0 in the session
+     *     state so the progress bar starts fresh for the new day.
+     *
+     * The caller (PdfReaderScreen timer loop) is responsible for resetting its
+     * own local accumulatedSessionTime / sessionPeriodStart AFTER this call.
      */
+    fun onMidnightCrossed(prevDayStartMs: Long, minutesReadBeforeMidnight: Long) {
+        viewModelScope.launch {
+            val state = _sessionState.value ?: return@launch
+            val goalMinutes = state.dailyGoalMinutes
+
+            if (goalMinutes != null) {
+                repository.saveDailyGoalResult(
+                    bookId      = state.bookId,
+                    dayStartMs  = prevDayStartMs,
+                    goalMinutes = goalMinutes,
+                    minutesRead = minutesReadBeforeMidnight
+                )
+            }
+
+            // New day — clear accumulators so isGoalMet / getGoalProgress reflect today.
+            _sessionState.value = state.copy(
+                todayReadingTimeMs = 0L,
+                sessionTimeSpent   = 0L
+            )
+        }
+    }
+
+    // ── Goal helpers ──────────────────────────────────────────────────────────
+
     fun setReadingGoal(bookId: Long, dailyMinutes: Int) {
         viewModelScope.launch {
             try {
                 repository.setReadingGoal(bookId, dailyMinutes)
                 _sessionState.value = _sessionState.value?.copy(dailyGoalMinutes = dailyMinutes)
-            } catch (e: Exception) {
-                // Handle error
-            }
+            } catch (e: Exception) { /* handle */ }
         }
     }
 
-    /**
-     * Get reading goal for a book
-     */
-    suspend fun getReadingGoal(bookId: Long): Int? {
-        return try {
-            repository.getReadingGoal(bookId)?.dailyMinutesGoal
-        } catch (e: Exception) {
-            null
-        }
-    }
+    suspend fun getReadingGoal(bookId: Long): Int? = runCatching {
+        repository.getReadingGoal(bookId)?.dailyMinutesGoal
+    }.getOrNull()
 
-    /**
-     * Get total reading time for a book
-     */
-    suspend fun getTotalReadingTime(bookId: Long): Long {
-        return try {
-            repository.getTotalReadingTime(bookId)
-        } catch (e: Exception) {
-            0L
-        }
-    }
+    suspend fun getTotalReadingTime(bookId: Long): Long = runCatching {
+        repository.getTotalReadingTime(bookId)
+    }.getOrDefault(0L)
 
-    /**
-     * Check if daily goal is met
-     */
+    /** True when today's reading (saved sessions + current session) meets the daily goal. */
     fun isGoalMet(): Boolean {
         val state = _sessionState.value ?: return false
         val goalMinutes = state.dailyGoalMinutes ?: return false
-        val totalMinutes = (state.totalReadingTime + state.sessionTimeSpent) / 60000
+        val totalMinutes = (state.todayReadingTimeMs + state.sessionTimeSpent) / 60_000L
         return totalMinutes >= goalMinutes
     }
 
-    /**
-     * Get progress percentage towards daily goal
-     */
+    /** Progress towards today's daily goal, clamped to [0, 1]. */
     fun getGoalProgress(): Float {
         val state = _sessionState.value ?: return 0f
-        val goalMinutes = state.dailyGoalMinutes ?: return 0f
-        val totalMinutes = (state.totalReadingTime + state.sessionTimeSpent) / 60000
-        return (totalMinutes.toFloat() / goalMinutes.toFloat()).coerceIn(0f, 1f)
+        val goalMinutes = state.dailyGoalMinutes?.takeIf { it > 0 } ?: return 0f
+        val totalMinutes = (state.todayReadingTimeMs + state.sessionTimeSpent) / 60_000f
+        return (totalMinutes / goalMinutes).coerceIn(0f, 1f)
     }
 
     override fun onCleared() {
         super.onCleared()
-        // Auto-save session when ViewModel is cleared
+        // Safe: endSession() no-ops if _sessionState is already null.
         endSession()
     }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /** Epoch-ms of midnight (00:00:00.000) for today in the device's local timezone. */
+    fun todayStartMs(): Long = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
 }

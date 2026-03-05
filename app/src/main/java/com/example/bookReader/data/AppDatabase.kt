@@ -9,12 +9,14 @@ import com.example.bookReader.data.dao.BookCollectionDao
 import com.example.bookReader.data.dao.BookDao
 import com.example.bookReader.data.dao.BookStateDao
 import com.example.bookReader.data.dao.CollectionDao
+import com.example.bookReader.data.dao.DailyGoalResultDao
 import com.example.bookReader.data.dao.ReadingGoalDao
 import com.example.bookReader.data.dao.ReadingSessionDao
 import com.example.bookReader.data.entity.BookCollectionCrossRef
 import com.example.bookReader.data.entity.BookEntity
 import com.example.bookReader.data.entity.BookStateEntity
 import com.example.bookReader.data.entity.CollectionEntity
+import com.example.bookReader.data.entity.DailyGoalResultEntity
 import com.example.bookReader.data.entity.ReadingGoalEntity
 import com.example.bookReader.data.entity.ReadingSessionEntity
 
@@ -25,7 +27,8 @@ import com.example.bookReader.data.entity.ReadingSessionEntity
         CollectionEntity::class,
         BookCollectionCrossRef::class,
         ReadingSessionEntity::class,
-        ReadingGoalEntity::class
+        ReadingGoalEntity::class,
+        DailyGoalResultEntity::class,
     ],
     version = 1,
     exportSchema = false
@@ -39,6 +42,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun bookCollectionDao(): BookCollectionDao
     abstract fun sessionDao(): ReadingSessionDao
     abstract fun goalDao(): ReadingGoalDao
+    abstract fun dailyGoalResultDao(): DailyGoalResultDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
