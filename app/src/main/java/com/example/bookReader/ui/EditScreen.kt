@@ -1,3 +1,4 @@
+package com.example.bookReader.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,8 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import androidx.navigation.NavController
-import com.example.bookReader.ui.theme.GeneralTopBar
-import com.example.bookReader.ui.theme.LibraryViewModel
 import kotlinx.coroutines.delay
 
 enum class EditField {

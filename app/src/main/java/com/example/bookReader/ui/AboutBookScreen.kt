@@ -1,4 +1,4 @@
-package com.example.bookReader
+package com.example.bookReader.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -29,10 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import com.example.bookReader.ui.theme.BookStateViewModel
-import com.example.bookReader.ui.theme.CollectionViewModel
-import com.example.bookReader.ui.theme.GeneralTopBar
-import com.example.bookReader.ui.theme.LibraryViewModel
+import com.example.bookReader.R
 import java.io.File
 
 @Composable

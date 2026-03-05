@@ -1,4 +1,4 @@
-package com.example.bookReader.ui.theme
+package com.example.bookReader.ui
 
 import android.content.Context
 import android.graphics.ColorMatrix
@@ -28,18 +28,18 @@ enum class PdfTheme(val label: String) {
 
         // Classic warm sepia — white paper becomes parchment, black ink stays dark
         SEPIA -> ColorMatrix(floatArrayOf(
-            0.393f, 0.769f, 0.189f, 0f,   0f,
-            0.349f, 0.686f, 0.168f, 0f,   0f,
-            0.272f, 0.534f, 0.131f, 0f,   0f,
-            0f,     0f,     0f,     1f,   0f
+            1f, 0f, 0f, 0f, 0f,
+            0f, 1f, 0f, 0f, -15f,
+            0f, 0f, 1f, 0f, -16f,
+            0f, 0f, 0f, 1f, 0f
         ))
 
         // Darker, more muted sepia — better for low-light reading
         DARK_SEPIA -> ColorMatrix(floatArrayOf(
-            0.20f, 0.40f, 0.10f, 0f,  10f,
-            0.18f, 0.36f, 0.09f, 0f,   6f,
-            0.14f, 0.28f, 0.07f, 0f,   2f,
-            0f,    0f,    0f,    1f,   0f
+            1f, 0f, 0f, 0f, -67f,
+            0f, 1f, 0f, 0f, -88f,
+            0f, 0f, 1f, 0f, -128f,
+            0f, 0f, 0f, 1f, 0f
         ))
 
         // Full colour-inversion — black bg, white/light text; easiest on eyes in the dark

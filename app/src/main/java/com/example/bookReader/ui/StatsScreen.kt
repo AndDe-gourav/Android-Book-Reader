@@ -1,4 +1,4 @@
-package com.example.bookReader.ui.theme
+package com.example.bookReader.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
@@ -355,7 +355,7 @@ fun StatsCalendarView(
             Text(
                 text = "${Month.of(month).getDisplayName(TextStyle.FULL, Locale.getDefault())} $year",
                 fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
+                fontSize = 15.sp,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
 

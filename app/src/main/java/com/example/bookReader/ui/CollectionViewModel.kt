@@ -1,4 +1,4 @@
-package com.example.bookReader.ui.theme
+package com.example.bookReader.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

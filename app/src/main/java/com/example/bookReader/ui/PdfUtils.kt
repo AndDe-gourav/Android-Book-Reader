@@ -1,4 +1,4 @@
-package com.example.bookReader.ui.theme
+package com.example.bookReader.ui
 
 import android.content.Context
 import android.graphics.Bitmap

@@ -1,4 +1,4 @@
-package com.example.bookReader.ui.theme
+package com.example.bookReader.theme
 import androidx.compose.ui.graphics.Color
 
 val primaryLight = Color(0xFF825513)

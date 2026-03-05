@@ -1,6 +1,5 @@
-package com.example.bookReader
+package com.example.bookReader.ui
 
-import EditScreen
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -22,15 +21,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.bookReader.ui.theme.BookReaderTheme
-import com.example.bookReader.ui.theme.BookStateViewModel
-import com.example.bookReader.ui.theme.CollectionViewModel
-import com.example.bookReader.ui.theme.HomeScreenImproved
-import com.example.bookReader.ui.theme.LibraryViewModel
-import com.example.bookReader.ui.theme.PdfReaderScreen
-import com.example.bookReader.ui.theme.PdfViewerViewModel
-import com.example.bookReader.ui.theme.StatsScreen
-import com.example.bookReader.ui.theme.StatsViewModel
+import com.example.bookReader.theme.BookReaderTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

@@ -1,4 +1,4 @@
-package com.example.bookReader.ui.theme
+package com.example.bookReader.ui
 
 import android.app.Activity
 import android.content.Intent
@@ -68,7 +68,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import com.example.bookReader.AnimatedIconRow
 import com.example.bookReader.R
 import com.example.bookReader.data.entity.BookEntity
 import com.example.bookReader.data.entity.CollectionWithBooks

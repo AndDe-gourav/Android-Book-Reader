@@ -1,4 +1,4 @@
-package com.example.bookReader
+package com.example.bookReader.ui
 
 import android.content.Intent
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -57,11 +57,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import androidx.navigation.NavController
+import com.example.bookReader.R
 import com.example.bookReader.data.entity.BookEntity
 import com.example.bookReader.data.entity.BookStateEntity
 import com.example.bookReader.data.entity.ReadingStatus
-import com.example.bookReader.ui.theme.BookStateViewModel
-import com.example.bookReader.ui.theme.CollectionViewModel
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable

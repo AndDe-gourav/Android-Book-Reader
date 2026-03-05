@@ -1,10 +1,8 @@
-package com.example.bookReader.ui.theme
+package com.example.bookReader.ui
 
-import android.R.attr.theme
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -24,7 +22,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,12 +31,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.automirrored.rounded.ArrowLeft
-import androidx.compose.material.icons.rounded.ArrowDownward
-import androidx.compose.material.icons.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.ArrowLeft
-import androidx.compose.material.icons.rounded.ArrowRight
-import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
@@ -275,14 +266,14 @@ fun PdfReaderScreen(
                     AndroidView(
                         factory = { ctx ->
                             MuPdfReaderView(
-                                context  = ctx,
-                                core     = core!!,
+                                context = ctx,
+                                core = core!!,
                                 onPageChanged = { page ->
                                     pdfViewerViewModel.updatePage(page)
                                     bookStateViewModel.updateBookState(
-                                        bookId      = bookId,
+                                        bookId = bookId,
                                         currentPage = page,
-                                        status      = if (page >= totalPages - 1)
+                                        status = if (page >= totalPages - 1)
                                             ReadingStatus.COMPLETED else ReadingStatus.READING
                                     )
                                 },
@@ -556,10 +547,10 @@ fun ThemeSelector(
         items(themes) { theme ->
 
             val bgColor = when (theme) {
-                PdfTheme.NORMAL    -> Color(0xFFFFFFFF)
-                PdfTheme.SEPIA     ->Color(0xFFF4ECD8)
-                PdfTheme.DARK_SEPIA -> Color(0xFF2B2016)
-                PdfTheme.NIGHT     -> Color(0xFF1A1A1A)
+                PdfTheme.NORMAL     -> Color(0xFFFFFFFF)
+                PdfTheme.SEPIA      -> Color(0xFFFFF0EF)
+                PdfTheme.DARK_SEPIA -> Color(0xFFBCA77F)
+                PdfTheme.NIGHT      -> Color(0xFF000000)
             }
 
             Surface(
