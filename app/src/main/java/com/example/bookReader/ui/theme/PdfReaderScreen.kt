@@ -1,35 +1,44 @@
 package com.example.bookReader.ui.theme
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
+import android.R.attr.theme
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddLink
-import androidx.compose.material.icons.filled.NorthEast
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.ArrowLeft
 import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.ArrowLeft
+import androidx.compose.material.icons.rounded.ArrowRight
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
@@ -37,15 +46,15 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -64,7 +73,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -83,7 +94,6 @@ import com.example.bookReader.R
 import com.example.bookReader.data.entity.ReadingStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -99,7 +109,7 @@ private data class TocNode(
 private fun buildTocTree(outline: List<OutlineActivity.Item>): List<TocNode> {
     val nodes = outline.map { item ->
         val leading = item.title.length - item.title.trimStart().length
-        val depth = leading / 4
+        val depth   = leading / 4
         TocNode(OutlineActivity.Item(item.title.trimStart(), item.page), depth)
     }
     val roots = mutableListOf<TocNode>()
@@ -110,6 +120,20 @@ private fun buildTocTree(outline: List<OutlineActivity.Item>): List<TocNode> {
         stack.add(node)
     }
     return roots
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Theme definitions (UI metadata only — ColorMatrix lives in MuPdfReaderView)
+// ─────────────────────────────────────────────────────────────────────────────
+
+private val ThemeList = PdfTheme.entries          // NORMAL, SEPIA, DARK_SEPIA, NIGHT
+
+/** Returns the background colour that should tint the Scaffold behind the PDF. */
+private fun PdfTheme.scaffoldBg(): Color = when (this) {
+    PdfTheme.NORMAL    -> Color(0xFFF5F5F5)
+    PdfTheme.SEPIA     -> Color(0xFFF4ECD8)
+    PdfTheme.DARK_SEPIA -> Color(0xFF2B2016)
+    PdfTheme.NIGHT     -> Color(0xFF1A1A1A)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,46 +150,51 @@ fun PdfReaderScreen(
     bookStateViewModel: BookStateViewModel,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
+    val context       = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val scope = rememberCoroutineScope()
+    val scope          = rememberCoroutineScope()
 
     val allBooks by libraryViewModel.allBooks.collectAsState()
     val book = remember(bookId, allBooks) { allBooks.find { it.bookId == bookId } }
 
-    // ── State ─────────────────────────────────────────────────────────────────
-    var core by remember { mutableStateOf<MuPDFCore?>(null) }
-    var totalPages by remember { mutableStateOf(0) }
-    var isLoading by remember { mutableStateOf(true) }
+    // ── Core state ────────────────────────────────────────────────────────────
+    var core         by remember { mutableStateOf<MuPDFCore?>(null) }
+    var totalPages   by remember { mutableStateOf(0) }
+    var isLoading    by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var sessionStartTime by remember { mutableStateOf(System.currentTimeMillis()) }
-    var outline by remember { mutableStateOf<List<OutlineActivity.Item>?>(null) }
+    var outline      by remember { mutableStateOf<List<OutlineActivity.Item>?>(null) }
 
-    val currentPage by pdfViewerViewModel.currentPage.collectAsState()
+    val currentPage  by pdfViewerViewModel.currentPage.collectAsState()
     val sessionState by pdfViewerViewModel.sessionState.collectAsState()
 
-    var isChromeVisible by remember { mutableStateOf(true) }
+    // ── UI toggles ────────────────────────────────────────────────────────────
+    var isChromeVisible   by remember { mutableStateOf(true) }
     var showPageJumpDialog by remember { mutableStateOf(false) }
-    var showGoalDialog by remember { mutableStateOf(false) }
-    var showTocSheet by remember { mutableStateOf(false) }
-    var showSearchBar by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
-    var jumpToPage by remember { mutableStateOf<Int?>(null) }
-    var readerViewRef by remember { mutableStateOf<MuPdfReaderView?>(null) }
+    var showGoalDialog    by remember { mutableStateOf(false) }
+    var showTocSheet      by remember { mutableStateOf(false) }
+    var showSearchBar     by remember { mutableStateOf(false) }
+    var searchQuery       by remember { mutableStateOf("") }
+    var jumpToPage        by remember { mutableStateOf<Int?>(null) }
+    var readerViewRef     by remember { mutableStateOf<MuPdfReaderView?>(null) }
 
-    // New feature states
-    var linksEnabled by remember { mutableStateOf(true) }
+    // ── Feature states ────────────────────────────────────────────────────────
+    var linksEnabled       by remember { mutableStateOf(false) }
     var horizontalScrolling by remember { mutableStateOf(true) }
-    var showCopySheet by remember { mutableStateOf(false) }
-    var snackbarMessage by remember { mutableStateOf<String?>(null) }
-    val snackbarHostState = remember { SnackbarHostState() }
+    var currentTheme       by remember { mutableStateOf(PdfTheme.NORMAL) }
+    var showThemeSheet     by remember { mutableStateOf(false) }
+    var showThemes     by remember { mutableStateOf(false) }
 
-    // Show snackbar when message is set
+    var bottomBarHeight by remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
+    val imeBottom = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+
+    val correctedPadding = (imeBottom - bottomBarHeight).coerceAtLeast(0.dp)
+    // ── Snackbar ──────────────────────────────────────────────────────────────
+    val snackbarHostState = remember { SnackbarHostState() }
+    var snackbarMessage   by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(snackbarMessage) {
-        snackbarMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            snackbarMessage = null
-        }
+        snackbarMessage?.let { snackbarHostState.showSnackbar(it); snackbarMessage = null }
     }
 
     // ── 1. Open document ──────────────────────────────────────────────────────
@@ -178,15 +207,14 @@ fun PdfReaderScreen(
                 val fileSize: Long = try {
                     context.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: -1L
                 } catch (_: Exception) { -1L }
-                val stream = ContentInputStream(context.contentResolver, uri, fileSize)
-                val mupdfCore = MuPDFCore(stream, "application/pdf")
-                val pages = mupdfCore.countPages()
-                val toc: List<OutlineActivity.Item>? =
-                    if (mupdfCore.hasOutline()) mupdfCore.getOutline() else null
+                val stream     = ContentInputStream(context.contentResolver, uri, fileSize)
+                val mupdfCore  = MuPDFCore(stream, "application/pdf")
+                val pages      = mupdfCore.countPages()
+                val toc        = if (mupdfCore.hasOutline()) mupdfCore.getOutline() else null
                 withContext(Dispatchers.Main) {
                     core = mupdfCore; totalPages = pages; outline = toc
                     val savedPage = bookStateViewModel.getBookState(bookId)?.currentPage ?: 0
-                    pdfViewerViewModel.startSession(bookId = bookId, startPage = savedPage, totalPages = pages)
+                    pdfViewerViewModel.startSession(bookId, savedPage, pages)
                     if (savedPage > 0) jumpToPage = savedPage
                 }
             }
@@ -209,11 +237,11 @@ fun PdfReaderScreen(
 
     // ── 3. Lifecycle ──────────────────────────────────────────────────────────
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) sessionStartTime = System.currentTimeMillis()
+        val obs = LifecycleEventObserver { _, ev ->
+            if (ev == Lifecycle.Event.ON_RESUME) sessionStartTime = System.currentTimeMillis()
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
     DisposableEffect(bookId) {
         onDispose { core?.onDestroy(); pdfViewerViewModel.endSession() }
@@ -221,267 +249,332 @@ fun PdfReaderScreen(
 
     BackHandler {
         when {
-            showCopySheet -> showCopySheet = false
             showSearchBar -> { showSearchBar = false; searchQuery = ""; readerViewRef?.clearSearch() }
-            showTocSheet -> showTocSheet = false
-            else -> navController.navigateUp()
+            showTocSheet  -> showTocSheet = false
+            showThemeSheet -> showThemeSheet = false
+            else -> navController.popBackStack()
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            AnimatedVisibility(
-                visible = isChromeVisible,
-                enter = fadeIn() + slideInVertically { -it },
-                exit = fadeOut() + slideOutVertically { -it }
-            ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.onBackground,
-                    shape = RoundedCornerShape(8.dp),
-                    shadowElevation = 4.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(10.dp)
-                    ) {
-                            Row(
-                                horizontalArrangement = Arrangement.Start,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ){
-                                IconButton(onClick = { navController.navigateUp() }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.sign_out_circle),
-                                    contentDescription = "Back",
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                }
-                                Text(
-                                    text = book?.title ?: "Loading…",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            Row(
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                IconButton(onClick = {
-                                    showSearchBar = !showSearchBar
-                                    if (!showSearchBar) { searchQuery = ""; readerViewRef?.clearSearch() }
-                                }) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.search_alt),
-                                        contentDescription = "Search",
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                                if (outline != null) {
-                                    IconButton(onClick = { showTocSheet = true }) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.sort),
-                                            contentDescription = "Table of contents",
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
-                                }
-                                IconButton(onClick = {
-                                    linksEnabled = !linksEnabled
-                                    readerViewRef?.setLinksEnabled(linksEnabled)
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Default.AddLink,
-                                        contentDescription = if (linksEnabled) "Disable links" else "Enable links",
-                                        modifier = Modifier.size(24.dp),
-                                        tint = if (linksEnabled)
-                                            MaterialTheme.colorScheme.primary
-                                        else
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                                    )
-                                }
-                                IconButton(onClick = {
-                                    horizontalScrolling = !horizontalScrolling
-                                    readerViewRef?.setScrollHorizontal(horizontalScrolling)
-                                }) {
-                                    Icon(
-                                        imageVector = if (horizontalScrolling)
-                                            Icons.Rounded.ArrowBack
-                                        else
-                                            Icons.Rounded.ArrowUpward,
-                                        contentDescription = if (horizontalScrolling)
-                                            "Switch to vertical scroll"
-                                        else
-                                            "Switch to horizontal scroll",
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                                IconButton(onClick = { showPageJumpDialog = true }) {
-                                    Icon(
-                                        imageVector = Icons.Default.NorthEast,
-                                        contentDescription = "Jump to page",
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                                IconButton(onClick = { showGoalDialog = true }) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.fluent_timer_12_regular),
-                                        contentDescription = "Reading goal",
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            }
-
-                        AnimatedVisibility(
-                            visible = showSearchBar,
-                            enter = slideInVertically { -it },
-                            exit = slideOutVertically { -it }
-                        ) {
-                            SearchBar(
-                                query = searchQuery,
-                                onQueryChange = { searchQuery = it },
-                                onSearchForward = {
-                                    if (searchQuery.isNotBlank())
-                                        readerViewRef?.search(searchQuery, direction = +1)
-                                },
-                                onSearchBackward = {
-                                    if (searchQuery.isNotBlank())
-                                        readerViewRef?.search(searchQuery, direction = -1)
-                                },
-                                onClose = {
-                                    showSearchBar = false
-                                    searchQuery = ""
-                                    readerViewRef?.clearSearch()
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        bottomBar = {
-            AnimatedVisibility(
-                visible = isChromeVisible && sessionState != null,
-                enter = fadeIn() + slideInVertically { it },
-                exit = fadeOut() + slideOutVertically { it }
-            ) {
-                ReadingProgressBar(
-                    currentPage = currentPage,
-                    totalPages = totalPages,
-                    sessionTime = sessionState?.sessionTimeSpent ?: 0L,
-                    goalProgress = pdfViewerViewModel.getGoalProgress(),
-                    isGoalMet = pdfViewerViewModel.isGoalMet()
-                )
-            }
-        },
-        modifier = modifier
-    ) { paddingValues ->
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ){
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
         ) {
             when {
-                isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                isLoading ->
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
 
-                errorMessage != null -> ErrorState(
-                    message = errorMessage!!,
-                    onBack = { navController.navigateUp() },
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                errorMessage != null ->
+                    ErrorState(errorMessage!!, { navController.navigateUp() },
+                        modifier = Modifier.align(Alignment.Center))
 
                 core != null -> {
                     AndroidView(
                         factory = { ctx ->
                             MuPdfReaderView(
-                                context = ctx,
-                                core = core!!,
+                                context  = ctx,
+                                core     = core!!,
                                 onPageChanged = { page ->
                                     pdfViewerViewModel.updatePage(page)
                                     bookStateViewModel.updateBookState(
-                                        bookId = bookId,
+                                        bookId      = bookId,
                                         currentPage = page,
-                                        status = if (page >= totalPages - 1)
-                                            ReadingStatus.COMPLETED
-                                        else
-                                            ReadingStatus.READING
+                                        status      = if (page >= totalPages - 1)
+                                            ReadingStatus.COMPLETED else ReadingStatus.READING
                                     )
                                 },
-                                onChromeTap = { isChromeVisible = !isChromeVisible },
-                                onLongPress = { showCopySheet = true }
-                            ).also { view ->
-                                view.layoutParams = FrameLayout.LayoutParams(
+                                onChromeTap = {
+                                    isChromeVisible = !isChromeVisible
+                                    showThemes = false
+                                    showSearchBar = false
+                                }
+                            ).also { v ->
+                                v.layoutParams = FrameLayout.LayoutParams(
                                     FrameLayout.LayoutParams.MATCH_PARENT,
-                                    FrameLayout.LayoutParams.MATCH_PARENT
-                                )
-                                view.setLinksEnabled(linksEnabled)
-                                view.setScrollHorizontal(horizontalScrolling)
-                                readerViewRef = view
+                                    FrameLayout.LayoutParams.MATCH_PARENT)
+                                v.setLinksEnabled(linksEnabled)
+                                v.setScrollHorizontal(horizontalScrolling)
+                                v.applyTheme(currentTheme)
+                                readerViewRef = v
                             }
                         },
                         update = { view ->
-                            jumpToPage?.let { page ->
-                                view.setDisplayedViewIndex(page)
-                                jumpToPage = null
-                            }
+                            jumpToPage?.let { page -> view.setDisplayedViewIndex(page); jumpToPage = null }
                         },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
             }
         }
+        Box(
+            modifier = modifier.align(Alignment.TopCenter)
+        ){
+            AnimatedVisibility(
+                visible = isChromeVisible,
+                enter = fadeIn() + slideInVertically { -it },
+                exit  = fadeOut() + slideOutVertically { -it }
+            ) {
+                GeneralTopBar(
+                    titleText = book?.title ?: "Loading…",
+                    onBackClicked = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+        Box(
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ){
+            Column() {
+                if(showThemes)
+                ThemeSelector(
+                    onThemeSelected = { theme ->
+                        currentTheme = theme
+                        readerViewRef?.applyTheme(theme)
+                        showThemes = false
+                    },
+                )
+                if (showSearchBar)
+                    SearchBar(
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it },
+                        onSearchForward = {
+                            if (searchQuery.isNotBlank()) readerViewRef?.search(
+                                searchQuery,
+                                +1
+                            )
+                        },
+                        onSearchBackward = {
+                            if (searchQuery.isNotBlank()) readerViewRef?.search(
+                                searchQuery,
+                                -1
+                            )
+                        },
+                        onClose = {
+                            showSearchBar = false; searchQuery =
+                            ""; readerViewRef?.clearSearch()
+                        },
+                        modifier = Modifier.padding(bottom = correctedPadding)
+                    )
+                AnimatedVisibility(
+                    visible = isChromeVisible && sessionState != null,
+                    enter = fadeIn() + slideInVertically { it },
+                    exit = fadeOut() + slideOutVertically { it }
+                ) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.onBackground,
+                        shape = RoundedCornerShape(topEnd = 8.dp, topStart = 8.dp),
+                        shadowElevation = 4.dp,
+                        modifier = Modifier
+                            .onSizeChanged {
+                                bottomBarHeight = with(density) { it.height.toDp() }
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Column {
+                                Row {
+                                    FilledIconButton(
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = IconButtonDefaults.iconButtonColors(
+                                            if (showThemes) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = {
+                                            if(showSearchBar) showSearchBar = false
+                                            showThemes = !showThemes
+                                        }
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.paint_roller),
+                                            contentDescription = "ColorPicker",
+                                            modifier = Modifier
+                                                .padding(3.dp)
+                                                .size(25.dp),
+                                            tint = Color.Black
+                                        )
+                                    }
+                                    // Search
+                                    FilledIconButton(
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = IconButtonDefaults.iconButtonColors(
+                                            if (showSearchBar) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = {
+                                            if(showThemes) showThemes = false
+                                            showSearchBar = !showSearchBar
+                                            if (!showSearchBar) {
+                                                searchQuery = ""; readerViewRef?.clearSearch()
+                                            }
+                                        },
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.search_alt),
+                                            contentDescription = "ColorPicker",
+                                            modifier = Modifier
+                                                .padding(3.dp)
+                                                .size(25.dp),
+                                            tint = Color.Black
+                                        )
+                                    }
 
-        // ── Dialogs ───────────────────────────────────────────────────────────
-        if (showPageJumpDialog) {
-            PageJumpDialog(
-                currentPage = currentPage,
-                totalPages = totalPages,
-                onDismiss = { showPageJumpDialog = false },
-                onPageSelected = { page -> jumpToPage = page; showPageJumpDialog = false }
-            )
-        }
-        if (showGoalDialog) {
-            ReadingGoalDialog(
-                currentGoal = sessionState?.dailyGoalMinutes,
-                onDismiss = { showGoalDialog = false },
-                onGoalSet = { minutes -> pdfViewerViewModel.setReadingGoal(bookId, minutes); showGoalDialog = false }
-            )
-        }
-        if (showTocSheet && outline != null) {
-            TocBottomSheet(
-                outline = outline!!,
-                currentPage = currentPage,
-                onPageSelected = { page -> jumpToPage = page; showTocSheet = false },
-                onDismiss = { showTocSheet = false }
-            )
-        }
-        // Text copy bottom sheet (triggered by long-press on the PDF)
-        if (showCopySheet) {
-            CopyTextSheet(
-                onCopyPage = {
-                    showCopySheet = false
-                    scope.launch(Dispatchers.IO) {
-                        val text = readerViewRef?.getCurrentPageText() ?: ""
-                        withContext(Dispatchers.Main) {
-                            if (text.isBlank()) {
-                                snackbarMessage = "No selectable text on this page"
-                            } else {
-                                val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                cm.setPrimaryClip(ClipData.newPlainText("PDF page text", text))
-                                snackbarMessage = "Page text copied to clipboard"
+                                    if (outline != null)
+                                        FilledIconButton(
+                                            shape = RoundedCornerShape(8.dp),
+                                            colors = IconButtonDefaults.iconButtonColors(
+                                                if (showTocSheet) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.onBackground
+                                            ),
+                                            onClick = { showTocSheet = true }
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.sort),
+                                                contentDescription = "TableOfContent",
+                                                modifier = Modifier
+                                                    .padding(3.dp)
+                                                    .size(25.dp),
+                                                tint = Color.Black
+                                            )
+                                        }
+                                    // Theme picker
+
+
+                                    FilledIconButton(
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = IconButtonDefaults.iconButtonColors(
+                                            if (linksEnabled) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = {
+                                            linksEnabled = !linksEnabled
+                                            readerViewRef?.setLinksEnabled(linksEnabled)
+                                        }
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.link),
+                                            contentDescription = "ColorPicker",
+                                            modifier = Modifier
+                                                .padding(3.dp)
+                                                .size(25.dp),
+                                            tint = Color.Black
+                                        )
+                                    }
+                                    IconButton(onClick = {
+                                        horizontalScrolling = !horizontalScrolling
+                                        readerViewRef?.setScrollHorizontal(horizontalScrolling)
+                                    }) {
+                                        Icon(
+                                            if (horizontalScrolling) painterResource(R.drawable.expand_right_stop)
+                                            else painterResource(R.drawable.expand_down_stop),
+                                            if (horizontalScrolling) "Switch to vertical" else "Switch to horizontal",
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    FilledIconButton(
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = IconButtonDefaults.iconButtonColors(
+                                            if (showPageJumpDialog) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = { showPageJumpDialog = true }
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.external),
+                                            contentDescription = "Jump page",
+                                            modifier = Modifier
+                                                .padding(3.dp)
+                                                .size(25.dp),
+                                            tint = Color.Black
+                                        )
+                                    }
+                                    FilledIconButton(
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = IconButtonDefaults.iconButtonColors(
+                                            if (showGoalDialog) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.onBackground
+                                        ),
+                                        onClick = { showGoalDialog = true }
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.fluent_timer_12_regular),
+                                            contentDescription = "Timer",
+                                            modifier = Modifier
+                                                .padding(3.dp)
+                                                .size(25.dp),
+                                            tint = Color.Black
+                                        )
+                                    }
+                                }
+                                Row {
+                                    ReadingProgressBar(
+                                        currentPage = currentPage,
+                                        totalPages = totalPages,
+                                        sessionTime = sessionState?.sessionTimeSpent ?: 0L,
+                                        goalProgress = pdfViewerViewModel.getGoalProgress(),
+                                        isGoalMet = pdfViewerViewModel.isGoalMet()
+                                    )
+                                }
                             }
                         }
                     }
-                },
-                onDismiss = { showCopySheet = false }
-            )
+                }
+
+            }
+        }
+    }
+
+
+        if (showPageJumpDialog)
+            PageJumpDialog(currentPage, totalPages,
+                onDismiss = { showPageJumpDialog = false },
+                onPageSelected = { jumpToPage = it; showPageJumpDialog = false })
+
+        if (showGoalDialog)
+            ReadingGoalDialog(
+                currentGoal = sessionState?.dailyGoalMinutes,
+                onDismiss = { showGoalDialog = false },
+                onGoalSet = { pdfViewerViewModel.setReadingGoal(bookId, it); showGoalDialog = false })
+
+        if (showTocSheet && outline != null)
+            TocBottomSheet(outline!!, currentPage,
+                onPageSelected = { jumpToPage = it; showTocSheet = false },
+                onDismiss = { showTocSheet = false })
+
+    }
+
+@Composable
+fun ThemeSelector(
+    onThemeSelected: (PdfTheme) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val themes = ThemeList
+
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 7.dp)
+    ){
+        items(themes) { theme ->
+
+            val bgColor = when (theme) {
+                PdfTheme.NORMAL    -> Color(0xFFFFFFFF)
+                PdfTheme.SEPIA     ->Color(0xFFF4ECD8)
+                PdfTheme.DARK_SEPIA -> Color(0xFF2B2016)
+                PdfTheme.NIGHT     -> Color(0xFF1A1A1A)
+            }
+
+            Surface(
+                border = BorderStroke(2.dp, Color.White),
+                onClick = {  onThemeSelected(theme)  },
+                shape = RoundedCornerShape(8.dp),
+                color = bgColor,
+                shadowElevation = 4.dp,
+                modifier = Modifier.padding(5.dp).size(50.dp)
+            ) {
+
+            }
         }
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Search bar
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun SearchBar(
@@ -505,99 +598,29 @@ private fun SearchBar(
             OutlinedTextField(
                 value = query,
                 onValueChange = onQueryChange,
-                placeholder = { Text("Search in document…", fontSize = 14.sp) },
+                placeholder = { Text("Search text", fontSize = 14.sp) },
                 singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor   = MaterialTheme.colorScheme.onBackground,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.onBackground
+                ),
                 modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(Modifier.width(4.dp))
             IconButton(onClick = onSearchBackward) {
                 Icon(
-                    imageVector = Icons.Rounded.ArrowUpward,
-                    contentDescription = "Previous result",
-                    modifier = Modifier.size(20.dp)
-                )
+                    Icons.AutoMirrored.Rounded.ArrowBack
+                    , "Previous", modifier = Modifier.size(20.dp))
             }
             IconButton(onClick = onSearchForward) {
-                Icon(
-                    imageVector = Icons.Rounded.ArrowDownward,
-                    contentDescription = "Next result",
-                    modifier = Modifier.size(20.dp)
-                )
+                Icon(Icons.AutoMirrored.Rounded.ArrowForward, "Next", modifier = Modifier.size(20.dp))
             }
             IconButton(onClick = onClose) {
-                Icon(
-                    painter = painterResource(R.drawable.close_ring),
-                    contentDescription = "Close search",
-                    modifier = Modifier.size(20.dp)
-                )
+                Icon(painterResource(R.drawable.close_ring), "Close", modifier = Modifier.size(20.dp))
             }
         }
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Copy text bottom sheet
-// ─────────────────────────────────────────────────────────────────────────────
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CopyTextSheet(
-    onCopyPage: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "Text Actions",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            HorizontalDivider()
-            Spacer(Modifier.height(4.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onCopyPage)
-                    .padding(vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.sort),
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Column {
-                    Text(
-                        text = "Copy page text",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = "Copies all selectable text from this page",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Collapsible TOC bottom sheet
-// ─────────────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -607,260 +630,182 @@ private fun TocBottomSheet(
     onPageSelected: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    val tocTree = remember(outline) { buildTocTree(outline) }
+    val tocTree       = remember(outline) { buildTocTree(outline) }
     val expandedNodes = remember { mutableStateOf(setOf<Int>()) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false),
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
     ) {
         Text(
-            text = "Table of Contents",
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            "Table of Contents",
+            style    = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
             modifier = Modifier
                 .padding(horizontal = 16.dp, vertical = 8.dp)
                 .align(Alignment.CenterHorizontally),
             color = Color.Black
         )
         HorizontalDivider()
-
         LazyColumn(modifier = Modifier.fillMaxWidth()) {
             tocTree.forEachIndexed { rootIdx, rootNode ->
-                val isExpanded = expandedNodes.value.contains(rootIdx)
-                item(key = "root_$rootIdx") {
+                val expanded = expandedNodes.value.contains(rootIdx)
+                item(key = "r$rootIdx") {
                     TocRow(
-                        title = rootNode.item.title,
-                        page = rootNode.item.page,
-                        depth = 0,
-                        isCurrentChapter = rootNode.item.page == currentPage,
+                        title       = rootNode.item.title,
+                        page        = rootNode.item.page,
+                        depth       = 0,
+                        isCurrent   = rootNode.item.page == currentPage,
                         hasChildren = rootNode.children.isNotEmpty(),
-                        isExpanded = isExpanded,
-                        onToggle = {
-                            expandedNodes.value = if (isExpanded)
+                        isExpanded  = expanded,
+                        onToggle    = {
+                            expandedNodes.value = if (expanded)
                                 expandedNodes.value - rootIdx
                             else
                                 expandedNodes.value + rootIdx
                         },
-                        onPageSelected = onPageSelected
+                        onSelect    = onPageSelected
                     )
                 }
-                if (isExpanded) {
-                    rootNode.children.forEachIndexed { childIdx, childNode ->
-                        item(key = "child_${rootIdx}_$childIdx") {
-                            TocRow(
-                                title = childNode.item.title,
-                                page = childNode.item.page,
-                                depth = 1,
-                                isCurrentChapter = childNode.item.page == currentPage,
-                                hasChildren = false,
-                                isExpanded = false,
-                                onToggle = {},
-                                onPageSelected = onPageSelected
-                            )
+                if (expanded) {
+                    rootNode.children.forEachIndexed { ci, child ->
+                        item(key = "c${rootIdx}_$ci") {
+                            TocRow(child.item.title, child.item.page, 1,
+                                child.item.page == currentPage, false, false, {}, onPageSelected)
                         }
-                        // Grandchildren (depth 2)
-                        childNode.children.forEachIndexed { grandIdx, grandNode ->
-                            item(key = "grand_${rootIdx}_${childIdx}_$grandIdx") {
-                                TocRow(
-                                    title = grandNode.item.title,
-                                    page = grandNode.item.page,
-                                    depth = 2,
-                                    isCurrentChapter = grandNode.item.page == currentPage,
-                                    hasChildren = false,
-                                    isExpanded = false,
-                                    onToggle = {},
-                                    onPageSelected = onPageSelected
-                                )
+                        child.children.forEachIndexed { gi, grand ->
+                            item(key = "g${rootIdx}_${ci}_$gi") {
+                                TocRow(grand.item.title, grand.item.page, 2,
+                                    grand.item.page == currentPage, false, false, {}, onPageSelected)
                             }
                         }
                     }
                 }
             }
-            item { Spacer(modifier = Modifier.height(32.dp)) }
+            item { Spacer(Modifier.height(32.dp)) }
         }
     }
 }
 
 @Composable
 private fun TocRow(
-    title: String,
-    page: Int,
-    depth: Int,
-    isCurrentChapter: Boolean,
-    hasChildren: Boolean,
-    isExpanded: Boolean,
-    onToggle: () -> Unit,
-    onPageSelected: (Int) -> Unit,
+    title: String, page: Int, depth: Int,
+    isCurrent: Boolean, hasChildren: Boolean, isExpanded: Boolean,
+    onToggle: () -> Unit, onSelect: (Int) -> Unit
 ) {
-    val indent = (depth * 20).dp
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                if (isCurrentChapter)
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                else
-                    MaterialTheme.colorScheme.onBackground
+                if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                else MaterialTheme.colorScheme.onBackground
             )
-            .clickable {
-                if (hasChildren) onToggle()
-                else onPageSelected(page)
-            }
-            .padding(start = 16.dp + indent, end = 16.dp, top = 12.dp, bottom = 12.dp),
+            .clickable { if (hasChildren) onToggle() else onSelect(page) }
+            .padding(start = 16.dp + (depth * 20).dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
-            // Expand/collapse arrow for parents, dot for leaves
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
             if (hasChildren) {
                 Icon(
-                    imageVector = if (isExpanded)
-                        Icons.Rounded.KeyboardArrowDown
-                    else
-                        Icons.Rounded.KeyboardArrowRight,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand",
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                    if (isExpanded) Icons.Rounded.KeyboardArrowDown else Icons.Rounded.KeyboardArrowRight,
+                    null, modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(6.dp))
             } else {
                 Spacer(Modifier.width(24.dp))
             }
             Text(
-                text = title,
+                title,
                 style = if (depth == 0)
                     MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
                 else
                     MaterialTheme.typography.bodySmall,
-                color = if (isCurrentChapter)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                color = if (isCurrent) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface,
+                maxLines = 2, overflow = TextOverflow.Ellipsis
             )
         }
-        Text(
-            text = "${page + 1}",
-            style = MaterialTheme.typography.bodySmall,
+        Text("${page + 1}", style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 8.dp)
-        )
+            modifier = Modifier.padding(start = 8.dp))
     }
     HorizontalDivider(thickness = 0.5.dp)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Reading progress bottom bar
+// Reading progress bar (bottom)
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun ReadingProgressBar(
-    currentPage: Int,
-    totalPages: Int,
-    sessionTime: Long,
-    goalProgress: Float,
-    isGoalMet: Boolean,
-    modifier: Modifier = Modifier
+    currentPage: Int, totalPages: Int, sessionTime: Long,
+    goalProgress: Float, isGoalMet: Boolean, modifier: Modifier = Modifier
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.onBackground,
-        shape = RoundedCornerShape(8.dp),
-        shadowElevation = 4.dp,
-    ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Page ${currentPage + 1} / $totalPages",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Black
-                )
-                Text(
-                    text = "${((currentPage.toFloat() / totalPages.coerceAtLeast(1)) * 100).toInt()}%",
-                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                    color = Color.Black
-                )
+                Text("Page ${currentPage + 1} / $totalPages",
+                    style = MaterialTheme.typography.bodySmall)
+                Text("${((currentPage.toFloat() / totalPages.coerceAtLeast(1)) * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
             }
             LinearProgressIndicator(
                 progress = { currentPage.toFloat() / totalPages.coerceAtLeast(1) },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Session: ${formatReadingTime(sessionTime)}",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Session: ${formatReadingTime(sessionTime)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (goalProgress > 0f) {
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (goalProgress > 0f)
                     Text(
-                        text = if (isGoalMet) "Goal Met ✓" else "Goal: ${(goalProgress * 100).toInt()}%",
+                        if (isGoalMet) "Goal Met ✓" else "Goal: ${(goalProgress * 100).toInt()}%",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isGoalMet) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                        else MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-    }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Dialogs
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun ErrorState(message: String, onBack: () -> Unit, modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.padding(32.dp),
+        modifier.padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(text = message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyLarge)
+        Text(message, color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyLarge)
         Button(onClick = onBack) { Text("Go Back") }
     }
 }
 
 @Composable
 private fun PageJumpDialog(
-    currentPage: Int,
-    totalPages: Int,
-    onDismiss: () -> Unit,
-    onPageSelected: (Int) -> Unit
+    currentPage: Int, totalPages: Int,
+    onDismiss: () -> Unit, onPageSelected: (Int) -> Unit
 ) {
-    var pageInput by remember { mutableStateOf((currentPage + 1).toString()) }
+    var input by remember { mutableStateOf((currentPage + 1).toString()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) { Text("Jump to Page") } },
+        title = { Text("Jump to Page", modifier = Modifier.fillMaxWidth()) },
         text = {
-            OutlinedTextField(
-                value = pageInput,
-                onValueChange = { pageInput = it.filter { c -> c.isDigit() } },
-                label = { Text("Page number (1–$totalPages)") },
-                singleLine = true,
+            OutlinedTextField(input, { input = it.filter(Char::isDigit) },
+                label = { Text("Page (1–$totalPages)") }, singleLine = true,
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.onBackground,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.onBackground,
-                ),
-            )
+                    focusedContainerColor   = MaterialTheme.colorScheme.onBackground,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.onBackground))
         },
         shape = RoundedCornerShape(8.dp),
         containerColor = MaterialTheme.colorScheme.background,
         confirmButton = {
             TextButton(onClick = {
-                val page = pageInput.toIntOrNull()
-                if (page != null && page in 1..totalPages) onPageSelected(page - 1)
+                input.toIntOrNull()?.takeIf { it in 1..totalPages }?.let { onPageSelected(it - 1) }
             }) { Text("Go") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
@@ -869,36 +814,25 @@ private fun PageJumpDialog(
 
 @Composable
 private fun ReadingGoalDialog(
-    currentGoal: Int?,
-    onDismiss: () -> Unit,
-    onGoalSet: (Int) -> Unit
+    currentGoal: Int?, onDismiss: () -> Unit, onGoalSet: (Int) -> Unit
 ) {
-    var goalInput by remember { mutableStateOf(currentGoal?.toString() ?: "30") }
+    var input by remember { mutableStateOf(currentGoal?.toString() ?: "30") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) { Text("Daily Reading Goal") } },
+        title = { Text("Daily Reading Goal") },
         text = {
-            Column {
-                Text("How many minutes do you want to read today?")
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = goalInput,
-                    onValueChange = { goalInput = it.filter { c -> c.isDigit() } },
-                    label = { Text("Minutes per day") },
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.onBackground,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.onBackground,
-                    ),
-                )
-            }
+            OutlinedTextField(input, { input = it.filter(Char::isDigit) },
+                label = { Text("Minutes per day") }, singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor   = MaterialTheme.colorScheme.onBackground,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.onBackground)
+            )
         },
         shape = RoundedCornerShape(8.dp),
         containerColor = MaterialTheme.colorScheme.background,
         confirmButton = {
             TextButton(onClick = {
-                val minutes = goalInput.toIntOrNull()
-                if (minutes != null && minutes > 0) onGoalSet(minutes)
+                input.toIntOrNull()?.takeIf { it > 0 }?.let { onGoalSet(it) }
             }) { Text("Set Goal") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
@@ -908,6 +842,6 @@ private fun ReadingGoalDialog(
 private fun formatReadingTime(ms: Long): String {
     val s = (ms / 1000) % 60
     val m = (ms / 60_000) % 60
-    val h = ms / 3_600_000
+    val h =  ms / 3_600_000
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }

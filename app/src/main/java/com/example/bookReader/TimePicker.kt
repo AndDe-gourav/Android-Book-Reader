@@ -47,8 +47,6 @@ import kotlinx.coroutines.delay
 fun TimePicker(
     onDismissRequest: () -> Unit,
     onTimeGoalSet: () -> Unit,
-    bookDataViewModel: BookDataViewModel,
-    timeGoalViewModel: TimeGoalViewModel,
     modifier: Modifier = Modifier
 ) {
     var hourValue by remember { mutableStateOf("") }
@@ -156,12 +154,7 @@ fun TimePicker(
                         shape = RoundedCornerShape(8.dp),
                         enabled = (hourValue != "" || minuteValue != "") && (hourValue != "00" || minuteValue != "00") && (hourValue != "0" || minuteValue != "0") && hourValue != "" && minuteValue != "" ,
                         onClick = {
-                            timeGoalViewModel.updateBookTimeGoal(
-                                bookDataViewModel.selectedBook.value?.uri!!,
-                                (hourValue.toInt() * 60 + minuteValue.toInt())
-                            )
-                            onTimeGoalSet()
-                            onDismissRequest()
+                            
                         }
                     ) {
                         Text(

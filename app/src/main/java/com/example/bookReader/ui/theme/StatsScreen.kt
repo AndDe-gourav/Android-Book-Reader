@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import com.example.bookReader.CustumSlideBar
 import com.example.bookReader.R
 import kotlinx.coroutines.launch
 import java.io.File

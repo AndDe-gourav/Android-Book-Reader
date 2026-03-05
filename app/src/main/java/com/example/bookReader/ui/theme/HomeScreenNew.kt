@@ -69,7 +69,6 @@ import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.bookReader.AnimatedIconRow
-import com.example.bookReader.CustumSlideBar
 import com.example.bookReader.R
 import com.example.bookReader.data.entity.BookEntity
 import com.example.bookReader.data.entity.CollectionWithBooks
@@ -566,6 +565,48 @@ fun ShelfChip(
         label = { Text(text) },
         modifier = modifier
     )
+}
+
+@Composable
+fun CustumSlideBar(
+    value: Float,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(16.dp)
+                .background(
+                    color = Color.White,
+                    shape = RoundedCornerShape(4.dp)
+                )
+        )
+        Box(
+            modifier = Modifier
+                .height(16.dp)
+                .fillMaxWidth(value)
+                .padding(3.dp)
+                .background(
+                    color = color,
+                    shape = RoundedCornerShape(4.dp)
+                )
+
+        )
+        Box(
+            modifier = Modifier
+                .padding(end = 4.dp)
+                .align(Alignment.CenterEnd)
+                .size(3.dp)
+                .background(
+                    color = color,
+                    shape = RoundedCornerShape(8.dp)
+                )
+        )
+    }
 }
 
 @Composable

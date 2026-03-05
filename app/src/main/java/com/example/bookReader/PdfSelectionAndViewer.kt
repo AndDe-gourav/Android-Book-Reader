@@ -4,9 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
-import android.content.res.Configuration
 import android.net.Uri
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -23,30 +21,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContent
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -60,7 +49,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -70,127 +58,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-
-@Composable
-fun PDFSelection(
-    navController: NavController,
-    bookDataViewModel: BookDataViewModel,
-    timeGoalViewModel: TimeGoalViewModel,
-    toCloseDrawer: () -> Unit,
-) {
-
-    val context = LocalContext.current
-    val contentResolver = context.contentResolver
-
-    val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let {
-
-            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            contentResolver.takePersistableUriPermission(it, takeFlags)
-
-            val encodedUri = Uri.encode(it.toString())
-            bookDataViewModel.addBook(it)
-            timeGoalViewModel.addTimeGoalBook(it)
-
-            bookDataViewModel.fetchLastPage(it.toString())
-            openPdf(context, it)
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(10.dp)
-            .clickable(
-                onClick = {
-                    pdfLauncher.launch(arrayOf("application/pdf"))
-                    toCloseDrawer()
-                }
-            )
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.load_circle_fill),
-                contentDescription = "Home",
-                tint = Color.Black
-            )
-            Spacer(
-                Modifier.width(dimensionResource(id = R.dimen.padding_large))
-            )
-            Text(
-                text = "Downloads",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.Black
-            )
-        }
-    }
-}
-
-@Composable
-fun QuickPdfSelection(
-    navController: NavController,
-    bookDataViewModel: BookDataViewModel,
-    timeGoalViewModel: TimeGoalViewModel,
-    toCloseDrawer: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    val contentResolver = context.contentResolver
-
-
-    val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let {
-
-            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            contentResolver.takePersistableUriPermission(it, takeFlags)
-
-            val encodedUri = Uri.encode(it.toString())
-            bookDataViewModel.addBook(it)
-            timeGoalViewModel.addTimeGoalBook(it)
-
-            bookDataViewModel.fetchLastPage(it.toString())
-            openPdf(context, it)
-        }
-    }
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-    ) {
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shape = RoundedCornerShape(8.dp),
-            shadowElevation = 8.dp,
-            modifier = Modifier
-                .size(40.dp)
-                .offset(y = (-14).dp)
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.add_round),
-                contentDescription = "Add new Book",
-                tint = MaterialTheme.colorScheme.inverseSurface,
-                modifier = Modifier
-                    .clickable(
-                        onClick = {
-                            pdfLauncher.launch(arrayOf("application/pdf"))
-                            toCloseDrawer()
-                        }
-                    )
-                    .padding(4.dp)
-            )
-        }
-        Text(
-            text = "Add Book",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.inverseSurface,
-            modifier = Modifier.offset(y = (-4).dp)
-        )
-    }
-}
 
 @Composable
 fun getActivity(): Activity? {
@@ -206,8 +75,6 @@ fun getActivity(): Activity? {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PDFViewerScreen(
-    bookDataViewModel: BookDataViewModel,
-    timeGoalViewModel: TimeGoalViewModel,
     pdfUri: String?,
     navController: NavController,
     showTimeGoal: Boolean,
@@ -219,36 +86,6 @@ fun PDFViewerScreen(
     var timeGoalAvailable by rememberSaveable { mutableStateOf(false) }
     var totalTime: Long? by rememberSaveable { mutableStateOf(0L) }
     var isTimerEnabled by rememberSaveable { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        timeGoalViewModel.addTimeGoalBook(pdfUri?.toUri()!!)
-        Log.d("insert", "insert")
-        var timeGoalCompleted = timeGoalViewModel.getGoalCompleted(pdfUri)
-        while (true) {
-            val now = System.currentTimeMillis()
-            sessionTimeSpent = now - sessionStartTime
-            if (timeGoalAvailable && (timeGoalCompleted == 0) && timeGoal !=0) {
-                (totalTime?.plus(sessionTimeSpent))?.div(1000)?.let {
-                    if ((it) >= timeGoal?.times(60)!!) {
-                        timeGoalViewModel.updateGoalCompleted(pdfUri, 1)
-                        timeGoalCompleted = timeGoalViewModel.getGoalCompleted(pdfUri)
-                    }
-                }
-            }
-            delay(1000L)
-        }
-    }
-    LaunchedEffect(Unit) {
-        if (pdfUri != null) {
-            delay(1000)
-            if (timeGoalViewModel.getTimeGoal(pdfUri) != 0) {
-                timeGoalAvailable = true
-            }
-            bookDataViewModel.fetchLastPage(pdfUri)
-            totalTime = timeGoalViewModel.getTotalTime(pdfUri)
-            isTimerEnabled = true
-        }
-    }
 
 
     val uri = pdfUri?.toUri()!!
@@ -269,9 +106,7 @@ fun PDFViewerScreen(
 
     var isTocSheetVisible by remember { mutableStateOf(false) }
 
-    val lastOpenedPageDB by bookDataViewModel.lastPage.collectAsState()
     var lastOpenedPage by rememberSaveable { mutableIntStateOf(0) }
-    var jumpToPage by remember { mutableIntStateOf(lastOpenedPageDB) }
 
     var isSystemUIVisible by remember { mutableStateOf(true) }
 
@@ -289,14 +124,12 @@ fun PDFViewerScreen(
             val lifecycleObserver = LifecycleEventObserver { _, event ->
                 when (event) {
                     Lifecycle.Event.ON_PAUSE -> {
-                        timeGoalViewModel.updateTotalTime(pdfUri, sessionTimeSpent)
                     }
 
                     Lifecycle.Event.ON_RESUME -> {
                         sessionStartTime = System.currentTimeMillis()
                         sessionTimeSpent = 0
                         scope.launch {
-                            timeGoal = timeGoalViewModel.getTimeGoal(pdfUri)
                         }
                     }
 
@@ -315,10 +148,8 @@ fun PDFViewerScreen(
             onDispose {
                 pdfUri.let {
                     CoroutineScope(Dispatchers.IO).launch {
-                        bookDataViewModel.updateLastPage(pdfUri, lastOpenedPage)
                     }
                 }
-                showSystemBars(activity!!)
                 lockHorizontalMovement = false
             }
         }
@@ -339,7 +170,6 @@ fun PDFViewerScreen(
                 onBackClicked = { navController.navigate("homeScreen") },
                 isTocSheetVisible = isTocSheetVisible,
                 onTocClicked = { isTocSheetVisible = !isTocSheetVisible },
-                bookDataViewModel = bookDataViewModel,
                 navController = navController,
                 isSystemUIVisible = isSystemUIVisible
             )
@@ -397,23 +227,7 @@ fun PDFViewerScreen(
                     }
                 }
             if(showTimeGoal) {
-                TimePicker(
-                    onDismissRequest = { onTimeGoalClicked() },
-                    bookDataViewModel = bookDataViewModel,
-                    timeGoalViewModel = timeGoalViewModel,
-                    onTimeGoalSet = {
-                        timeGoalAvailable = true
-                        scope.launch {
-                            timeGoalViewModel.resetTotalTime(pdfUri)
-                            timeGoalViewModel.updateGoalCompleted(pdfUri, 0)
-                            sessionStartTime = System.currentTimeMillis()
-                            sessionTimeSpent = 0
-                            totalTime = 0
-                            timeGoal = timeGoalViewModel.getTimeGoal(pdfUri)
-                        }
-                    }
 
-                )
             }
             AnimatedVisibility (
                 visible = isTocSheetVisible,
@@ -440,19 +254,7 @@ fun PDFViewerScreen(
                         targetOffsetY = { fullHeight -> fullHeight }
                     )
                 ) {
-                    TocSheet(
-                        currentPage = lastOpenedPage,
-                        bookDataViewModel = bookDataViewModel,
-                        onTocPageClicked = { tocPage ->
-                            jumpToPage = tocPage
-                            isTocSheetVisible = !isTocSheetVisible
-                        },
-                        onChildPageClicked = { childPage ->
-                            jumpToPage = childPage
-                            isTocSheetVisible = !isTocSheetVisible
-                        },
-                        modifier = Modifier.windowInsetsPadding(if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) WindowInsets.safeContent else WindowInsets(0,0,0,0))
-                    )
+
                 }
 
 

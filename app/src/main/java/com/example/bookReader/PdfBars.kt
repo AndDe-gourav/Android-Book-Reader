@@ -107,7 +107,6 @@ fun PdfTopBar(
     isTocSheetVisible: Boolean,
     navController: NavController,
     isSystemUIVisible: Boolean,
-    bookDataViewModel: BookDataViewModel,
     onBackClicked: () -> Unit,
     onTocClicked: () -> Unit,
     modifier: Modifier = Modifier
@@ -182,10 +181,7 @@ fun PdfTopBar(
                             tint = Color.Black
                         )
                     }
-                    PdfOptions(
-                        bookDataViewModel = bookDataViewModel,
-                        navController = navController,
-                    )
+
                 }
             }
         }

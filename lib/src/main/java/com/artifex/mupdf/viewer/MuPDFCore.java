@@ -7,7 +7,6 @@ import com.artifex.mupdf.fitz.Link;
 import com.artifex.mupdf.fitz.Matrix;
 import com.artifex.mupdf.fitz.Outline;
 import com.artifex.mupdf.fitz.Page;
-import com.artifex.mupdf.fitz.Point;
 import com.artifex.mupdf.fitz.Quad;
 import com.artifex.mupdf.fitz.Rect;
 import com.artifex.mupdf.fitz.RectI;
@@ -243,9 +242,37 @@ public class MuPDFCore
         if (page == null) return "";
         try {
             com.artifex.mupdf.fitz.StructuredText stext = page.toStructuredText(null);
-            String text = stext.copy(null, new Point(0,0));
+            // Select the full page bounds to get all text
+            Rect b = page.getBounds();
+            com.artifex.mupdf.fitz.Point p0 = new com.artifex.mupdf.fitz.Point(b.x0, b.y0);
+            com.artifex.mupdf.fitz.Point p1 = new com.artifex.mupdf.fitz.Point(b.x1, b.y1);
+            String text = stext.copy(p0, p1);
             stext.destroy();
             return text != null ? text : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /**
+     * Extract text within a region defined in PDF-point coordinates.
+     * x0,y0 = one corner; x1,y1 = the opposite corner of the selection.
+     * The method normalises the rectangle so corner order does not matter.
+     */
+    public synchronized String getTextInPageRegion(int pageNum,
+                                                   float x0, float y0, float x1, float y1) {
+        gotoPage(pageNum);
+        if (page == null) return "";
+        try {
+            com.artifex.mupdf.fitz.StructuredText stext = page.toStructuredText(null);
+            // copy(Point, Point) — pass top-left then bottom-right
+            com.artifex.mupdf.fitz.Point p0 = new com.artifex.mupdf.fitz.Point(
+                    Math.min(x0, x1), Math.min(y0, y1));
+            com.artifex.mupdf.fitz.Point p1 = new com.artifex.mupdf.fitz.Point(
+                    Math.max(x0, x1), Math.max(y0, y1));
+            String text = stext.copy(p0, p1);
+            stext.destroy();
+            return text != null ? text.trim() : "";
         } catch (Exception e) {
             return "";
         }

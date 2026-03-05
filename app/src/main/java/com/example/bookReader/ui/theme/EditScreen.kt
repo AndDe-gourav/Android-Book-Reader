@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import androidx.navigation.NavController
-import com.example.bookReader.OnCellClicked
 import com.example.bookReader.ui.theme.GeneralTopBar
 import com.example.bookReader.ui.theme.LibraryViewModel
 import kotlinx.coroutines.delay

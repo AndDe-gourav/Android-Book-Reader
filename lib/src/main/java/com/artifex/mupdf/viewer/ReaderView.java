@@ -26,7 +26,6 @@ import android.widget.Scroller;
 public class ReaderView
         extends AdapterView<Adapter>
         implements GestureDetector.OnGestureListener, ScaleGestureDetector.OnScaleGestureListener, Runnable {
-    private final String APP = "MuPDF";
 
     private Context mContext;
     private boolean mLinksEnabled = false;
@@ -914,6 +913,18 @@ public class ReaderView
             case MOVING_DOWN: return bounds.bottom >= 0;
             default: throw new NoSuchElementException();
         }
+    }
+
+    /**
+     * Returns the current page view's screen transform as
+     * float[]{left, top, measuredWidth, measuredHeight}.
+     * Used by MuPdfReaderView to map screen coordinates → PDF-point coordinates.
+     */
+    public float[] getCurrentPageTransform() {
+        View v = getDisplayedView();
+        if (v == null) return null;
+        return new float[]{v.getLeft(), v.getTop(),
+                v.getMeasuredWidth(), v.getMeasuredHeight()};
     }
 
     protected void onTapMainDocArea() {}
