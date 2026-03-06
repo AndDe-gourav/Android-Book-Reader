@@ -1,0 +1,10 @@
+*.iml
+.externalNativeBuild
+.gradle
+.idea
+.cxx
+MAVEN
+build
+local.properties
+tags
+fitz-symbols-*.zip

@@ -16,7 +16,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://maven.ghostscript.com") }
         flatDir {
             dirs("app/libs")
         }
@@ -26,4 +25,5 @@ dependencyResolutionManagement {
 rootProject.name = "bookReader"
 include(":app")
 include(":lib")
+include(":jni")
 
