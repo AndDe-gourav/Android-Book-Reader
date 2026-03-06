@@ -79,7 +79,11 @@ This project aims to create a **simple, focused, and distraction-free reading ap
 
 ## 📜 License
 
-This project is licensed under the **Apache License 2.0**.
+This project uses MuPDF for PDF rendering.
+
+MuPDF is licensed under the GNU Affero General Public License (AGPL) v3.
+
+Therefore this application is also distributed under the AGPL-3.0 license.
 
 ---
 
