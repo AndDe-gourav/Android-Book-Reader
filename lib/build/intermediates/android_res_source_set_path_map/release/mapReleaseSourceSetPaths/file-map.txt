@@ -1,0 +1,11 @@
+com.artifex.mupdf.viewer.lib-appcompat-1.1.0-0 /home/gourav/.gradle/caches/9.1.0/transforms/1fdd9cc0b4ab66910951fcd96eb83b82/transformed/appcompat-1.1.0/res
+com.artifex.mupdf.viewer.lib-appcompat-resources-1.1.0-1 /home/gourav/.gradle/caches/9.1.0/transforms/c80bec93d23650dbe5d29e408ed2a08f/transformed/appcompat-resources-1.1.0/res
+com.artifex.mupdf.viewer.lib-core-1.1.0-2 /home/gourav/.gradle/caches/9.1.0/transforms/d897ed3ab23338993b99e5d7222f7857/transformed/core-1.1.0/res
+com.artifex.mupdf.viewer.lib-release-3 /home/gourav/StudioProjects/Android-Book-Reader/jni/build/intermediates/packaged_res/release/packageReleaseResources
+com.artifex.mupdf.viewer.lib-pngs-4 /home/gourav/StudioProjects/Android-Book-Reader/lib/build/generated/res/pngs/release
+com.artifex.mupdf.viewer.lib-updated_navigation_xml-5 /home/gourav/StudioProjects/Android-Book-Reader/lib/build/generated/updated_navigation_xml/release
+com.artifex.mupdf.viewer.lib-mergeReleaseResources-6 /home/gourav/StudioProjects/Android-Book-Reader/lib/build/intermediates/incremental/release/mergeReleaseResources/merged.dir
+com.artifex.mupdf.viewer.lib-mergeReleaseResources-7 /home/gourav/StudioProjects/Android-Book-Reader/lib/build/intermediates/incremental/release/mergeReleaseResources/stripped.dir
+com.artifex.mupdf.viewer.lib-release-8 /home/gourav/StudioProjects/Android-Book-Reader/lib/build/intermediates/merged_res/release/mergeReleaseResources
+com.artifex.mupdf.viewer.lib-main-9 /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/res
+com.artifex.mupdf.viewer.lib-release-10 /home/gourav/StudioProjects/Android-Book-Reader/lib/src/release/res

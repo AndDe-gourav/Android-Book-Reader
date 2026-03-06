@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "com.artifex.mupdf.viewer.lib-release-6:/layout-v21/notification_template_custom_big.xml",
+        "source": "com.artifex.mupdf.viewer.lib-core-1.1.0-2:/layout-v21/notification_template_custom_big.xml"
+    },
+    {
+        "merged": "com.artifex.mupdf.viewer.lib-release-6:/layout-v21/notification_action.xml",
+        "source": "com.artifex.mupdf.viewer.lib-core-1.1.0-2:/layout-v21/notification_action.xml"
+    },
+    {
+        "merged": "com.artifex.mupdf.viewer.lib-release-6:/layout-v21/notification_template_icon_group.xml",
+        "source": "com.artifex.mupdf.viewer.lib-core-1.1.0-2:/layout-v21/notification_template_icon_group.xml"
+    },
+    {
+        "merged": "com.artifex.mupdf.viewer.lib-release-6:/layout-v21/notification_action_tombstone.xml",
+        "source": "com.artifex.mupdf.viewer.lib-core-1.1.0-2:/layout-v21/notification_action_tombstone.xml"
+    }
+]

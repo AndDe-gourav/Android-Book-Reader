@@ -1,0 +1,13 @@
+Book Reader is a lightweight open-source PDF reader for Android.
+
+Features:
+• Fast PDF rendering using MuPDF
+• Smooth page navigation
+• Dark mode and reading themes
+• Search inside documents
+• Clean reading interface
+
+The application is completely open source and respects user privacy.
+
+Source code:
+https://github.com/AndDe-gourav/Android-Book-Reader
