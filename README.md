@@ -67,7 +67,6 @@ The reader is designed to stay out of your way so you can focus on reading.
 <p align="center">
   <img src="fastlane/metadata/android/en-US/phoneScreenshots/Screenshot_2026-03-06-23-02-35-94.jpg" width="250"/>
   <img src="fastlane/metadata/android/en-US/phoneScreenshots/Screenshot_2026-03-06-23-04-05-80.jpg" width="250"/>
-  <img src="fastlane/metadata/android/en-US/phoneScreenshots/Screenshot_2026-03-06-23-04-39-39.jpg" width="250"/>
   <img src="fastlane/metadata/android/en-US/phoneScreenshots/Screenshot_2026-03-06-23-04-56-66.jpg" width="250"/>
 </p>
 
