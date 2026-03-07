@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
@@ -71,6 +72,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -827,11 +829,18 @@ private fun PageJumpDialog(
         onDismissRequest = onDismiss,
         title = { Text("Jump to Page", modifier = Modifier.fillMaxWidth()) },
         text = {
-            OutlinedTextField(input, { input = it.filter(Char::isDigit) },
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it.filter(Char::isDigit) },
                 label = { Text("Page (1–$totalPages)") }, singleLine = true,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor   = MaterialTheme.colorScheme.onBackground,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.onBackground))
+                    unfocusedContainerColor = MaterialTheme.colorScheme.onBackground
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number
+                ),
+            )
         },
         shape = RoundedCornerShape(8.dp),
         containerColor = MaterialTheme.colorScheme.background,
@@ -857,7 +866,10 @@ private fun ReadingGoalDialog(
                 label = { Text("Minutes per day") }, singleLine = true,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor   = MaterialTheme.colorScheme.onBackground,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.onBackground)
+                    unfocusedContainerColor = MaterialTheme.colorScheme.onBackground),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number
+                ),
             )
         },
         shape = RoundedCornerShape(8.dp),
