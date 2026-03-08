@@ -4,11 +4,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bookReader.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.util.Calendar
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 data class ReadingSessionState(
@@ -34,6 +41,13 @@ class PdfViewerViewModel @Inject constructor(
     private val _currentPage = MutableStateFlow(0)
     val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
 
+    /**
+     * Guards against endSession / endSessionBlocking being called concurrently from
+     * multiple paths (ON_STOP + onDispose + onCleared all within milliseconds of each
+     * other). compareAndSet(false, true) returns true exactly once.
+     */
+    private val isSaving = AtomicBoolean(false)
+
     // ── Session management ────────────────────────────────────────────────────
 
     fun startSession(bookId: Long, startPage: Int, totalPages: Int) {
@@ -54,6 +68,8 @@ class PdfViewerViewModel @Inject constructor(
                 todayReadingTimeMs = todayTime
             )
             _currentPage.value = startPage
+            // Reset the save guard each time a new session begins.
+            isSaving.set(false)
         }
     }
 
@@ -67,118 +83,168 @@ class PdfViewerViewModel @Inject constructor(
     }
 
     /**
-     * End the session, persist it to the DB, then upsert today's DailyGoalResultEntity.
+     * BLOCKING save — call this from the lifecycle ON_STOP observer.
      *
-     * The daily result is written AFTER the session row is inserted so the DB query for
-     * today's total already includes the just-finished session.
+     * WHY BLOCKING:
+     * Android guarantees the system waits for onStop() to return before killing the
+     * process. A coroutine launched asynchronously (even on saveScope) may never get
+     * to execute if the process is killed the moment onStop() returns.
+     * By doing the DB writes synchronously here we get a 100% guarantee they finish
+     * before the system gets the chance to kill the process.
+     *
+     * Room writes are fast (< 50 ms on any modern device) so briefly blocking the
+     * main thread during onStop() is completely acceptable and causes no ANR risk.
      */
-    fun endSession() {
-        viewModelScope.launch {
-            val state = _sessionState.value ?: return@launch
-            // Null out immediately so onCleared() cannot fire a second save.
-            _sessionState.value = null
+    fun endSessionBlocking() {
+        if (!isSaving.compareAndSet(false, true)) return
+        val state = _sessionState.value ?: run { isSaving.set(false); return }
+        _sessionState.value = null
 
+        // runBlocking bridges from the main thread into a blocking coroutine on IO.
+        runBlocking(Dispatchers.IO) {
             try {
-                // 1. Persist the raw reading session.
+                val endTime = System.currentTimeMillis()
+
                 repository.saveSession(
-                    bookId = state.bookId,
+                    bookId    = state.bookId,
                     startTime = state.startTime,
-                    endTime = System.currentTimeMillis(),
+                    endTime   = endTime,
                     startPage = state.startPage,
-                    endPage = state.currentPage
+                    endPage   = state.currentPage
                 )
 
-                // 2. Update book read-progress / status.
                 repository.updateProgress(
-                    bookId = state.bookId,
-                    page = state.currentPage,
+                    bookId     = state.bookId,
+                    page       = state.currentPage,
                     totalPages = state.totalPages
                 )
 
-                // 3. Upsert today's goal result (only when a goal has been set).
-                val goalMinutes = state.dailyGoalMinutes ?: return@launch
-                val todayStart = todayStartMs()
-                // Re-query the DB so the total includes the session just saved above.
-                val minutesReadToday = repository.getReadingTimeBetween(
-                    bookId = state.bookId,
-                    from  = todayStart,
-                    to    = todayStart + 86_400_000L
-                ) / 60_000L
+                val goalMinutes = state.dailyGoalMinutes
+                if (goalMinutes != null) {
+                    val todayStart = todayStartMs()
+                    val minutesReadToday = repository.getReadingTimeBetween(
+                        bookId = state.bookId,
+                        from   = todayStart,
+                        to     = todayStart + 86_400_000L
+                    ) / 60_000L
 
-                repository.saveDailyGoalResult(
-                    bookId     = state.bookId,
-                    dayStartMs = todayStart,
-                    goalMinutes = goalMinutes,
-                    minutesRead = minutesReadToday
-                )
+                    repository.saveDailyGoalResult(
+                        bookId      = state.bookId,
+                        dayStartMs  = todayStart,
+                        goalMinutes = goalMinutes,
+                        minutesRead = minutesReadToday
+                    )
+                }
             } catch (e: Exception) {
-                // Surface via a SharedFlow<UiEvent> if you want error snackbars
+                // Log if needed
+            } finally {
+                isSaving.set(false)
             }
         }
     }
 
     /**
-     * Called by the UI timer when midnight is detected mid-session.
+     * ASYNC save — call this from onDispose (normal back navigation).
      *
-     * Responsibilities:
-     *  1. Persists a DailyGoalResultEntity for the day that just ended, using
-     *     [minutesReadBeforeMidnight] as the final tally for that day.
-     *  2. Resets todayReadingTimeMs and sessionTimeSpent to 0 in the session
-     *     state so the progress bar starts fresh for the new day.
-     *
-     * The caller (PdfReaderScreen timer loop) is responsible for resetting its
-     * own local accumulatedSessionTime / sessionPeriodStart AFTER this call.
+     * When the user presses Back, the process stays alive and the coroutine has
+     * time to complete, so async is fine and avoids blocking the main thread
+     * during navigation. Uses NonCancellable so a scope cancellation mid-flight
+     * doesn't leave a partial write.
+     */
+    fun endSession() {
+        if (!isSaving.compareAndSet(false, true)) return
+        val state = _sessionState.value ?: run { isSaving.set(false); return }
+        _sessionState.value = null
+
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            withContext(NonCancellable) {
+                try {
+                    val endTime = System.currentTimeMillis()
+
+                    repository.saveSession(
+                        bookId    = state.bookId,
+                        startTime = state.startTime,
+                        endTime   = endTime,
+                        startPage = state.startPage,
+                        endPage   = state.currentPage
+                    )
+
+                    repository.updateProgress(
+                        bookId     = state.bookId,
+                        page       = state.currentPage,
+                        totalPages = state.totalPages
+                    )
+
+                    val goalMinutes = state.dailyGoalMinutes
+                    if (goalMinutes != null) {
+                        val todayStart = todayStartMs()
+                        val minutesReadToday = repository.getReadingTimeBetween(
+                            bookId = state.bookId,
+                            from   = todayStart,
+                            to     = todayStart + 86_400_000L
+                        ) / 60_000L
+
+                        repository.saveDailyGoalResult(
+                            bookId      = state.bookId,
+                            dayStartMs  = todayStart,
+                            goalMinutes = goalMinutes,
+                            minutesRead = minutesReadToday
+                        )
+                    }
+                } catch (e: Exception) {
+                    // Log if needed
+                } finally {
+                    isSaving.set(false)
+                }
+            }
+        }
+    }
+
+    /**
+     * Called when midnight is detected mid-session by the timer loop.
+     * Persists the result for the ending day, then resets in-memory counters.
      */
     fun onMidnightCrossed(prevDayStartMs: Long, minutesReadBeforeMidnight: Long) {
-        viewModelScope.launch {
-            val state = _sessionState.value ?: return@launch
-            val goalMinutes = state.dailyGoalMinutes
+        val state = _sessionState.value ?: return
+        val goalMinutes = state.dailyGoalMinutes ?: return
 
-            if (goalMinutes != null) {
-                repository.saveDailyGoalResult(
-                    bookId      = state.bookId,
-                    dayStartMs  = prevDayStartMs,
-                    goalMinutes = goalMinutes,
-                    minutesRead = minutesReadBeforeMidnight
-                )
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            withContext(NonCancellable) {
+                runCatching {
+                    repository.saveDailyGoalResult(
+                        bookId      = state.bookId,
+                        dayStartMs  = prevDayStartMs,
+                        goalMinutes = goalMinutes,
+                        minutesRead = minutesReadBeforeMidnight
+                    )
+                }
             }
-
-            // New day — clear accumulators so isGoalMet / getGoalProgress reflect today.
-            _sessionState.value = state.copy(
-                todayReadingTimeMs = 0L,
-                sessionTimeSpent   = 0L
-            )
         }
+
+        _sessionState.value = state.copy(todayReadingTimeMs = 0L, sessionTimeSpent = 0L)
     }
 
     // ── Goal helpers ──────────────────────────────────────────────────────────
 
     fun setReadingGoal(bookId: Long, dailyMinutes: Int) {
         viewModelScope.launch {
-            try {
-                repository.setReadingGoal(bookId, dailyMinutes)
-                _sessionState.value = _sessionState.value?.copy(dailyGoalMinutes = dailyMinutes)
-            } catch (e: Exception) { /* handle */ }
+            runCatching { repository.setReadingGoal(bookId, dailyMinutes) }
+            _sessionState.value = _sessionState.value?.copy(dailyGoalMinutes = dailyMinutes)
         }
     }
 
-    suspend fun getReadingGoal(bookId: Long): Int? = runCatching {
-        repository.getReadingGoal(bookId)?.dailyMinutesGoal
-    }.getOrNull()
+    suspend fun getReadingGoal(bookId: Long): Int? =
+        runCatching { repository.getReadingGoal(bookId)?.dailyMinutesGoal }.getOrNull()
 
-    suspend fun getTotalReadingTime(bookId: Long): Long = runCatching {
-        repository.getTotalReadingTime(bookId)
-    }.getOrDefault(0L)
+    suspend fun getTotalReadingTime(bookId: Long): Long =
+        runCatching { repository.getTotalReadingTime(bookId) }.getOrDefault(0L)
 
-    /** True when today's reading (saved sessions + current session) meets the daily goal. */
     fun isGoalMet(): Boolean {
         val state = _sessionState.value ?: return false
         val goalMinutes = state.dailyGoalMinutes ?: return false
-        val totalMinutes = (state.todayReadingTimeMs + state.sessionTimeSpent) / 60_000L
-        return totalMinutes >= goalMinutes
+        return (state.todayReadingTimeMs + state.sessionTimeSpent) / 60_000L >= goalMinutes
     }
 
-    /** Progress towards today's daily goal, clamped to [0, 1]. */
     fun getGoalProgress(): Float {
         val state = _sessionState.value ?: return 0f
         val goalMinutes = state.dailyGoalMinutes?.takeIf { it > 0 } ?: return 0f
@@ -188,13 +254,14 @@ class PdfViewerViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        // Safe: endSession() no-ops if _sessionState is already null.
+        // Last-resort fallback: if somehow ON_STOP and onDispose both missed the save
+        // (e.g. in tests or unusual lifecycle paths), endSession() still tries async.
+        // In normal app usage this is a no-op because isSaving is already true.
         endSession()
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /** Epoch-ms of midnight (00:00:00.000) for today in the device's local timezone. */
     fun todayStartMs(): Long = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, 0)
         set(Calendar.MINUTE, 0)

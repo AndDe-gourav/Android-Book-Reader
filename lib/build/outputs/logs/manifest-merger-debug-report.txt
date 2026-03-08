@@ -1,0 +1,54 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:2:1-33:12
+INJECTED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:2:1-33:12
+	package
+		INJECTED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:2:11-69
+uses-permission#android.permission.READ_EXTERNAL_STORAGE
+ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:3:2-77
+	android:name
+		ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:3:19-74
+application
+ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:4:2-32:16
+activity#com.artifex.mupdf.viewer.DocumentActivity
+ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:5:3-26:14
+	android:exported
+		ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:8:4-27
+	android:configChanges
+		ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:7:4-65
+	android:name
+		ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:6:4-36
+intent-filter#action:name:android.intent.action.VIEW+category:name:android.intent.category.BROWSABLE+category:name:android.intent.category.DEFAULT+data:mimeType:application/epub+zip+data:mimeType:application/octet-stream+data:mimeType:application/oxps+data:mimeType:application/pdf+data:mimeType:application/vnd.comicbook+zip+data:mimeType:application/vnd.ms-xpsdocument+data:mimeType:application/x-cbz+data:mimeType:application/x-fictionbook+data:mimeType:application/x-mobipocket-ebook
+ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:10:4-25:20
+action#android.intent.action.VIEW
+ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:11:5-57
+	android:name
+		ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:11:13-54
+category#android.intent.category.BROWSABLE
+ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:12:5-66
+	android:name
+		ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:12:15-63
+category#android.intent.category.DEFAULT
+ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:13:5-64
+	android:name
+		ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:13:15-61
+data
+ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:5-48
+	android:mimeType
+		ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:15:11-45
+activity#com.artifex.mupdf.viewer.OutlineActivity
+ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:27:3-31:14
+	android:configChanges
+		ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:29:4-65
+	android:name
+		ADDED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml:28:4-35
+uses-sdk
+INJECTED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml
+INJECTED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /home/gourav/StudioProjects/Android-Book-Reader/lib/src/main/AndroidManifest.xml

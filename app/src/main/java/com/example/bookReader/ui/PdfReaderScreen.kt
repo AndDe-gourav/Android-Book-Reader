@@ -28,13 +28,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -69,10 +67,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -80,7 +76,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.artifex.mupdf.viewer.ContentInputStream
 import com.artifex.mupdf.viewer.MuPDFCore
@@ -157,10 +152,6 @@ fun PdfReaderScreen(
     var totalPages   by remember { mutableStateOf(0) }
     var isLoading    by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    // BUG FIX #6: The old single `sessionStartTime` was reset to System.currentTimeMillis()
-    // on every ON_RESUME, which wiped out all time accumulated before the app was backgrounded.
-    // We now keep a separate `accumulatedSessionTime` that is updated on pause, so the timer
-    // resumes from where it left off rather than restarting from zero.
     var sessionPeriodStart by remember { mutableStateOf(System.currentTimeMillis()) }
     var accumulatedSessionTime by remember { mutableStateOf(0L) }
     var outline      by remember { mutableStateOf<List<OutlineActivity.Item>?>(null) }
@@ -225,40 +216,13 @@ fun PdfReaderScreen(
         }
     }
 
-    // ── 2. Session timer + midnight reset ────────────────────────────────────
-    // Keyed on isSessionActive so page changes (which update sessionState) don't
-    // restart the coroutine and reset the period-start timestamp mid-session.
     val isSessionActive = sessionState != null
     LaunchedEffect(isSessionActive) {
         if (isSessionActive) {
-            sessionPeriodStart    = System.currentTimeMillis()
+            sessionPeriodStart = System.currentTimeMillis()
             accumulatedSessionTime = 0L
-
-            // Snapshot the day we started on.  If the clock crosses midnight while
-            // the user is still reading we detect it below and fire onMidnightCrossed.
-            var trackedDayStart = pdfViewerViewModel.todayStartMs()
-
             while (true) {
                 delay(1000L)
-
-                val newDayStart = pdfViewerViewModel.todayStartMs()
-                if (newDayStart != trackedDayStart) {
-                    // ── Midnight crossed ──────────────────────────────────────
-                    // 1. Compute total minutes read on the day that just ended.
-                    val totalMsBeforeMidnight =
-                        accumulatedSessionTime + (System.currentTimeMillis() - sessionPeriodStart)
-                    val minutesBefore = totalMsBeforeMidnight / 60_000L
-
-                    // 2. Notify the ViewModel so it can persist the result and
-                    //    reset its own todayReadingTimeMs / sessionTimeSpent.
-                    pdfViewerViewModel.onMidnightCrossed(trackedDayStart, minutesBefore)
-
-                    // 3. Reset the local timer accumulators for the new day.
-                    accumulatedSessionTime = 0L
-                    sessionPeriodStart     = System.currentTimeMillis()
-                    trackedDayStart        = newDayStart
-                }
-
                 pdfViewerViewModel.updateSessionTime(
                     accumulatedSessionTime + (System.currentTimeMillis() - sessionPeriodStart)
                 )
@@ -266,22 +230,30 @@ fun PdfReaderScreen(
         }
     }
 
-    // ── 3. Lifecycle ──────────────────────────────────────────────────────────
-    // BUG FIX #6 (cont.): ON_PAUSE snapshots elapsed time into accumulatedSessionTime;
-    // ON_RESUME resets the period-start clock so the timer continues from the snapshot.
     DisposableEffect(lifecycleOwner) {
         val obs = LifecycleEventObserver { _, ev ->
             when (ev) {
-                Lifecycle.Event.ON_PAUSE ->
+                Lifecycle.Event.ON_PAUSE -> {
                     accumulatedSessionTime += System.currentTimeMillis() - sessionPeriodStart
-                Lifecycle.Event.ON_RESUME ->
+                }
+                Lifecycle.Event.ON_STOP -> {
+                    pdfViewerViewModel.endSessionBlocking()
+                }
+                Lifecycle.Event.ON_START -> {
+                    if (totalPages > 0) {
+                        pdfViewerViewModel.startSession(bookId, currentPage, totalPages)
+                    }
+                }
+                Lifecycle.Event.ON_RESUME -> {
                     sessionPeriodStart = System.currentTimeMillis()
+                }
                 else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(obs)
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
+
     DisposableEffect(bookId) {
         onDispose { core?.onDestroy(); pdfViewerViewModel.endSession() }
     }
@@ -829,18 +801,11 @@ private fun PageJumpDialog(
         onDismissRequest = onDismiss,
         title = { Text("Jump to Page", modifier = Modifier.fillMaxWidth()) },
         text = {
-            OutlinedTextField(
-                value = input,
-                onValueChange = { input = it.filter(Char::isDigit) },
+            OutlinedTextField(input, { input = it.filter(Char::isDigit) },
                 label = { Text("Page (1–$totalPages)") }, singleLine = true,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor   = MaterialTheme.colorScheme.onBackground,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.onBackground
-                ),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number
-                ),
-            )
+                    unfocusedContainerColor = MaterialTheme.colorScheme.onBackground))
         },
         shape = RoundedCornerShape(8.dp),
         containerColor = MaterialTheme.colorScheme.background,
@@ -866,10 +831,7 @@ private fun ReadingGoalDialog(
                 label = { Text("Minutes per day") }, singleLine = true,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor   = MaterialTheme.colorScheme.onBackground,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.onBackground),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number
-                ),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.onBackground)
             )
         },
         shape = RoundedCornerShape(8.dp),

@@ -116,7 +116,6 @@ class StatsViewModel @Inject constructor(
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private fun todayStartMs(): Long = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, 0)
