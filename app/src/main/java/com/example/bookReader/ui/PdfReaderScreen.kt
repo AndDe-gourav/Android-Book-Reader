@@ -112,9 +112,6 @@ private fun buildTocTree(outline: List<OutlineActivity.Item>): List<TocNode> {
     return roots
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Theme definitions (UI metadata only — ColorMatrix lives in MuPdfReaderView)
-// ─────────────────────────────────────────────────────────────────────────────
 
 private val ThemeList = PdfTheme.entries          // NORMAL, SEPIA, DARK_SEPIA, NIGHT
 
@@ -126,9 +123,6 @@ private fun PdfTheme.scaffoldBg(): Color = when (this) {
     PdfTheme.NIGHT     -> Color(0xFF1A1A1A)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Main screen
-// ─────────────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -354,16 +348,16 @@ fun PdfReaderScreen(
                         query = searchQuery,
                         onQueryChange = { searchQuery = it },
                         onSearchForward = {
-                            if (searchQuery.isNotBlank()) readerViewRef?.search(
-                                searchQuery,
-                                +1
-                            )
+                            if (searchQuery.isNotBlank())
+                                readerViewRef?.search(searchQuery, +1) { page ->
+                                    jumpToPage = page
+                                }
                         },
                         onSearchBackward = {
-                            if (searchQuery.isNotBlank()) readerViewRef?.search(
-                                searchQuery,
-                                -1
-                            )
+                            if (searchQuery.isNotBlank())
+                                readerViewRef?.search(searchQuery, -1) { page ->
+                                    jumpToPage = page
+                                }
                         },
                         onClose = {
                             showSearchBar = false; searchQuery =

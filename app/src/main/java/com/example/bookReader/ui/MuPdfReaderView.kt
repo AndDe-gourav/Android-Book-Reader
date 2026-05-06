@@ -118,19 +118,28 @@ class MuPdfReaderView(
 
     // ── Search ────────────────────────────────────────────────────────────────
 
+    private var activeSearchTask: SearchTask? = null
+
     fun search(text: String, direction: Int = +1, onFound: (page: Int) -> Unit = {}) {
-        val task = object : SearchTask(context, core) {
+        activeSearchTask?.stop()
+
+        activeSearchTask = object : SearchTask(context, core) {
             override fun onTextFound(result: SearchTaskResult) {
                 SearchTaskResult.set(result)
-                setDisplayedViewIndex(result.pageNumber)
-                resetupChildren()
+                post {
+                    setDisplayedViewIndex(result.pageNumber)
+                    resetupChildren()
+                }
                 onFound(result.pageNumber)
             }
+        }.also { task ->
+            task.go(text, direction, displayedViewIndex, displayedViewIndex)
         }
-        task.go(text, direction, displayedViewIndex, -1)
     }
 
     fun clearSearch() {
+        activeSearchTask?.stop()
+        activeSearchTask = null
         SearchTaskResult.set(null)
         resetupChildren()
     }
