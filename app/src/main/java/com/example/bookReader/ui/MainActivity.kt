@@ -80,7 +80,7 @@ fun App(
         composable(
             route = "homeScreen",
         ) {
-            HomeScreenImproved(
+            HomeScreen(
                 navController = navController,
                 libraryViewModel = libraryViewModel,
                 bookStateViewModel = bookStateViewModel,

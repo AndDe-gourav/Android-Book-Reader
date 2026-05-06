@@ -76,7 +76,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable
-fun HomeScreenImproved(
+fun HomeScreen(
     navController: NavController,
     modifier: Modifier = Modifier,
     libraryViewModel: LibraryViewModel,
@@ -95,7 +95,6 @@ fun HomeScreenImproved(
     val toReadBooks by bookStateViewModel.toReadBooks.collectAsState()
     val completedBooks by bookStateViewModel.completedBooks.collectAsState()
 
-    // Collect all collections with their books for the Collection shelf
     val collectionsWithBooks by collectionViewModel.allCollectionsWithBooks.collectAsState()
 
     val snackbarMessage by libraryViewModel.snackbarMessage.collectAsState()
@@ -131,6 +130,7 @@ fun HomeScreenImproved(
         topBar = {
             GeneralDrawerTopBar(
                 text = "Home",
+                libraryViewModel = libraryViewModel,
                 modifier = Modifier.zIndex(1f)
             )
         },
@@ -639,8 +639,10 @@ fun CustomSnackBar(
 @Composable
 fun GeneralDrawerTopBar(
     text: String,
+    libraryViewModel: LibraryViewModel,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -652,10 +654,14 @@ fun GeneralDrawerTopBar(
             shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
             shadowElevation = 4.dp,
         ) {
-            IconButton(onClick = { }) {
+            IconButton(
+                onClick = {
+                    libraryViewModel.onFeedBackIconClicked(context)
+                }
+            ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.home),
-                    contentDescription = "Menu",
+                    painter = painterResource(id = R.drawable.comment),
+                    contentDescription = "Feedback",
                     tint = MaterialTheme.colorScheme.inverseSurface,
                     modifier = Modifier.size(24.dp)
                 )

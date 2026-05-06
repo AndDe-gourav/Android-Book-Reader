@@ -1,7 +1,10 @@
 package com.example.bookReader.ui
 
+import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bookReader.data.entity.BookEntity
@@ -164,4 +167,27 @@ class LibraryViewModel @Inject constructor(
     fun clearSnackbar() {
         _snackbarMessage.value = null
     }
-}
+
+    fun onFeedBackIconClicked(context: Context) {
+        val deviceModel = android.os.Build.MODEL
+        val androidVersion = android.os.Build.VERSION.RELEASE
+        val appVersion = "1.0.0"
+
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = "mailto:".toUri()
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("gourav.and.de@gmail.com"))
+            putExtra(Intent.EXTRA_SUBJECT, "Feedback: Book Reader App")
+            putExtra(Intent.EXTRA_TEXT, """
+            --- Device Info ---
+            Model: $deviceModel
+            OS Version: Android $androidVersion
+            App Version: $appVersion
+            
+            --- Feedback ---
+            Enter your feedback here:
+            
+        """.trimIndent())
+        }
+
+        context.startActivity(Intent.createChooser(intent, "Send Feedback via..."))
+    }}
