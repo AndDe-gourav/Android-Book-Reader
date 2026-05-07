@@ -85,7 +85,7 @@ class StatsViewModel @Inject constructor(
                 book               = book,
                 todayReadingTimeMs = todayTime,
                 dailyGoalMinutes   = goal.dailyMinutesGoal,
-                completedDaysCount = completedDays
+                completedDaysCount = completedDays,
             )
         }
 
@@ -113,6 +113,22 @@ class StatsViewModel @Inject constructor(
         return results.associate { result ->
             val cal = Calendar.getInstance().apply { timeInMillis = result.date }
             cal.get(Calendar.DAY_OF_MONTH) to result.isCompleted
+        }
+    }
+
+    suspend fun getReadTimeMap(
+        bookId: Long,
+        year: Int,
+        month: Int
+    ): Map<Int, Long> {
+        val (from, to) = monthRangeMs(year, month)
+        val results = runCatching {
+            repository.getDailyGoalResultsInRange(bookId, from, to)
+        }.getOrDefault(emptyList())
+
+        return results.associate { result ->
+            val cal = Calendar.getInstance().apply { timeInMillis = result.date }
+            cal.get(Calendar.DAY_OF_MONTH) to result.minutesRead
         }
     }
 

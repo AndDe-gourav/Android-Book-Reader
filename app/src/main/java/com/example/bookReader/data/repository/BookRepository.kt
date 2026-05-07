@@ -185,6 +185,9 @@ class BookRepository @Inject constructor(
     suspend fun getDailyGoalResultsInRange(bookId: Long, from: Long, to: Long): List<DailyGoalResultEntity> =
         dailyGoalResultDao.getResultsInRange(bookId, from, to)
 
+    suspend fun getTimeReadResultsInRange(bookId: Long, from: Long, to: Long): List<DailyGoalResultEntity> =
+        dailyGoalResultDao.getResultsInRange(bookId, from, to)
+
     suspend fun countCompletedDays(bookId: Long): Int = dailyGoalResultDao.countCompletedDays(bookId)
 
     /**

@@ -1,5 +1,6 @@
 package com.example.bookReader.ui
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -308,6 +309,7 @@ fun StatsCalendarView(
     val dayLabels = listOf("S", "M", "T", "W", "T", "F", "S")
 
     var goalMap by remember { mutableStateOf(mapOf<Int, Boolean>()) }
+    var timeReadMap by remember { mutableStateOf(mapOf<Int, Long>()) }
 
     LaunchedEffect(bookId, year, month) {
         coroutineScope.launch {
@@ -315,6 +317,11 @@ fun StatsCalendarView(
                 bookId = bookId,
                 year = year,
                 month = month,
+            )
+            timeReadMap = statsViewModel.getReadTimeMap(
+                bookId = bookId,
+                year = year,
+                month = month
             )
         }
     }
@@ -354,7 +361,15 @@ fun StatsCalendarView(
 
                 items(daysInMonth) { index ->
                     val day = index + 1
-                    StatsDateCell(day = day, goalMet = goalMap[day], year = year, month = month)
+                    StatsDateCell(
+                        day = day,
+                        goalMet = goalMap[day],
+                        year = year,
+                        month = month,
+                        onDateClicked = { day ->
+                           Log.d("about", "${goalMap[day]}, ${timeReadMap[day]}")
+                        }
+                    )
                 }
             }
 
@@ -385,7 +400,8 @@ fun StatsDateCell(
     day: Int,
     goalMet: Boolean?,
     year: Int,
-    month: Int
+    month: Int,
+    onDateClicked: (Int) -> Unit,
 ) {
     val today = LocalDate.now()
     val isToday = day == today.dayOfMonth && year == today.year && month == today.monthValue
@@ -399,7 +415,10 @@ fun StatsDateCell(
     Box(
         modifier = Modifier
             .padding(4.dp)
-            .background(color = bgColor, shape = RoundedCornerShape(4.dp)),
+            .background(color = bgColor, shape = RoundedCornerShape(4.dp))
+            .clickable{
+                onDateClicked(day)
+            },
         contentAlignment = Alignment.Center
     ) {
         Text(text = "$day", color = Color.Black)
@@ -412,8 +431,6 @@ fun LegendDot(color: Color, label: String) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // BUG FIX #10: The old composable had TWO Boxes — the first used fillMaxWidth(0f)
-        // making it completely invisible (zero width). Only one dot Box is needed.
         Box(
             modifier = Modifier
                 .height(12.dp)
