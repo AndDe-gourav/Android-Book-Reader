@@ -132,6 +132,21 @@ class StatsViewModel @Inject constructor(
         }
     }
 
+    suspend fun getGoalSetMap(
+        bookId: Long,
+        year: Int,
+        month: Int
+    ): Map<Int, Int> {
+        val (from, to) = monthRangeMs(year, month)
+        val results = runCatching {
+            repository.getDailyGoalResultsInRange(bookId, from, to)
+        }.getOrDefault(emptyList())
+
+        return results.associate { result ->
+            val cal = Calendar.getInstance().apply { timeInMillis = result.date }
+            cal.get(Calendar.DAY_OF_MONTH) to result.goalMinutes
+        }
+    }
 
     private fun todayStartMs(): Long = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, 0)

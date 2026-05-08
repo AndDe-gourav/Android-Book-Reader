@@ -12,16 +12,10 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
-/**
- * Utility class for handling PDF operations with MuPDF
- */
 object PdfUtil {
 
     private const val COVER_IMAGES_DIR = "book_covers"
 
-    /**
-     * Extract metadata and cover from a PDF file
-     */
     suspend fun extractPdfMetadata(context: Context, uri: Uri): PdfMetadata? =
         withContext(Dispatchers.IO) {
             try {
@@ -38,9 +32,11 @@ object PdfUtil {
                     val author = document.getMetaData(Document.META_INFO_AUTHOR)
                         ?.takeIf { it.isNotBlank() }
 
+                    val creator = document.getMetaData(Document.META_INFO_CREATOR)
+                    val formate = document.getMetaData(Document.META_FORMAT)
                     val pageCount = document.countPages()
 
-                    // Extract and save cover image
+
                     val coverPath = extractAndSaveCover(context, document, uri)
 
                     document.destroy()
@@ -48,16 +44,19 @@ object PdfUtil {
                     PdfMetadata(
                         title = title,
                         author = author,
+                        creator = creator,
+                        format = formate,
                         totalPages = pageCount,
                         coverImagePath = coverPath
                     )
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                // If metadata extraction fails, return basic info
                 PdfMetadata(
                     title = getFileNameFromUri(context, uri),
                     author = null,
+                    creator = null,
+                    format = null,
                     totalPages = 0,
                     coverImagePath = null
                 )
@@ -161,6 +160,8 @@ object PdfUtil {
 data class PdfMetadata(
     val title: String,
     val author: String?,
+    val creator: String?,
+    val format: String?,
     val totalPages: Int,
     val coverImagePath: String?
 )

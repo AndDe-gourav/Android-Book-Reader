@@ -1,6 +1,5 @@
 package com.example.bookReader.ui
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,7 +22,10 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -310,6 +312,8 @@ fun StatsCalendarView(
 
     var goalMap by remember { mutableStateOf(mapOf<Int, Boolean>()) }
     var timeReadMap by remember { mutableStateOf(mapOf<Int, Long>()) }
+    var goalSetMap by remember { mutableStateOf(mapOf<Int, Int>()) }
+
 
     LaunchedEffect(bookId, year, month) {
         coroutineScope.launch {
@@ -322,6 +326,11 @@ fun StatsCalendarView(
                 bookId = bookId,
                 year = year,
                 month = month
+            )
+            goalSetMap = statsViewModel.getGoalSetMap(
+                bookId = bookId,
+                year = year,
+                month = month,
             )
         }
     }
@@ -364,11 +373,10 @@ fun StatsCalendarView(
                     StatsDateCell(
                         day = day,
                         goalMet = goalMap[day],
+                        timeRead = timeReadMap[day],
+                        goalSet = goalSetMap[day],
                         year = year,
                         month = month,
-                        onDateClicked = { day ->
-                           Log.d("about", "${goalMap[day]}, ${timeReadMap[day]}")
-                        }
                     )
                 }
             }
@@ -378,33 +386,27 @@ fun StatsCalendarView(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
-                LegendDot(
-                    color = colorResource(id = R.color.LightGreen),
-                    label = "Goal met"
-                )
-                LegendDot(
-                    color = colorResource(id = R.color.LightRed),
-                    label = "Goal missed"
-                )
-                LegendDot(
-                    color = colorResource(id = R.color.TodayColor),
-                    label = "Today"
-                )
+                LegendDot(color = colorResource(id = R.color.LightGreen), label = "Goal met")
+                LegendDot(color = colorResource(id = R.color.LightRed), label = "Goal missed")
+                LegendDot(color = colorResource(id = R.color.TodayColor), label = "Today")
             }
         }
     }
 }
 
+
 @Composable
 fun StatsDateCell(
     day: Int,
     goalMet: Boolean?,
+    timeRead: Long?,
+    goalSet: Int?,
     year: Int,
     month: Int,
-    onDateClicked: (Int) -> Unit,
 ) {
     val today = LocalDate.now()
     val isToday = day == today.dayOfMonth && year == today.year && month == today.monthValue
+
     val bgColor = when {
         isToday -> colorResource(id = R.color.TodayColor)
         goalMet == true -> colorResource(id = R.color.LightGreen)
@@ -412,19 +414,77 @@ fun StatsDateCell(
         else -> Color.White
     }
 
+    var showMenu by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .padding(4.dp)
             .background(color = bgColor, shape = RoundedCornerShape(4.dp))
-            .clickable{
-                onDateClicked(day)
+            .clickable {
+                if (goalMet != null) showMenu = true
             },
         contentAlignment = Alignment.Center
     ) {
         Text(text = "$day", color = Color.Black)
+
+        DropdownMenu(
+            containerColor = MaterialTheme.colorScheme.onBackground,
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = "$day ${Month.of(month).getDisplayName(TextStyle.SHORT, Locale.getDefault())}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = Color.Black,
+                    )
+                },
+                onClick = {},
+                enabled = false
+            )
+
+            HorizontalDivider()
+
+            DropdownMenuItem(
+                text = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val goalSet = when {
+                            goalSet != null -> "${goalSet}m goal"
+                            else -> "no goal"
+                        }
+                        Text(
+                            text = goalSet,
+                            fontSize = 13.sp
+                        )
+                    }
+                },
+                onClick = { showMenu = false }
+            )
+
+            DropdownMenuItem(
+                text = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val readText = when {
+                            timeRead == null || timeRead == 0L -> "No reading recorded"
+                            timeRead < 60 -> "${timeRead}m read"
+                            else -> "${timeRead / 60}h ${timeRead % 60}m read"
+                        }
+                        Text(text = readText, fontSize = 13.sp)
+                    }
+                },
+                onClick = { showMenu = false }
+            )
+        }
     }
 }
-
 @Composable
 fun LegendDot(color: Color, label: String) {
     Row(

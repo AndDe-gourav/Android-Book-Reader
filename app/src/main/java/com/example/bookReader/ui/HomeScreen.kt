@@ -784,7 +784,9 @@ fun PdfSelection(
                         author = meta.author,
                         uri = it,
                         coverImagePath = meta.coverImagePath,
-                        totalPages = meta.totalPages
+                        totalPages = meta.totalPages,
+                        creator = meta.creator,
+                        format = meta.format
                     )
                     if (bookId != -1L) {
                         libraryViewModel.restoreLastOpenedBook()

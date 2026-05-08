@@ -131,27 +131,31 @@ fun AboutBookScreen(
                     Column(
                         modifier = Modifier.fillMaxWidth()
                     ) {
+
+                        val formate = book?.format ?: "not available"
+                        val creator = book?.creator ?: "not available"
+
                         Text(
-                            text = "time",
+                            text = "Formate",
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.inverseSurface,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(top = 16.dp, bottom = 1.dp)
                         )
                         Text(
-                            text = "Last read time",
+                            text = formate,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.inverseSurface,
                         )
                         Text(
-                            text = "size",
+                            text = "Creator",
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.inverseSurface,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(top = 16.dp, bottom = 1.dp)
                         )
                         Text(
-                            text = "File format and size",
+                            text = creator,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.inverseSurface,
                         )

@@ -46,6 +46,8 @@ class BookRepository @Inject constructor(
     suspend fun addBook(
         title: String,
         author: String?,
+        format: String?,
+        creator: String?,
         uri: Uri,
         coverImagePath: String?,
         totalPages: Int
@@ -57,6 +59,8 @@ class BookRepository @Inject constructor(
                 uri = uri.toString(),
                 totalPages = totalPages,
                 coverImagePath = coverImagePath,
+                creator = creator,
+                format = format,
             )
         )
         bookStateDao.insertState(BookStateEntity(bookId = bookId, status = ReadingStatus.TO_READ))

@@ -14,6 +14,8 @@ data class BookEntity(
 
     val title: String,
     val author: String?,
+    val format: String?,
+    val creator: String?,
 
     val uri: String,
 

@@ -63,12 +63,22 @@ class LibraryViewModel @Inject constructor(
     suspend fun addBook(
         title: String,
         author: String?,
+        creator: String?,
+        format: String?,
         uri: Uri,
         coverImagePath: String?,
         totalPages: Int
     ): Long {
         return try {
-            val bookId = repository.addBook(title, author, uri, coverImagePath, totalPages)
+            val bookId = repository.addBook(
+                title,
+                author,
+                format,
+                creator,
+                uri,
+                coverImagePath,
+                totalPages,
+            )
             showSnackbar("Book added to library")
             bookId
         } catch (e: Exception) {
