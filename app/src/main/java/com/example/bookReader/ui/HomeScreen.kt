@@ -35,12 +35,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -81,9 +77,8 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     libraryViewModel: LibraryViewModel,
     bookStateViewModel: BookStateViewModel,
-    collectionViewModel: CollectionViewModel
+    collectionViewModel: CollectionViewModel,
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -97,22 +92,9 @@ fun HomeScreen(
 
     val collectionsWithBooks by collectionViewModel.allCollectionsWithBooks.collectAsState()
 
-    val snackbarMessage by libraryViewModel.snackbarMessage.collectAsState()
-
     val activity = context as? Activity
     var backPressCount by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(snackbarMessage) {
-        snackbarMessage?.let { message ->
-            snackbarHostState.currentSnackbarData?.dismiss()
-            val job = launch {
-                snackbarHostState.showSnackbar(message = message)
-            }
-            delay(2000)
-            job.cancel()
-            libraryViewModel.clearSnackbar()
-        }
-    }
 
     BackHandler {
         backPressCount++
@@ -134,7 +116,7 @@ fun HomeScreen(
                 modifier = Modifier.zIndex(1f)
             )
         },
-        modifier = modifier
+        modifier = modifier,
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
 
@@ -196,18 +178,6 @@ fun HomeScreen(
                 }
 
                 item { Spacer(modifier = Modifier.size(100.dp)) }
-            }
-
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 90.dp)
-            ) { snackBarData ->
-                CustomSnackBar(
-                    text = snackBarData.visuals.message,
-                    onCancelClicked = { snackBarData.dismiss() }
-                )
             }
 
             BottomBar(
@@ -600,38 +570,6 @@ fun CustumSlideBar(
                     color = color,
                     shape = RoundedCornerShape(8.dp)
                 )
-        )
-    }
-}
-
-@Composable
-fun CustomSnackBar(
-    modifier: Modifier = Modifier,
-    text: String,
-    onCancelClicked: () -> Unit = {},
-) {
-    Snackbar(
-        shape = RoundedCornerShape(8.dp),
-        containerColor = MaterialTheme.colorScheme.outline,
-        contentColor = Color.Black,
-        action = {
-            if (!text.contains("Collection")) {
-                TextButton(onClick = onCancelClicked) {
-                    Text(
-                        text = "Cancel",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = colorResource(id = R.color.shadow),
-                        letterSpacing = 2.sp
-                    )
-                }
-            }
-        },
-        modifier = modifier.padding(horizontal = 6.dp)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = colorResource(id = R.color.text_color),
         )
     }
 }

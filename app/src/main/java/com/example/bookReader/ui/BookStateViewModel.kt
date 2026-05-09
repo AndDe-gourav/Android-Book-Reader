@@ -7,9 +7,11 @@ import com.example.bookReader.data.entity.BookStateEntity
 import com.example.bookReader.data.entity.ReadingStatus
 import com.example.bookReader.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -19,7 +21,17 @@ class BookStateViewModel @Inject constructor(
     private val repository: BookRepository
 ) : ViewModel() {
 
-    // Favorite books - automatically updates when favorites change
+    // 1. UI Event Channel
+    private val _uiEvent = Channel<UiEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow()
+
+    // 2. Helper function
+    private fun showSnackbar(message: String) {
+        viewModelScope.launch {
+            _uiEvent.send(UiEvent.ShowSnackbar(message))
+        }
+    }
+
     val favoriteBooks: StateFlow<List<BookEntity>> = repository.getFavoriteBooks()
         .stateIn(
             scope = viewModelScope,
@@ -27,7 +39,6 @@ class BookStateViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    // Books to read - automatically updates when status changes
     val toReadBooks: StateFlow<List<BookEntity>> = repository.getBooksByStatus(ReadingStatus.TO_READ)
         .stateIn(
             scope = viewModelScope,
@@ -35,7 +46,6 @@ class BookStateViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    // Currently reading books - automatically updates when status changes
     val readingBooks: StateFlow<List<BookEntity>> = repository.getBooksByStatus(ReadingStatus.READING)
         .stateIn(
             scope = viewModelScope,
@@ -43,7 +53,6 @@ class BookStateViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    // Completed books - automatically updates when status changes
     val completedBooks: StateFlow<List<BookEntity>> = repository.getBooksByStatus(ReadingStatus.COMPLETED)
         .stateIn(
             scope = viewModelScope,
@@ -51,7 +60,6 @@ class BookStateViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    // Recent books (sorted by last opened) - automatically updates
     val recentBooks: StateFlow<List<BookEntity>> = repository.getRecentBooks(limit = 10)
         .stateIn(
             scope = viewModelScope,
@@ -59,24 +67,12 @@ class BookStateViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    /**
-     * Get state for a specific book (one-time query)
-     */
     suspend fun getBookState(bookId: Long): BookStateEntity? =
         repository.getBookState(bookId)
 
-    /**
-     * Observe book state changes reactively
-     * Returns a Flow that emits whenever the book state changes
-     * UI will automatically update when state changes
-     */
     fun observeBookState(bookId: Long): Flow<BookStateEntity?> =
         repository.observeBookState(bookId)
 
-    /**
-     * Update book state (progress, status, favorite)
-     * UI will automatically update via Flows
-     */
     fun updateBookState(
         bookId: Long,
         currentPage: Int? = null,
@@ -91,16 +87,19 @@ class BookStateViewModel @Inject constructor(
                     status = status,
                     isFavorite = isFavorite
                 )
+
+                when {
+                    isFavorite == true -> showSnackbar("Added to Favorites")
+                    isFavorite == false -> showSnackbar("Removed from Favorites")
+                    status == ReadingStatus.COMPLETED -> showSnackbar("Book marked as Finished!")
+                    status == ReadingStatus.TO_READ -> showSnackbar("Book marked as To Read")
+                }
             } catch (e: Exception) {
-                // Handle error
+                showSnackbar("Failed to update book state")
             }
         }
     }
 
-    /**
-     * Get books by specific reading status
-     * This returns a new StateFlow for dynamic status filtering
-     */
     fun getBooksByStatus(status: ReadingStatus): StateFlow<List<BookEntity>> {
         return repository.getBooksByStatus(status)
             .stateIn(

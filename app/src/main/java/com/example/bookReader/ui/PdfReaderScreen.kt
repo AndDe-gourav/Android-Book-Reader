@@ -284,12 +284,6 @@ fun PdfReaderScreen(
                                 core = core!!,
                                 onPageChanged = { page ->
                                     pdfViewerViewModel.updatePage(page)
-                                    bookStateViewModel.updateBookState(
-                                        bookId = bookId,
-                                        currentPage = page,
-                                        status = if (page >= totalPages - 1)
-                                            ReadingStatus.COMPLETED else ReadingStatus.READING
-                                    )
                                 },
                                 onChromeTap = {
                                     isChromeVisible = !isChromeVisible

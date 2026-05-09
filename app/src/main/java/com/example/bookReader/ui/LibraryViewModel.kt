@@ -10,10 +10,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.bookReader.data.entity.BookEntity
 import com.example.bookReader.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.InputStream
@@ -24,7 +26,6 @@ sealed class BookShelfType {
     object Favorites : BookShelfType()
     object ToRead : BookShelfType()
     object Completed : BookShelfType()
-
     object Collection : BookShelfType()
 }
 
@@ -53,10 +54,17 @@ class LibraryViewModel @Inject constructor(
     val currentBookShelf: StateFlow<BookShelfType> = _currentBookShelf.asStateFlow()
 
     // UI state for snackbar messages
-    private val _snackbarMessage = MutableStateFlow<String?>(null)
-    val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
+    private val _uiEvent = Channel<UiEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow()
+
+    private fun showSnackbar(message: String) {
+        viewModelScope.launch {
+            _uiEvent.send(UiEvent.ShowSnackbar(message))
+        }
+    }
 
     /**
+     *
      * Add a new book to the library
      * UI will automatically update via allBooks Flow
      */
@@ -164,19 +172,6 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Show snackbar message
-     */
-    private fun showSnackbar(message: String) {
-        _snackbarMessage.value = message
-    }
-
-    /**
-     * Clear snackbar message
-     */
-    fun clearSnackbar() {
-        _snackbarMessage.value = null
-    }
 
     fun onFeedBackIconClicked(context: Context) {
         val deviceModel = android.os.Build.MODEL
@@ -200,4 +195,5 @@ class LibraryViewModel @Inject constructor(
         }
 
         context.startActivity(Intent.createChooser(intent, "Send Feedback via..."))
-    }}
+    }
+}

@@ -8,9 +8,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -41,6 +43,14 @@ class PdfViewerViewModel @Inject constructor(
     private val _currentPage = MutableStateFlow(0)
     val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
 
+    private val _uiEvent = Channel<UiEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow()
+
+    private fun showSnackbar(message: String) {
+        viewModelScope.launch {
+            _uiEvent.send(UiEvent.ShowSnackbar(message))
+        }
+    }
     /**
      * Guards against endSession / endSessionBlocking being called concurrently from
      * multiple paths (ON_STOP + onDispose + onCleared all within milliseconds of each
@@ -122,21 +132,18 @@ class PdfViewerViewModel @Inject constructor(
                 val goalMinutes = state.dailyGoalMinutes
                 if (goalMinutes != null) {
                     val todayStart = todayStartMs()
-                    val minutesReadToday = repository.getReadingTimeBetween(
+                    val totalMsRead = repository.getReadingTimeBetween(
                         bookId = state.bookId,
                         from   = todayStart,
                         to     = todayStart + 86_400_000L
-                    ) / 60_000L
-
-                    repository.saveDailyGoalResult(
-                        bookId      = state.bookId,
-                        dayStartMs  = todayStart,
-                        goalMinutes = goalMinutes,
-                        minutesRead = minutesReadToday
                     )
+
+                    if (totalMsRead / 60_000L >= goalMinutes) {
+                        showSnackbar("Daily reading goal achieved! 🎉")
+                    }
                 }
             } catch (e: Exception) {
-                // Log if needed
+                showSnackbar("Failed to save reading progress")
             } finally {
                 isSaving.set(false)
             }
@@ -228,7 +235,12 @@ class PdfViewerViewModel @Inject constructor(
 
     fun setReadingGoal(bookId: Long, dailyMinutes: Int) {
         viewModelScope.launch {
-            runCatching { repository.setReadingGoal(bookId, dailyMinutes) }
+            runCatching {
+                repository.setReadingGoal(bookId, dailyMinutes)
+                showSnackbar("Daily goal set to $dailyMinutes minutes")
+            }.onFailure {
+                showSnackbar("Failed to set goal")
+            }
             _sessionState.value = _sessionState.value?.copy(dailyGoalMinutes = dailyMinutes)
         }
     }
@@ -254,9 +266,6 @@ class PdfViewerViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        // Last-resort fallback: if somehow ON_STOP and onDispose both missed the save
-        // (e.g. in tests or unusual lifecycle paths), endSession() still tries async.
-        // In normal app usage this is a no-op because isSaving is already true.
         endSession()
     }
 

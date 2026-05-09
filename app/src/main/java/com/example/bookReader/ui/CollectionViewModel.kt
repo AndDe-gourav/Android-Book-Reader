@@ -6,10 +6,12 @@ import com.example.bookReader.data.entity.CollectionEntity
 import com.example.bookReader.data.entity.CollectionWithBooks
 import com.example.bookReader.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -19,7 +21,17 @@ class CollectionViewModel @Inject constructor(
     private val repository: BookRepository
 ) : ViewModel() {
 
-    /** Flat list of all collection entities (name + id). */
+    // 1. Define the Channel for UI Events
+    private val _uiEvent = Channel<UiEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow()
+
+    // 2. Helper function to send snackbar messages
+    private fun showSnackbar(message: String) {
+        viewModelScope.launch {
+            _uiEvent.send(UiEvent.ShowSnackbar(message))
+        }
+    }
+
     val allCollections: StateFlow<List<CollectionEntity>> = repository.getAllCollections()
         .stateIn(
             scope = viewModelScope,
@@ -27,11 +39,6 @@ class CollectionViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    /**
-     * Every collection together with its member books.
-     * Consumed by the Collection shelf view and the "add to collection" dialog
-     * to know which collections already contain the selected book.
-     */
     val allCollectionsWithBooks: StateFlow<List<CollectionWithBooks>> =
         repository.getAllCollectionsWithBooks()
             .stateIn(
@@ -43,43 +50,39 @@ class CollectionViewModel @Inject constructor(
     private val _selectedCollection = MutableStateFlow<CollectionWithBooks?>(null)
     val selectedCollection: StateFlow<CollectionWithBooks?> = _selectedCollection.asStateFlow()
 
-    /** Create a new collection (fire-and-forget from the UI). */
     fun createCollection(name: String) {
         viewModelScope.launch {
             try {
                 repository.createCollection(name)
+                showSnackbar("Collection '$name' created")
             } catch (e: Exception) {
-                // Handle error
+                showSnackbar("Failed to create collection")
             }
         }
     }
 
-    /** Add a book to a collection. */
     fun addBookToCollection(bookId: Long, collectionId: Long) {
         viewModelScope.launch {
             try {
                 repository.addBookToCollection(bookId, collectionId)
+                showSnackbar("Added to collection")
             } catch (e: Exception) {
-                // Handle error
+                showSnackbar("Failed to add book")
             }
         }
     }
 
-    /** Remove a book from a collection. */
     fun removeBookFromCollection(bookId: Long, collectionId: Long) {
         viewModelScope.launch {
             try {
                 repository.removeBookFromCollection(bookId, collectionId)
+                showSnackbar("Removed from collection")
             } catch (e: Exception) {
-                // Handle error
+                showSnackbar("Failed to remove book")
             }
         }
     }
 
-    /**
-     * Toggle a book's membership in a collection.
-     * If the book is already in the collection it is removed, otherwise it is added.
-     */
     fun toggleBookInCollection(bookId: Long, collectionId: Long, currentlyIn: Boolean) {
         if (currentlyIn) {
             removeBookFromCollection(bookId, collectionId)
@@ -88,13 +91,16 @@ class CollectionViewModel @Inject constructor(
         }
     }
 
-    /** Load a specific collection with its books (updates [selectedCollection] reactively). */
     fun loadCollection(collectionId: Long) {
         viewModelScope.launch {
-            repository.getCollectionWithBooks(collectionId)
-                .collect { collectionWithBooks ->
-                    _selectedCollection.value = collectionWithBooks
-                }
+            try {
+                repository.getCollectionWithBooks(collectionId)
+                    .collect { collectionWithBooks ->
+                        _selectedCollection.value = collectionWithBooks
+                    }
+            } catch (e: Exception) {
+                showSnackbar("Could not load collection")
+            }
         }
     }
 
