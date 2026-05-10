@@ -48,7 +48,11 @@ class MainActivity : ComponentActivity() {
             BookReaderTheme {
                 val snackbarHostState = remember { SnackbarHostState() }
                 Scaffold(
-                    snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+                    snackbarHost = {
+                        SnackbarHost(
+                            hostState = snackbarHostState,
+                        )
+                    }
                 ) {innerPadding ->
                     App(
                         modifier = Modifier.padding(innerPadding),

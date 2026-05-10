@@ -1,3 +1,0 @@
-Initial release
-PDF reading support
-Basic reader interface
