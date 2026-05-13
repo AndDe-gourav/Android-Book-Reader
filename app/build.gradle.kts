@@ -6,11 +6,19 @@ plugins {
 }
 
 android {
-    namespace = "com.example.bookReader"
+    signingConfigs {
+        create("release") {
+            storeFile = file("/home/gourav/Documents/bookreader-release-key.jks")
+            keyAlias = "bookreader"
+            storePassword = "20 Years of mind"
+            keyPassword = "20 Years of mind"
+        }
+    }
+    namespace = "com.timepass.bookreader"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.bookReader"
+        applicationId = "com.timepass.bookreader"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -19,16 +27,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-            signingConfig = signingConfigs.getByName("debug")
-        }
-    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -36,6 +34,11 @@ android {
 
     buildFeatures {
         compose = true
+    }
+    buildTypes {
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+        }
     }
 }
 

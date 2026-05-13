@@ -1,4 +1,4 @@
-package com.example.bookReader
+package com.timepass.bookreader
 
 import org.junit.Test
 

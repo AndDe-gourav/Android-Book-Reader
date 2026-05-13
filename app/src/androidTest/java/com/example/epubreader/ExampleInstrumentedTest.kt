@@ -1,4 +1,4 @@
-package com.example.bookReader
+package com.timepass.bookreader
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4

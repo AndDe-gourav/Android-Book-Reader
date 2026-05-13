@@ -1,0 +1,198 @@
+package com.timepass.bookreader.ui
+
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.util.Log
+import androidx.core.net.toUri
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.timepass.bookreader.data.entity.BookEntity
+import com.timepass.bookreader.data.repository.BookRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.io.InputStream
+import javax.inject.Inject
+
+sealed class BookShelfType {
+    object Recent : BookShelfType()
+    object Favorites : BookShelfType()
+    object ToRead : BookShelfType()
+    object Completed : BookShelfType()
+    object Collection : BookShelfType()
+}
+
+@HiltViewModel
+class LibraryViewModel @Inject constructor(
+    private val repository: BookRepository
+) : ViewModel() {
+
+    init {
+        restoreLastOpenedBook()
+    }
+    // All books from the library - automatically updates when books are added/removed
+    val allBooks: StateFlow<List<BookEntity>> = repository.getLibrary()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    // Currently selected book for reading
+    private val _selectedBook = MutableStateFlow<BookEntity?>(null)
+    val selectedBook: StateFlow<BookEntity?> = _selectedBook.asStateFlow()
+
+    // Current shelf being viewed
+    private val _currentBookShelf = MutableStateFlow<BookShelfType>(BookShelfType.Recent)
+    val currentBookShelf: StateFlow<BookShelfType> = _currentBookShelf.asStateFlow()
+
+    // UI state for snackbar messages
+    private val _uiEvent = Channel<UiEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow()
+
+    private fun showSnackbar(message: String) {
+        viewModelScope.launch {
+            _uiEvent.send(UiEvent.ShowSnackbar(message))
+        }
+    }
+
+    /**
+     *
+     * Add a new book to the library
+     * UI will automatically update via allBooks Flow
+     */
+    suspend fun addBook(
+        title: String,
+        author: String?,
+        creator: String?,
+        format: String?,
+        uri: Uri,
+        coverImagePath: String?,
+        totalPages: Int
+    ): Long {
+        return try {
+            val bookId = repository.addBook(
+                title,
+                author,
+                format,
+                creator,
+                uri,
+                coverImagePath,
+                totalPages,
+            )
+            showSnackbar("Book added to library")
+            bookId
+        } catch (e: Exception) {
+            showSnackbar("Failed to add book: ${e.message}")
+            -1L
+        }
+    }
+
+    /**
+     * Select a book for reading
+     */
+    fun selectBook(book: BookEntity) {
+        _selectedBook.value = book
+    }
+
+
+    /**
+     * Change the current bookshelf view
+     */
+    fun changeBookShelf(shelfType: BookShelfType) {
+        _currentBookShelf.value = shelfType
+    }
+
+    fun updateBookTitle(bookId: Long, newTitle: String) {
+        viewModelScope.launch {
+            try {
+                repository.updateBookTitle(bookId, newTitle)
+                restoreLastOpenedBook()
+                showSnackbar("Title updated")
+            } catch (e: Exception) {
+                showSnackbar("Failed to update title")
+            }
+        }
+    }
+
+    fun updateBookAuthor(bookId: Long, newAuthor: String) {
+        viewModelScope.launch {
+            try {
+                repository.updateBookAuthor(bookId, newAuthor)
+                restoreLastOpenedBook()
+                showSnackbar("Author updated")
+            } catch (e: Exception) {
+                showSnackbar("Failed to update author")
+            }
+        }
+    }
+
+    /**
+     * Delete a book from library
+     * UI will automatically update via allBooks Flow
+     */
+    fun deleteBook(bookId: Long) {
+        viewModelScope.launch {
+            try {
+                repository.deleteBook(bookId)
+                restoreLastOpenedBook()
+                showSnackbar("Book deleted")
+            } catch (e: Exception) {
+                showSnackbar("Failed to delete book")
+            }
+        }
+    }
+
+    /**
+     * Open PDF input stream
+     */
+    fun openPdf(bookId: Long): InputStream? {
+        return try {
+            repository.openPdf(bookId)
+        } catch (e: Exception) {
+            showSnackbar("Failed to open PDF: ${e.message}")
+            null
+        }
+    }
+
+
+
+    fun restoreLastOpenedBook() {
+        viewModelScope.launch {
+            val lastBook = repository.getLastOpenedBook()
+            _selectedBook.value = lastBook
+        }
+    }
+
+
+    fun onFeedBackIconClicked(context: Context) {
+        val deviceModel = android.os.Build.MODEL
+        val androidVersion = android.os.Build.VERSION.RELEASE
+        val appVersion = "1.0.0"
+
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = "mailto:".toUri()
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("gourav.and.de@gmail.com"))
+            putExtra(Intent.EXTRA_SUBJECT, "Feedback: Book Reader App")
+            putExtra(Intent.EXTRA_TEXT, """
+            --- Device Info ---
+            Model: $deviceModel
+            OS Version: Android $androidVersion
+            App Version: $appVersion
+            
+            --- Feedback ---
+            Enter your feedback here:
+            
+        """.trimIndent())
+        }
+
+        context.startActivity(Intent.createChooser(intent, "Send Feedback via..."))
+    }
+}
