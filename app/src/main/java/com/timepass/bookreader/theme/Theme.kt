@@ -20,11 +20,9 @@ private val lightScheme = lightColorScheme(
 fun BookReaderTheme(
     content: @Composable () -> Unit
 ) {
-    val colorScheme = lightScheme
 
   MaterialTheme(
-    colorScheme = colorScheme,
-    typography = customTypography,
+    colorScheme = lightScheme,
     content = content
   )
 }

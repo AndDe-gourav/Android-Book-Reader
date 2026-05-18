@@ -26,6 +26,16 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.timepass.bookreader.theme.BookReaderTheme
+import com.timepass.bookreader.ui.aboutbook.AboutBookScreen
+import com.timepass.bookreader.ui.aboutbook.EditScreen
+import com.timepass.bookreader.ui.home.BookStateViewModel
+import com.timepass.bookreader.ui.home.CollectionViewModel
+import com.timepass.bookreader.ui.home.HomeScreen
+import com.timepass.bookreader.ui.home.LibraryViewModel
+import com.timepass.bookreader.ui.pdfviewer.PdfReaderScreen
+import com.timepass.bookreader.ui.pdfviewer.PdfViewerViewModel
+import com.timepass.bookreader.ui.stats.StatsScreen
+import com.timepass.bookreader.ui.stats.StatsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
