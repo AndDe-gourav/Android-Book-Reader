@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -36,7 +37,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,7 +54,6 @@ import coil.compose.rememberAsyncImagePainter
 import com.timepass.bookreader.R
 import com.timepass.bookreader.ui.TopBar
 import com.timepass.bookreader.ui.home.ProgressBar
-import kotlinx.coroutines.launch
 import java.io.File
 import java.time.LocalDate
 import java.time.Month
@@ -85,7 +84,15 @@ fun StatsScreen(
         modifier = modifier
     ) { innerPadding ->
         if (isLoading) {
-            CircularProgressIndicator()
+            // FIX 3: CircularProgressIndicator was not centered — added Box + fillMaxSize
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
         } else {
             LazyColumn(
                 contentPadding = PaddingValues(10.dp),
@@ -98,8 +105,7 @@ fun StatsScreen(
                 item {
                     if (booksWithStats.isEmpty()) {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -296,36 +302,20 @@ fun StatsCalendarView(
     year: Int,
     month: Int
 ) {
-    val coroutineScope = rememberCoroutineScope()
     val daysInMonth = YearMonth.of(year, month).lengthOfMonth()
     val firstDayOfMonth = LocalDate.of(year, month, 1).dayOfWeek.value % 7
     val dayLabels = listOf("S", "M", "T", "W", "T", "F", "S")
 
-    var goalMap by remember { mutableStateOf(mapOf<Int, Boolean>()) }
-    var timeReadMap by remember { mutableStateOf(mapOf<Int, Long>()) }
-    var goalSetMap by remember { mutableStateOf(mapOf<Int, Int>()) }
-
+    // FIX 1: single state — all three maps set atomically, zero resets between them
+    var monthlyStats by remember { mutableStateOf<MonthlyStats?>(null) }
 
     LaunchedEffect(bookId, year, month) {
-        coroutineScope.launch {
-            goalMap = statsViewModel.getMonthlyGoalMap(
-                bookId = bookId,
-                year = year,
-                month = month,
-            )
-            timeReadMap = statsViewModel.getReadTimeMap(
-                bookId = bookId,
-                year = year,
-                month = month
-            )
-            goalSetMap = statsViewModel.getGoalSetMap(
-                bookId = bookId,
-                year = year,
-                month = month,
-            )
-        }
+        monthlyStats = statsViewModel.getMonthlyStats(bookId, year, month)
     }
 
+    val goalMap     = monthlyStats?.goalMap     ?: emptyMap()
+    val timeReadMap = monthlyStats?.timeReadMap ?: emptyMap()
+    val goalSetMap  = monthlyStats?.goalSetMap  ?: emptyMap()
 
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -398,6 +388,10 @@ fun StatsDateCell(
     val today = LocalDate.now()
     val isToday = day == today.dayOfMonth && year == today.year && month == today.monthValue
 
+    // FIX 2: determine if this cell date is in the past or today (future dates not tappable)
+    val cellDate = LocalDate.of(year, month, day)
+    val isPastOrToday = !cellDate.isAfter(today)
+
     val bgColor = when {
         isToday -> colorResource(id = R.color.TodayColor)
         goalMet == true -> colorResource(id = R.color.LightGreen)
@@ -411,15 +405,17 @@ fun StatsDateCell(
         modifier = Modifier
             .padding(4.dp)
             .background(color = bgColor)
-            .clickable {
-                if (goalMet != null) showMenu = true
+            // FIX 2: was `if (goalMet != null)` — missed days with no goal record at all
+            .clickable(enabled = isPastOrToday) {
+                showMenu = true
             },
         contentAlignment = Alignment.Center
     ) {
         Text(text = "$day", color = Color.Black)
 
         DropdownMenu(
-            containerColor = MaterialTheme.colorScheme.onBackground,
+            shape = RoundedCornerShape(0.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
             expanded = showMenu,
             onDismissRequest = { showMenu = false },
         ) {
@@ -444,14 +440,8 @@ fun StatsDateCell(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val goalSet = when {
-                            goalSet != null -> "${goalSet}m goal"
-                            else -> "no goal"
-                        }
-                        Text(
-                            text = goalSet,
-                            fontSize = 13.sp
-                        )
+                        val goalText = if (goalSet != null) "${goalSet}m goal" else "no goal"
+                        Text(text = goalText, fontSize = 13.sp)
                     }
                 },
                 onClick = { showMenu = false }
@@ -476,6 +466,7 @@ fun StatsDateCell(
         }
     }
 }
+
 @Composable
 fun LegendDot(color: Color, label: String) {
     Row(
@@ -491,7 +482,7 @@ fun LegendDot(color: Color, label: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onSurface  // FIX 4: was Color.Black
         )
     }
 }

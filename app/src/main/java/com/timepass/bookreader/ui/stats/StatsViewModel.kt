@@ -32,6 +32,13 @@ data class BookStatEntry(
         }
 }
 
+// FIX 2: Single data class to hold all three maps from one DB query
+data class MonthlyStats(
+    val goalMap: Map<Int, Boolean>,
+    val timeReadMap: Map<Int, Long>,
+    val goalSetMap: Map<Int, Int>
+)
+
 @HiltViewModel
 class StatsViewModel @Inject constructor(
     private val repository: BookRepository
@@ -45,18 +52,12 @@ class StatsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            // combine() collects all four flows concurrently.
-            // Whenever ANY of these tables changes — a book is added, a session is saved,
-            // a goal is set, or a daily result is upserted — the block re-executes and
-            // the UI updates immediately without any manual refresh() call.
             combine(
                 repository.getLibrary(),
                 repository.observeSessionChanges(),
                 repository.observeGoalChanges(),
                 repository.observeDailyResultChanges()
             ) { books, _, _, _ ->
-                // We only need the books list to drive loadStats();
-                // the other flows are used purely as invalidation signals.
                 books
             }.collect { books ->
                 loadStats(books)
@@ -93,59 +94,26 @@ class StatsViewModel @Inject constructor(
         _isLoading.value = false
     }
 
-    // ── Calendar / monthly history ───────────────────────────────────────────
 
-    /**
-     * Returns a map of [day-of-month → true/false] for [year]/[month].
-     * Reads from the persisted DailyGoalResultEntity records so the calendar
-     * correctly reflects the goal that was active on each specific day.
-     */
-    suspend fun getMonthlyGoalMap(
-        bookId: Long,
-        year: Int,
-        month: Int
-    ): Map<Int, Boolean> {
+    suspend fun getMonthlyStats(bookId: Long, year: Int, month: Int): MonthlyStats {
         val (from, to) = monthRangeMs(year, month)
         val results = runCatching {
             repository.getDailyGoalResultsInRange(bookId, from, to)
         }.getOrDefault(emptyList())
 
-        return results.associate { result ->
+        val goalMap     = mutableMapOf<Int, Boolean>()
+        val timeReadMap = mutableMapOf<Int, Long>()
+        val goalSetMap  = mutableMapOf<Int, Int>()
+
+        for (result in results) {
             val cal = Calendar.getInstance().apply { timeInMillis = result.date }
-            cal.get(Calendar.DAY_OF_MONTH) to result.isCompleted
+            val day = cal.get(Calendar.DAY_OF_MONTH)
+            goalMap[day]     = result.isCompleted
+            timeReadMap[day] = result.minutesRead
+            goalSetMap[day]  = result.goalMinutes
         }
-    }
 
-    suspend fun getReadTimeMap(
-        bookId: Long,
-        year: Int,
-        month: Int
-    ): Map<Int, Long> {
-        val (from, to) = monthRangeMs(year, month)
-        val results = runCatching {
-            repository.getDailyGoalResultsInRange(bookId, from, to)
-        }.getOrDefault(emptyList())
-
-        return results.associate { result ->
-            val cal = Calendar.getInstance().apply { timeInMillis = result.date }
-            cal.get(Calendar.DAY_OF_MONTH) to result.minutesRead
-        }
-    }
-
-    suspend fun getGoalSetMap(
-        bookId: Long,
-        year: Int,
-        month: Int
-    ): Map<Int, Int> {
-        val (from, to) = monthRangeMs(year, month)
-        val results = runCatching {
-            repository.getDailyGoalResultsInRange(bookId, from, to)
-        }.getOrDefault(emptyList())
-
-        return results.associate { result ->
-            val cal = Calendar.getInstance().apply { timeInMillis = result.date }
-            cal.get(Calendar.DAY_OF_MONTH) to result.goalMinutes
-        }
+        return MonthlyStats(goalMap, timeReadMap, goalSetMap)
     }
 
     private fun todayStartMs(): Long = Calendar.getInstance().apply {

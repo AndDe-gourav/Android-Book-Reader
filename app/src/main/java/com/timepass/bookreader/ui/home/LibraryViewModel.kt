@@ -144,7 +144,7 @@ class LibraryViewModel @Inject constructor(
             try {
                 repository.deleteBook(bookId)
                 restoreLastOpenedBook()
-                showSnackbar("Book deleted")
+                showSnackbar("Book removed")
             } catch (e: Exception) {
                 showSnackbar("Failed to delete book")
             }

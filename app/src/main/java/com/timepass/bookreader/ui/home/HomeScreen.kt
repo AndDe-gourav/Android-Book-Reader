@@ -8,7 +8,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,10 +21,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -44,30 +41,22 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
 import androidx.navigation.NavController
-import coil.compose.rememberAsyncImagePainter
 import com.timepass.bookreader.R
-import com.timepass.bookreader.data.entity.BookEntity
-import com.timepass.bookreader.data.entity.CollectionWithBooks
-import com.timepass.bookreader.ui.pdfviewer.PdfUtil
 import com.timepass.bookreader.ui.TopBar
+import com.timepass.bookreader.ui.pdfviewer.PdfUtil
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
 
 @Composable
 fun HomeScreen(
@@ -187,183 +176,6 @@ fun HomeScreen(
     }
 }
 
-
-@Composable
-fun CollectionShelfSection(
-    collectionsWithBooks: List<CollectionWithBooks>,
-    onBookClick: (BookEntity) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val nonEmpty = collectionsWithBooks.filter { it.books.isNotEmpty() }
-
-    if (nonEmpty.isEmpty()) {
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(32.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "No books in any collection yet.\nTap the folder icon on a book to add it.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-        }
-        return
-    }
-
-    Column(modifier = modifier) {
-        nonEmpty.forEach { cwb ->
-
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(cwb.books) { book ->
-                    Surface(
-                        color = Color.White,
-                        tonalElevation = 8.dp,
-                        shadowElevation = 16.dp,
-                        modifier = Modifier
-                            .height(100.dp)
-                            .width(65.dp)
-                            .clickable { onBookClick(book) }
-                    ) {
-                        Image(
-                            painter = rememberAsyncImagePainter(
-                                model = book.coverImagePath?.let { File(it) }
-                            ),
-                            contentDescription = book.title,
-                            contentScale = ContentScale.FillBounds,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .background(color = MaterialTheme.colorScheme.surfaceContainer)
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(14.dp)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.surfaceContainerHigh,
-                                MaterialTheme.colorScheme.surfaceContainerHighest
-                            )
-                        )
-                    )
-            )
-            HorizontalDivider(
-                thickness = 0.5.dp,
-                color = colorResource(id = R.color.shadow)
-            )
-
-            Surface(
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(start = 12.dp),
-                shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
-                shadowElevation = 4.dp
-            ) {
-                Text(
-                    text = cwb.collection.name,
-                    modifier = Modifier.padding(vertical = 3.dp, horizontal = 10.dp),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 13.sp),
-                    color = MaterialTheme.colorScheme.inverseSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-fun BookShelfSection(
-    books: List<BookEntity>,
-    onBookClick: (BookEntity) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    if (books.isEmpty()) {
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(32.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "No books in this shelf",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-        }
-    } else {
-        Column {
-            books.chunked(3).forEach { rowBooks ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    rowBooks.forEach { book ->
-                        Surface(
-                            color = Color.White,
-                            modifier = Modifier
-                                .height(110.dp)
-                                .width(70.dp)
-                                .clickable { onBookClick(book) }
-                        ) {
-                            Image(
-                                painter = rememberAsyncImagePainter(
-                                    model = book.coverImagePath?.let { File(it) }
-                                ),
-                                contentDescription = "Shelf Book",
-                                contentScale = ContentScale.FillBounds,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.dp)
-                        .background(color = colorResource(R.color.book_shelf_2))
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(14.dp)
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    colorResource(R.color.book_shelf_1),
-                                    colorResource(R.color.book_shelf_3)
-                                )
-                            )
-                        )
-                )
-                HorizontalDivider(
-                    thickness = 0.5.dp,
-                    color = colorResource(id = R.color.shadow)
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-            }
-        }
-    }
-}
-
-
 @Composable
 fun ShelfNavigationSection(
     currentShelf: BookShelfType,
@@ -433,70 +245,6 @@ fun ShelfChip(
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(5.dp)
         )
-    }
-}
-
-
-@Composable
-fun BottomBar(
-    libraryViewModel: LibraryViewModel,
-    navController: NavController,
-    selectedBook: BookEntity?,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-            color = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(0.dp),
-            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.tertiary),
-            modifier = modifier
-                .fillMaxWidth()
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceAround,
-            modifier = Modifier.fillMaxWidth().padding(2.dp)
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.clickable{
-                    navController.navigate("StatsScreen")
-                },
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.analytics_40dp_000000_fill0_wght300_grad0_opsz40),
-                    contentDescription = "Stats",
-                )
-                Text(
-                    text = "Stats",
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(5.dp)
-                )
-            }
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .clickable{
-                        selectedBook?.let { book ->
-                            navController.navigate("pdfReader/${book.bookId}")
-                        }
-                    }
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.play_button),
-                    contentDescription = "Read",
-                    tint = MaterialTheme.colorScheme.inverseSurface,
-                    modifier = Modifier.size(30.dp)
-                )
-                Text(
-                    text = "Read",
-                    style = MaterialTheme.typography.titleMedium,
-                )
-            }
-            PdfSelection(
-                libraryViewModel = libraryViewModel,
-                navController = navController,
-            )
-        }
     }
 }
 

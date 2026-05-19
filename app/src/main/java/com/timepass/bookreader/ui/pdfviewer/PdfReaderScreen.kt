@@ -1,6 +1,5 @@
 package com.timepass.bookreader.ui.pdfviewer
 
-import androidx.compose.ui.window.Dialog
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -29,14 +28,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,9 +56,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,11 +69,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -84,10 +83,10 @@ import com.artifex.mupdf.viewer.ContentInputStream
 import com.artifex.mupdf.viewer.MuPDFCore
 import com.artifex.mupdf.viewer.OutlineActivity
 import com.timepass.bookreader.R
-import com.timepass.bookreader.ui.home.LibraryViewModel
 import com.timepass.bookreader.ui.TopBar
-import com.timepass.bookreader.ui.home.Button
 import com.timepass.bookreader.ui.home.BookStateViewModel
+import com.timepass.bookreader.ui.home.Button
+import com.timepass.bookreader.ui.home.LibraryViewModel
 import com.timepass.bookreader.ui.home.ProgressBar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -143,11 +142,11 @@ fun PdfReaderScreen(
     val book = remember(bookId, allBooks) { allBooks.find { it.bookId == bookId } }
 
     var core by remember { mutableStateOf<MuPDFCore?>(null) }
-    var totalPages by remember { mutableStateOf(0) }
+    var totalPages by remember { mutableIntStateOf(0) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var sessionPeriodStart by remember { mutableStateOf(System.currentTimeMillis()) }
-    var accumulatedSessionTime by remember { mutableStateOf(0L) }
+    var sessionPeriodStart by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var accumulatedSessionTime by remember { mutableLongStateOf(0L) }
     var outline by remember { mutableStateOf<List<OutlineActivity.Item>?>(null) }
 
     val currentPage by pdfViewerViewModel.currentPage.collectAsState()
@@ -457,21 +456,36 @@ fun PdfReaderScreen(
         }
     }
 
-    val jumpTextFieldState = rememberTextFieldState(currentPage.toString())
-    val goalTextFieldState = rememberTextFieldState(sessionState?.dailyGoalMinutes.toString())
+    val jumpTextFieldState = rememberTextFieldState()
+    val goalTextFieldState = rememberTextFieldState()
+
+    LaunchedEffect(currentPage) {
+        jumpTextFieldState.setTextAndPlaceCursorAtEnd(currentPage.toString())
+    }
+
+    LaunchedEffect(sessionState?.dailyGoalMinutes) {
+        goalTextFieldState.setTextAndPlaceCursorAtEnd(
+            sessionState?.dailyGoalMinutes?.toString() ?: ""
+        )
+    }
 
     if (showPageJumpDialog)
         DialogBox(
             textFieldState = jumpTextFieldState,
             textFieldLabel = "Page (1–$totalPages)",
-            onDismiss = { showPageJumpDialog = false},
+            onDismiss = { showPageJumpDialog = false },
             dismissText = "Cancel",
             confirmText = "Go",
             heading = "Jump to page",
+            keyboardType = KeyboardType.Number,
             onConfirm = {
-                jumpTextFieldState.text.toString().toIntOrNull()?.takeIf { it in 1..totalPages }?.let {
-                    jumpToPage = jumpTextFieldState.text.toString().toInt()
+                val page = jumpTextFieldState.text.toString()
+                    .toIntOrNull()
+
+                if (page != null && page in 1..totalPages) {
+                    jumpToPage = page
                 }
+
                 showPageJumpDialog = false
             }
         )
@@ -479,21 +493,24 @@ fun PdfReaderScreen(
     if (showGoalDialog)
         DialogBox(
             textFieldState = goalTextFieldState,
-            textFieldLabel = "",
-            onDismiss = { showGoalDialog = false},
+            textFieldLabel = "Minutes",
+            onDismiss = { showGoalDialog = false },
             confirmText = "Set Goal",
+            keyboardType = KeyboardType.Number,
             dismissText = "Cancel",
             onConfirm = {
-                goalTextFieldState.text.toString().toIntOrNull()?.takeIf { it > 0 }?.let {
-                    pdfViewerViewModel.setReadingGoal(
-                        bookId,
-                        goalTextFieldState.text.toString().toInt()
-                    )
-                }
+                goalTextFieldState.text.toString()
+                    .toIntOrNull()
+                    ?.takeIf { it > 0 }
+                    ?.let { goal ->
+                        pdfViewerViewModel.setReadingGoal(bookId, goal)
+                    }
+
                 showGoalDialog = false
             },
             heading = "Daily Reading Goal"
         )
+
 
     if (showTocSheet && outline != null)
         TocBottomSheet(
@@ -760,43 +777,59 @@ private fun ErrorState(message: String, onBack: () -> Unit, modifier: Modifier =
 
 @Composable
 fun DialogBox(
-    textFieldState: TextFieldState,
-    textFieldLabel: String,
     onDismiss: () -> Unit,
     dismissText: String,
     confirmText: String,
     heading: String,
     onConfirm: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    textFieldState: TextFieldState? = null,
+    textFieldLabel: String = "",
+    keyboardType: KeyboardType = KeyboardType.Text,
+    content: (@Composable () -> Unit)? = null
 ) {
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismiss
     ) {
         Box(
-            modifier = modifier.background(MaterialTheme.colorScheme.background)
+            modifier = modifier
+                .background(
+                    color = MaterialTheme.colorScheme.background,
+                )
         ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.padding(20.dp)
             ) {
+
                 Text(
                     text = heading,
                     style = MaterialTheme.typography.titleMedium
                 )
-                OutlinedTextField(
-                    state = textFieldState,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    shape = RoundedCornerShape(0.dp),
-                    label = {
-                        Text(
-                            textFieldLabel
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
+
+                if (content != null) {
+                    content()
+                }
+
+                if (textFieldState != null) {
+                    OutlinedTextField(
+                        state = textFieldState,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = keyboardType
+                        ),
+                        label = if (textFieldLabel.isNotBlank()) {
+                            {
+                                Text(textFieldLabel)
+                            }
+                        } else null,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Absolute.Right
@@ -804,29 +837,17 @@ fun DialogBox(
                     Box(
                         modifier = Modifier
                             .background(MaterialTheme.colorScheme.surface)
-                            .clickable{
-                                onDismiss()
-                            }
+                            .clickable{ onDismiss() }
                     ) {
-                        Text(
-                            text = dismissText,
-                            modifier = Modifier.padding(10.dp)
-                        )
+                        Text( text = dismissText, modifier = Modifier.padding(10.dp) )
                     }
-                    Spacer(
-                        modifier = Modifier.width(10.dp)
-                    )
+                    Spacer( modifier = Modifier.width(10.dp) )
                     Box(
                         modifier = Modifier
                             .background(MaterialTheme.colorScheme.surface)
-                            .clickable{
-                                onConfirm()
-                            }
+                            .clickable{ onConfirm() }
                     ) {
-                        Text(
-                            text = confirmText,
-                            modifier = Modifier.padding(10.dp)
-                        )
+                        Text( text = confirmText, modifier = Modifier.padding(10.dp) )
                     }
                 }
             }
