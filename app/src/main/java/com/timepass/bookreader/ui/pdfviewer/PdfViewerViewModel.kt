@@ -93,25 +93,11 @@ class PdfViewerViewModel @Inject constructor(
         _sessionState.value = _sessionState.value?.copy(sessionTimeSpent = timeSpent)
     }
 
-    /**
-     * BLOCKING save — call this from the lifecycle ON_STOP observer.
-     *
-     * WHY BLOCKING:
-     * Android guarantees the system waits for onStop() to return before killing the
-     * process. A coroutine launched asynchronously (even on saveScope) may never get
-     * to execute if the process is killed the moment onStop() returns.
-     * By doing the DB writes synchronously here we get a 100% guarantee they finish
-     * before the system gets the chance to kill the process.
-     *
-     * Room writes are fast (< 50 ms on any modern device) so briefly blocking the
-     * main thread during onStop() is completely acceptable and causes no ANR risk.
-     */
     fun endSessionBlocking() {
         if (!isSaving.compareAndSet(false, true)) return
         val state = _sessionState.value ?: run { isSaving.set(false); return }
         _sessionState.value = null
 
-        // runBlocking bridges from the main thread into a blocking coroutine on IO.
         runBlocking(Dispatchers.IO) {
             try {
                 val endTime = System.currentTimeMillis()
@@ -138,8 +124,17 @@ class PdfViewerViewModel @Inject constructor(
                         from   = todayStart,
                         to     = todayStart + 86_400_000L
                     )
+                    val minutesReadToday = totalMsRead / 60_000L
 
-                    if (totalMsRead / 60_000L >= goalMinutes) {
+                    // ✅ ADD THIS — was missing, causing daily_goal_results to stay empty
+                    repository.saveDailyGoalResult(
+                        bookId      = state.bookId,
+                        dayStartMs  = todayStart,
+                        goalMinutes = goalMinutes,
+                        minutesRead = minutesReadToday
+                    )
+
+                    if (minutesReadToday >= goalMinutes) {
                         showSnackbar("Daily reading goal achieved! 🎉")
                     }
                 }
@@ -150,7 +145,6 @@ class PdfViewerViewModel @Inject constructor(
             }
         }
     }
-
     /**
      * ASYNC save — call this from onDispose (normal back navigation).
      *
