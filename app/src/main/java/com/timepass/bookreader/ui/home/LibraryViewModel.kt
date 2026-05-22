@@ -12,12 +12,10 @@ import com.timepass.bookreader.data.entity.BookEntity
 import com.timepass.bookreader.data.repository.BookRepository
 import com.timepass.bookreader.ui.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.InputStream
@@ -36,13 +34,14 @@ class LibraryViewModel @Inject constructor(
     private val repository: BookRepository
 ) : ViewModel() {
 
+
     init {
         restoreLastOpenedBook()
     }
     val allBooks: StateFlow<List<BookEntity>> = repository.getLibrary()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,
             initialValue = emptyList()
         )
 
@@ -87,6 +86,31 @@ class LibraryViewModel @Inject constructor(
         _currentBookShelf.value = shelfType
     }
 
+    fun selectNextBook() {
+        val books = allBooks.value
+        val currentBook = _selectedBook.value ?: return
+
+        val currentIndex = books.indexOfFirst {
+            it.bookId == currentBook.bookId
+        }
+
+        if (currentIndex != -1 && currentIndex < books.lastIndex) {
+            _selectedBook.value = books[currentIndex + 1]
+        }
+    }
+
+    fun selectPreviousBook() {
+        val books = allBooks.value
+        val currentBook = _selectedBook.value ?: return
+
+        val currentIndex = books.indexOfFirst {
+            it.bookId == currentBook.bookId
+        }
+
+        if (currentIndex > 0) {
+            _selectedBook.value = books[currentIndex - 1]
+        }
+    }
     fun updateBookTitle(bookId: Long, newTitle: String) {
         viewModelScope.launch {
             try {

@@ -38,11 +38,7 @@ class BookRepository @Inject constructor(
     private val dailyGoalResultDao: DailyGoalResultDao,
     @ApplicationContext private val context: Context
 ) {
-
-    // ==================== BOOK OPERATIONS ====================
-
     fun getLibrary(): Flow<List<BookEntity>> = bookDao.getAllBooks()
-
     suspend fun addBook(
         title: String,
         author: String?,

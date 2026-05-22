@@ -108,24 +108,27 @@ fun App(
 
     Scaffold(
         topBar = {
-            if (backStack.lastOrNull() == HomeScreen)
+            if (backStack.lastOrNull() == HomeScreen) {
                 GeneralDrawerTopBar(
                     text = "Home",
                     libraryViewModel = libraryViewModel,
                     modifier = Modifier.zIndex(1f)
                 )
-            else
+            } else if (backStack.lastOrNull() is PdfReader){
+
+            } else {
                 TopBar(
                     onActionClicked = { backStack.removeLastOrNull() },
                     titleText =
-                        when(backStack.lastOrNull()) {
+                        when (backStack.lastOrNull()) {
                             StatsScreen -> "Stats"
                             EditScreen -> "Edit Book"
                             AboutBookScreen -> "About Book"
-                            else -> { selectedBook?.title ?: "Loading…" }
+                            else -> { "Not Available" }
                         },
                     icon = R.drawable.arrow_back_24dp_000000_fill0_wght300_grad0_opsz24,
                 )
+            }
         },
         snackbarHost = {
             SnackbarHost(
@@ -154,12 +157,9 @@ fun App(
         },
         modifier = modifier,
     ) { innerPadding ->
-
         NavDisplay(
             backStack = backStack,
-
             transitionSpec = {
-
                 slideInHorizontally( initialOffsetX = { it }, animationSpec = tween(180)
                 ) + fadeIn( animationSpec = tween(120)
                 ) togetherWith
@@ -167,7 +167,6 @@ fun App(
                         ) + fadeOut( animationSpec = tween(120)
                 )
             },
-
             popTransitionSpec = {
                 slideInHorizontally(
                     initialOffsetX = { -it / 4 }, animationSpec = tween(180)
@@ -177,7 +176,6 @@ fun App(
                         ) + fadeOut( animationSpec = tween(120)
                 )
             },
-
             entryProvider = entryProvider {
                 entry<HomeScreen> {
                     HomeScreen(

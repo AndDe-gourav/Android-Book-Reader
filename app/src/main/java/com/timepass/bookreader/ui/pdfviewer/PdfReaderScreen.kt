@@ -3,10 +3,11 @@ package com.timepass.bookreader.ui.pdfviewer
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -81,6 +82,7 @@ import com.artifex.mupdf.viewer.ContentInputStream
 import com.artifex.mupdf.viewer.MuPDFCore
 import com.artifex.mupdf.viewer.OutlineActivity
 import com.timepass.bookreader.R
+import com.timepass.bookreader.ui.TopBar
 import com.timepass.bookreader.ui.home.BookStateViewModel
 import com.timepass.bookreader.ui.home.Button
 import com.timepass.bookreader.ui.home.LibraryViewModel
@@ -265,7 +267,7 @@ fun PdfReaderScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
 
                 errorMessage != null ->
-                    ErrorState(errorMessage!!, { onBack },
+                    ErrorState(errorMessage!!, { onBack() },
                         modifier = Modifier.align(Alignment.Center))
 
                 core != null -> {
@@ -301,9 +303,36 @@ fun PdfReaderScreen(
             }
         }
         Box(
+            modifier = modifier.align(Alignment.TopCenter)
+        ) {
+            AnimatedVisibility(
+                visible = isChromeVisible,
+                enter = slideInHorizontally(
+                    initialOffsetX = { it / 3 },
+                    animationSpec = tween(180)
+                ) + fadeIn(
+                    animationSpec = tween(120)
+                ),
+
+                exit = slideOutHorizontally(
+                    targetOffsetX = { it / 4 },
+                    animationSpec = tween(180)
+                ) + fadeOut(
+                    animationSpec = tween(120)
+                )
+            ) {
+                TopBar(
+                    onActionClicked = onBack,
+                    icon = R.drawable.arrow_back_24dp_000000_fill0_wght300_grad0_opsz24,
+                    titleText = book?.title ?: "Loding",
+                    modifier = modifier.align(Alignment.TopCenter)
+                )
+            }
+        }
+        Box(
             modifier = Modifier.align(Alignment.BottomCenter)
         ){
-            Column() {
+            Column {
                 if(showThemes) {
                     ThemeSelector(
                         onThemeSelected = { theme ->
@@ -335,7 +364,21 @@ fun PdfReaderScreen(
                         },
                         modifier = Modifier.padding(bottom = correctedPadding)
                     )
-                if( isChromeVisible ) {
+                AnimatedVisibility (
+                    visible = isChromeVisible,
+                    enter = slideInHorizontally(
+                        initialOffsetX = { it / 3 },
+                        animationSpec = tween(180)
+                    ) + fadeIn(
+                        animationSpec = tween(120)
+                    ),
+                    exit = slideOutHorizontally(
+                        targetOffsetX = { it / 4 },
+                        animationSpec = tween(180)
+                    ) + fadeOut(
+                        animationSpec = tween(120)
+                    )
+                ) {
                     Surface(
                         color = MaterialTheme.colorScheme.surface,
                         border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.tertiary),

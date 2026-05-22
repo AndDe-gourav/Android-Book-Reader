@@ -49,6 +49,13 @@ fun AboutBookScreen(
     modifier: Modifier = Modifier
 ) {
     val book by libraryViewModel.selectedBook.collectAsState()
+
+    val allBooks by libraryViewModel.allBooks.collectAsState()
+
+    val currentIndex = allBooks.indexOfFirst { it.bookId == book?.bookId }
+    val isFirstBook = currentIndex <= 0
+    val isLastBook = currentIndex == -1 || currentIndex >= allBooks.lastIndex
+
     LazyColumn(
         contentPadding = PaddingValues(vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -66,7 +73,9 @@ fun AboutBookScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         Surface(
-                            onClick = { },
+                            contentColor = if (isFirstBook) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onPrimary,
+                            enabled = !isFirstBook,
+                            onClick = { libraryViewModel.selectPreviousBook() },
                             shape = RoundedCornerShape(topStart = 10.dp, bottomStart = 10.dp),
                             border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.tertiary),
                             modifier = Modifier.align(Alignment.Center)
@@ -103,7 +112,9 @@ fun AboutBookScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         Surface(
-                            onClick = { },
+                            contentColor = if (isLastBook) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onPrimary,
+                            enabled = !isLastBook,
+                            onClick = { libraryViewModel.selectNextBook() },
                             shape = RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp),
                             border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.tertiary),
                             modifier = Modifier.align(Alignment.Center)
