@@ -29,6 +29,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,7 +51,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.timepass.bookreader.R
 import com.timepass.bookreader.ui.TopBar
@@ -64,7 +65,8 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
-    navController: NavController,
+    onBack: () -> Unit,
+    snackbarHostState: SnackbarHostState,
     statsViewModel: StatsViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -77,14 +79,18 @@ fun StatsScreen(
         topBar = {
             TopBar(
                 titleText = "Stats",
-                onActionClicked = { navController.popBackStack() },
+                onActionClicked = { onBack() },
                 icon = R.drawable.arrow_back_24dp_000000_fill0_wght300_grad0_opsz24
+            )
+        },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
             )
         },
         modifier = modifier
     ) { innerPadding ->
         if (isLoading) {
-            // FIX 3: CircularProgressIndicator was not centered — added Box + fillMaxSize
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -482,7 +488,7 @@ fun LegendDot(color: Color, label: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface  // FIX 4: was Color.Black
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }

@@ -11,7 +11,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -29,6 +28,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,7 +52,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
-import androidx.navigation.NavController
 import com.timepass.bookreader.R
 import com.timepass.bookreader.ui.TopBar
 import com.timepass.bookreader.ui.pdfviewer.PdfUtil
@@ -60,7 +60,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
-    navController: NavController,
+    openPdf: (Long) -> Unit,
+    openStats: () -> Unit,
+    openAbout: () -> Unit,
+    openEdit: () -> Unit,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     libraryViewModel: LibraryViewModel,
     bookStateViewModel: BookStateViewModel,
@@ -103,75 +107,81 @@ fun HomeScreen(
                 modifier = Modifier.zIndex(1f)
             )
         },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+            )
+        },
+        bottomBar = {
+            BottomBar(
+                openPdf = openPdf,
+                openStats = openStats,
+                libraryViewModel = libraryViewModel,
+                selectedBook = selectedBook,
+            )
+        },
         modifier = modifier,
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
-
-            LazyColumn(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                item {
-                    CurrentlyReadingCard(
-                        selectedBook = selectedBook,
-                        bookStateViewModel = bookStateViewModel,
-                        onBookClick = { book ->
-                            libraryViewModel.selectBook(book)
-                            navController.navigate("AboutBookScreen")
-                        },
-                    )
-                    BookStatusIconRow(
-                        selectedBook = selectedBook,
-                        bookStateViewModel = bookStateViewModel,
-                        collectionViewModel = collectionViewModel,
-                        navController = navController,
-                        onBookDeleted = {
-                            libraryViewModel.deleteBook(selectedBook?.bookId!!)
-                        },
-                    )
-                    HorizontalDivider(
-                        thickness = 0.5.dp,
-                        color = colorResource(id = R.color.progress_bar_front_color)
-                    )
-                }
-
-                item {
-                    ShelfNavigationSection(
-                        currentShelf = currentBookShelf,
-                        onShelfSelected = { shelfType ->
-                            libraryViewModel.changeBookShelf(shelfType)
-                        },
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                }
-
-                item {
-                    if (currentBookShelf is BookShelfType.Collection) {
-                        CollectionShelfSection(
-                            collectionsWithBooks = collectionsWithBooks,
-                            onBookClick = { book -> libraryViewModel.selectBook(book) }
-                        )
-                    } else {
-                        val booksToDisplay = when (currentBookShelf) {
-                            is BookShelfType.Recent -> recentBooks
-                            is BookShelfType.Favorites -> favoriteBooks
-                            is BookShelfType.ToRead -> toReadBooks
-                            is BookShelfType.Completed -> completedBooks
-                            else -> emptyList()
-                        }
-                        BookShelfSection(
-                            books = booksToDisplay,
-                            onBookClick = { book -> libraryViewModel.selectBook(book) },
-                        )
-                    }
-                }
-
-                item { Spacer(modifier = Modifier.size(100.dp)) }
+        LazyColumn(
+            contentPadding = innerPadding,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            item {
+                CurrentlyReadingCard(
+                    selectedBook = selectedBook,
+                    bookStateViewModel = bookStateViewModel,
+                    onBookClick = { book ->
+                        libraryViewModel.selectBook(book)
+                        openAbout()
+                    },
+                )
+                BookStatusIconRow(
+                    openEdit = openEdit,
+                    selectedBook = selectedBook,
+                    bookStateViewModel = bookStateViewModel,
+                    collectionViewModel = collectionViewModel,
+                    onBookDeleted = {
+                        libraryViewModel.deleteBook(selectedBook?.bookId!!)
+                    },
+                )
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = colorResource(id = R.color.progress_bar_front_color)
+                )
             }
 
-            BottomBar(
-                libraryViewModel = libraryViewModel,
-                navController = navController,
-                selectedBook = selectedBook,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
+            item {
+                ShelfNavigationSection(
+                    currentShelf = currentBookShelf,
+                    onShelfSelected = { shelfType ->
+                        libraryViewModel.changeBookShelf(shelfType)
+                    },
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
+            item {
+                if (currentBookShelf is BookShelfType.Collection) {
+                    CollectionShelfSection(
+                        collectionsWithBooks = collectionsWithBooks,
+                        onBookClick = { book -> libraryViewModel.selectBook(book) }
+                    )
+                } else {
+                    val booksToDisplay = when (currentBookShelf) {
+                        is BookShelfType.Recent -> recentBooks
+                        is BookShelfType.Favorites -> favoriteBooks
+                        is BookShelfType.ToRead -> toReadBooks
+                        is BookShelfType.Completed -> completedBooks
+                        else -> emptyList()
+                    }
+                    BookShelfSection(
+                        books = booksToDisplay,
+                        onBookClick = { book -> libraryViewModel.selectBook(book) },
+                    )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.size(100.dp)) }
         }
     }
 }
@@ -251,7 +261,7 @@ fun ShelfChip(
 @Composable
 fun PdfSelection(
     libraryViewModel: LibraryViewModel,
-    navController: NavController,
+    openPdf: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -279,7 +289,7 @@ fun PdfSelection(
                     )
                     if (bookId != -1L) {
                         libraryViewModel.restoreLastOpenedBook()
-                        navController.navigate("pdfReader/$bookId")
+                        openPdf(bookId)
                     }
                 }
             }

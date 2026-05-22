@@ -18,6 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,22 +33,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.timepass.bookreader.R
+import com.timepass.bookreader.ui.TopBar
 import com.timepass.bookreader.ui.home.BookStateViewModel
 import com.timepass.bookreader.ui.home.BookStatusIconRow
 import com.timepass.bookreader.ui.home.CollectionViewModel
 import com.timepass.bookreader.ui.home.LibraryViewModel
-import com.timepass.bookreader.ui.TopBar
 import java.io.File
 
 @Composable
 fun AboutBookScreen(
+    onBack: () -> Unit,
+    openEdit: () -> Unit,
+    openPdf: (Long) -> Unit,
+    snackbarHostState: SnackbarHostState,
     bookStateViewModel: BookStateViewModel,
     libraryViewModel: LibraryViewModel,
     collectionViewModel: CollectionViewModel,
-    navController: NavController,
     modifier: Modifier = Modifier
 ) {
     val book by libraryViewModel.selectedBook.collectAsState()
@@ -54,8 +58,13 @@ fun AboutBookScreen(
         topBar = {
             TopBar(
                 titleText = "About Book",
-                onActionClicked = { navController.popBackStack() },
+                onActionClicked = { onBack() },
                 icon = R.drawable.arrow_back_24dp_000000_fill0_wght300_grad0_opsz24
+            )
+        },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
             )
         },
         modifier = modifier
@@ -98,7 +107,7 @@ fun AboutBookScreen(
                                 )
                                 .clickable {
                                     book?.let { book ->
-                                        navController.navigate("pdfReader/${book.bookId}")
+                                        openPdf(book.bookId)
                                     }
                                 },
                         ) {
@@ -152,13 +161,13 @@ fun AboutBookScreen(
                     )
                 }
                 BookStatusIconRow(
+                    openEdit = openEdit,
                     selectedBook = book,
                     bookStateViewModel = bookStateViewModel,
                     collectionViewModel = collectionViewModel,
-                    navController = navController,
                     onBookDeleted = {
                         libraryViewModel.deleteBook(book?.bookId!!)
-                        navController.popBackStack()
+                        onBack()
                     },
                     modifier = Modifier.padding(vertical = 4.dp)
                 )

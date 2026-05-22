@@ -45,6 +45,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -128,8 +129,8 @@ private fun PdfTheme.scaffoldBg(): Color = when (this) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PdfReaderScreen(
+    onBack: () -> Unit,
     bookId: Long,
-    navController: NavController,
     libraryViewModel: LibraryViewModel,
     pdfViewerViewModel: PdfViewerViewModel,
     bookStateViewModel: BookStateViewModel,
@@ -252,274 +253,284 @@ fun PdfReaderScreen(
             showSearchBar -> { showSearchBar = false; searchQuery = ""; readerViewRef?.clearSearch() }
             showTocSheet  -> showTocSheet = false
             showThemeSheet -> showThemeSheet = false
-            else -> navController.popBackStack()
+            else -> onBack()
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ){
+    Scaffold(
+
+    ) { innerPadding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
+            modifier = Modifier.fillMaxSize()
         ) {
-            when {
-                isLoading ->
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-
-                errorMessage != null ->
-                    ErrorState(errorMessage!!, { navController.navigateUp() },
-                        modifier = Modifier.align(Alignment.Center))
-
-                core != null -> {
-                    AndroidView(
-                        factory = { ctx ->
-                            MuPdfReaderView(
-                                context = ctx,
-                                core = core!!,
-                                onPageChanged = { page ->
-                                    pdfViewerViewModel.updatePage(page)
-                                },
-                                onChromeTap = {
-                                    isChromeVisible = !isChromeVisible
-                                    showThemes = false
-                                    showSearchBar = false
-                                }
-                            ).also { v ->
-                                v.layoutParams = FrameLayout.LayoutParams(
-                                    FrameLayout.LayoutParams.MATCH_PARENT,
-                                    FrameLayout.LayoutParams.MATCH_PARENT)
-                                v.setLinksEnabled(linksEnabled)
-                                v.setScrollHorizontal(horizontalScrolling)
-                                v.applyTheme(currentTheme)
-                                readerViewRef = v
-                            }
-                        },
-                        update = { view ->
-                            jumpToPage?.let { page -> view.setDisplayedViewIndex(page); jumpToPage = null }
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            }
-        }
-        Box(
-            modifier = modifier.align(Alignment.TopCenter)
-        ){
-            AnimatedVisibility(
-                visible = isChromeVisible,
-                enter = fadeIn() + slideInVertically { -it },
-                exit  = fadeOut() + slideOutVertically { -it }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
             ) {
-                TopBar(
-                    titleText = book?.title ?: "Loading…",
-                    onActionClicked = {
-                        navController.popBackStack()
-                    },
-                    icon = R.drawable.arrow_back_24dp_000000_fill0_wght300_grad0_opsz24
-                )
+                when {
+                    isLoading ->
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+
+                    errorMessage != null ->
+                        ErrorState(
+                            errorMessage!!, { onBack },
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+
+                    core != null -> {
+                        AndroidView(
+                            factory = { ctx ->
+                                MuPdfReaderView(
+                                    context = ctx,
+                                    core = core!!,
+                                    onPageChanged = { page ->
+                                        pdfViewerViewModel.updatePage(page)
+                                    },
+                                    onChromeTap = {
+                                        isChromeVisible = !isChromeVisible
+                                        showThemes = false
+                                        showSearchBar = false
+                                    }
+                                ).also { v ->
+                                    v.layoutParams = FrameLayout.LayoutParams(
+                                        FrameLayout.LayoutParams.MATCH_PARENT,
+                                        FrameLayout.LayoutParams.MATCH_PARENT
+                                    )
+                                    v.setLinksEnabled(linksEnabled)
+                                    v.setScrollHorizontal(horizontalScrolling)
+                                    v.applyTheme(currentTheme)
+                                    readerViewRef = v
+                                }
+                            },
+                            update = { view ->
+                                jumpToPage?.let { page ->
+                                    view.setDisplayedViewIndex(page); jumpToPage = null
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
             }
-        }
-        Box(
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ){
-            Column() {
-                if(showThemes) {
-                    ThemeSelector(
-                        onThemeSelected = { theme ->
-                            currentTheme = theme
-                            readerViewRef?.applyTheme(theme)
-                            showThemes = false
+            Box(
+                modifier = modifier.align(Alignment.TopCenter)
+            ) {
+                AnimatedVisibility(
+                    visible = isChromeVisible,
+                    enter = fadeIn() + slideInVertically { -it },
+                    exit = fadeOut() + slideOutVertically { -it }
+                ) {
+                    TopBar(
+                        titleText = book?.title ?: "Loading…",
+                        onActionClicked = {
+                            onBack()
                         },
+                        icon = R.drawable.arrow_back_24dp_000000_fill0_wght300_grad0_opsz24
                     )
                 }
-                if (showSearchBar)
-                    SearchBar(
-                        query = searchQuery,
-                        onQueryChange = { searchQuery = it },
-                        onSearchForward = {
-                            if (searchQuery.isNotBlank())
-                                readerViewRef?.search(searchQuery, +1) { page ->
-                                    jumpToPage = page
-                                }
-                        },
-                        onSearchBackward = {
-                            if (searchQuery.isNotBlank())
-                                readerViewRef?.search(searchQuery, -1) { page ->
-                                    jumpToPage = page
-                                }
-                        },
-                        onClose = {
-                            showSearchBar = false; searchQuery =
-                            ""; readerViewRef?.clearSearch()
-                        },
-                        modifier = Modifier.padding(bottom = correctedPadding)
-                    )
-                AnimatedVisibility(
-                    visible = isChromeVisible && sessionState != null,
-                    enter = fadeIn() + slideInVertically { it },
-                    exit = fadeOut() + slideOutVertically { it }
-                ) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.tertiary),
-                        modifier = Modifier
-                            .onSizeChanged {
-                                bottomBarHeight = with(density) { it.height.toDp() }
-                            }
+            }
+            Box(
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
+                Column() {
+                    if (showThemes) {
+                        ThemeSelector(
+                            onThemeSelected = { theme ->
+                                currentTheme = theme
+                                readerViewRef?.applyTheme(theme)
+                                showThemes = false
+                            },
+                        )
+                    }
+                    if (showSearchBar)
+                        SearchBar(
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            onSearchForward = {
+                                if (searchQuery.isNotBlank())
+                                    readerViewRef?.search(searchQuery, +1) { page ->
+                                        jumpToPage = page
+                                    }
+                            },
+                            onSearchBackward = {
+                                if (searchQuery.isNotBlank())
+                                    readerViewRef?.search(searchQuery, -1) { page ->
+                                        jumpToPage = page
+                                    }
+                            },
+                            onClose = {
+                                showSearchBar = false; searchQuery =
+                                ""; readerViewRef?.clearSearch()
+                            },
+                            modifier = Modifier.padding(bottom = correctedPadding)
+                        )
+                    AnimatedVisibility(
+                        visible = isChromeVisible && sessionState != null,
+                        enter = fadeIn() + slideInVertically { it },
+                        exit = fadeOut() + slideOutVertically { it }
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Column {
-                                Row {
-                                    Button(
-                                        isActive = showThemes,
-                                        onClick = {
-                                            if (showSearchBar) showSearchBar = false
-                                            showThemes = !showThemes
-                                        },
-                                        icon = R.drawable.format_paint_24dp_000000_fill0_wght300_grad0_opsz24,
-                                        contentDescription = "ColorPicker",
-                                    )
-                                    Button(
-                                        isActive = showSearchBar,
-                                        onClick = {
-                                            if (showThemes) showThemes = false
-                                            showSearchBar = !showSearchBar
-                                            if (!showSearchBar) {
-                                                searchQuery = ""; readerViewRef?.clearSearch()
-                                            }
-                                        },
-                                        icon = R.drawable.search_24dp_000000_fill0_wght300_grad0_opsz24,
-                                        contentDescription = "search",
-                                    )
-                                    Button(
-                                        isActive = showTocSheet,
-                                        onClick = {
-                                            showTocSheet = true
-                                        },
-                                        icon = R.drawable.sort_24dp_000000_fill0_wght300_grad0_opsz24,
-                                        contentDescription = "toc",
-                                    )
-                                    Button(
-                                        isActive = linksEnabled,
-                                        onClick = {
-                                            linksEnabled = !linksEnabled
-                                            readerViewRef?.setLinksEnabled(linksEnabled)
-                                        },
-                                        icon = R.drawable.link_24dp_000000_fill0_wght300_grad0_opsz24,
-                                        contentDescription = "link",
-                                    )
-                                    Button(
-                                        isActive = horizontalScrolling,
-                                        onClick = {
-                                            horizontalScrolling = !horizontalScrolling
-                                            readerViewRef?.setScrollHorizontal(horizontalScrolling)
-                                        },
-                                        icon = R.drawable.horizontal_align_right_24dp_000000_fill0_wght300_grad0_opsz24,
-                                        contentDescription = "horizontal scroll",
-                                    )
-                                    Button(
-                                        isActive = showPageJumpDialog,
-                                        onClick = {
-                                            showPageJumpDialog = true
-                                        },
-                                        icon = R.drawable.article_shortcut_24dp_000000_fill0_wght300_grad0_opsz24,
-                                        contentDescription = "jump to page",
-                                    )
-                                    Button(
-                                        isActive = showGoalDialog,
-                                        onClick = {
-                                            showGoalDialog = true
-                                        },
-                                        icon = R.drawable.alarm_24dp_000000_fill0_wght300_grad0_opsz24,
-                                        contentDescription = "timer",
-                                    )
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.tertiary),
+                            modifier = Modifier
+                                .onSizeChanged {
+                                    bottomBarHeight = with(density) { it.height.toDp() }
                                 }
-                                Row {
-                                    ReadingProgressBar(
-                                        currentPage = currentPage,
-                                        totalPages = totalPages,
-                                        sessionTime = sessionState?.sessionTimeSpent ?: 0L,
-                                        goalProgress = pdfViewerViewModel.getGoalProgress(),
-                                        isGoalMet = pdfViewerViewModel.isGoalMet()
-                                    )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Column {
+                                    Row {
+                                        Button(
+                                            isActive = showThemes,
+                                            onClick = {
+                                                if (showSearchBar) showSearchBar = false
+                                                showThemes = !showThemes
+                                            },
+                                            icon = R.drawable.format_paint_24dp_000000_fill0_wght300_grad0_opsz24,
+                                            contentDescription = "ColorPicker",
+                                        )
+                                        Button(
+                                            isActive = showSearchBar,
+                                            onClick = {
+                                                if (showThemes) showThemes = false
+                                                showSearchBar = !showSearchBar
+                                                if (!showSearchBar) {
+                                                    searchQuery = ""; readerViewRef?.clearSearch()
+                                                }
+                                            },
+                                            icon = R.drawable.search_24dp_000000_fill0_wght300_grad0_opsz24,
+                                            contentDescription = "search",
+                                        )
+                                        Button(
+                                            isActive = showTocSheet,
+                                            onClick = {
+                                                showTocSheet = true
+                                            },
+                                            icon = R.drawable.sort_24dp_000000_fill0_wght300_grad0_opsz24,
+                                            contentDescription = "toc",
+                                        )
+                                        Button(
+                                            isActive = linksEnabled,
+                                            onClick = {
+                                                linksEnabled = !linksEnabled
+                                                readerViewRef?.setLinksEnabled(linksEnabled)
+                                            },
+                                            icon = R.drawable.link_24dp_000000_fill0_wght300_grad0_opsz24,
+                                            contentDescription = "link",
+                                        )
+                                        Button(
+                                            isActive = horizontalScrolling,
+                                            onClick = {
+                                                horizontalScrolling = !horizontalScrolling
+                                                readerViewRef?.setScrollHorizontal(
+                                                    horizontalScrolling
+                                                )
+                                            },
+                                            icon = R.drawable.horizontal_align_right_24dp_000000_fill0_wght300_grad0_opsz24,
+                                            contentDescription = "horizontal scroll",
+                                        )
+                                        Button(
+                                            isActive = showPageJumpDialog,
+                                            onClick = {
+                                                showPageJumpDialog = true
+                                            },
+                                            icon = R.drawable.article_shortcut_24dp_000000_fill0_wght300_grad0_opsz24,
+                                            contentDescription = "jump to page",
+                                        )
+                                        Button(
+                                            isActive = showGoalDialog,
+                                            onClick = {
+                                                showGoalDialog = true
+                                            },
+                                            icon = R.drawable.alarm_24dp_000000_fill0_wght300_grad0_opsz24,
+                                            contentDescription = "timer",
+                                        )
+                                    }
+                                    Row {
+                                        ReadingProgressBar(
+                                            currentPage = currentPage,
+                                            totalPages = totalPages,
+                                            sessionTime = sessionState?.sessionTimeSpent ?: 0L,
+                                            goalProgress = pdfViewerViewModel.getGoalProgress(),
+                                            isGoalMet = pdfViewerViewModel.isGoalMet()
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
+                }
             }
         }
-    }
 
-    val jumpTextFieldState = rememberTextFieldState()
-    val goalTextFieldState = rememberTextFieldState()
+        val jumpTextFieldState = rememberTextFieldState()
+        val goalTextFieldState = rememberTextFieldState()
 
-    LaunchedEffect(currentPage) {
-        jumpTextFieldState.setTextAndPlaceCursorAtEnd(currentPage.toString())
-    }
+        LaunchedEffect(currentPage) {
+            jumpTextFieldState.setTextAndPlaceCursorAtEnd(currentPage.toString())
+        }
 
-    LaunchedEffect(sessionState?.dailyGoalMinutes) {
-        goalTextFieldState.setTextAndPlaceCursorAtEnd(
-            sessionState?.dailyGoalMinutes?.toString() ?: ""
-        )
-    }
+        LaunchedEffect(sessionState?.dailyGoalMinutes) {
+            goalTextFieldState.setTextAndPlaceCursorAtEnd(
+                sessionState?.dailyGoalMinutes?.toString() ?: ""
+            )
+        }
 
-    if (showPageJumpDialog)
-        DialogBox(
-            textFieldState = jumpTextFieldState,
-            textFieldLabel = "Page (1–$totalPages)",
-            onDismiss = { showPageJumpDialog = false },
-            dismissText = "Cancel",
-            confirmText = "Go",
-            heading = "Jump to page",
-            keyboardType = KeyboardType.Number,
-            onConfirm = {
-                val page = jumpTextFieldState.text.toString()
-                    .toIntOrNull()
+        if (showPageJumpDialog)
+            DialogBox(
+                textFieldState = jumpTextFieldState,
+                textFieldLabel = "Page (1–$totalPages)",
+                onDismiss = { showPageJumpDialog = false },
+                dismissText = "Cancel",
+                confirmText = "Go",
+                heading = "Jump to page",
+                keyboardType = KeyboardType.Number,
+                onConfirm = {
+                    val page = jumpTextFieldState.text.toString()
+                        .toIntOrNull()
 
-                if (page != null && page in 1..totalPages) {
-                    jumpToPage = page
-                }
-
-                showPageJumpDialog = false
-            }
-        )
-
-    if (showGoalDialog)
-        DialogBox(
-            textFieldState = goalTextFieldState,
-            textFieldLabel = "Minutes",
-            onDismiss = { showGoalDialog = false },
-            confirmText = "Set Goal",
-            keyboardType = KeyboardType.Number,
-            dismissText = "Cancel",
-            onConfirm = {
-                goalTextFieldState.text.toString()
-                    .toIntOrNull()
-                    ?.takeIf { it > 0 }
-                    ?.let { goal ->
-                        pdfViewerViewModel.setReadingGoal(bookId, goal)
+                    if (page != null && page in 1..totalPages) {
+                        jumpToPage = page
                     }
 
-                showGoalDialog = false
-            },
-            heading = "Daily Reading Goal"
-        )
+                    showPageJumpDialog = false
+                }
+            )
+
+        if (showGoalDialog)
+            DialogBox(
+                textFieldState = goalTextFieldState,
+                textFieldLabel = "Minutes",
+                onDismiss = { showGoalDialog = false },
+                confirmText = "Set Goal",
+                keyboardType = KeyboardType.Number,
+                dismissText = "Cancel",
+                onConfirm = {
+                    goalTextFieldState.text.toString()
+                        .toIntOrNull()
+                        ?.takeIf { it > 0 }
+                        ?.let { goal ->
+                            pdfViewerViewModel.setReadingGoal(bookId, goal)
+                        }
+
+                    showGoalDialog = false
+                },
+                heading = "Daily Reading Goal"
+            )
 
 
-    if (showTocSheet && outline != null)
-        TocBottomSheet(
-            outline!!,
-            currentPage,
-            onPageSelected = { jumpToPage = it; showTocSheet = false },
-            onDismiss = { showTocSheet = false }
-        )
-
+        if (showTocSheet && outline != null)
+            TocBottomSheet(
+                outline!!,
+                currentPage,
+                onPageSelected = { jumpToPage = it; showTocSheet = false },
+                onDismiss = { showTocSheet = false }
+            )
+    }
 }
 
 @Composable

@@ -2,6 +2,7 @@ package com.timepass.bookreader.ui.pdfviewer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.timepass.bookreader.UiEventManager
 import com.timepass.bookreader.data.repository.BookRepository
 import com.timepass.bookreader.ui.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -9,11 +10,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -29,7 +28,6 @@ data class ReadingSessionState(
     val totalPages: Int = 0,
     val sessionTimeSpent: Long = 0L,
     val dailyGoalMinutes: Int? = null,
-    /** Previously-saved reading time for TODAY only (not all-time). */
     val todayReadingTimeMs: Long = 0L
 )
 
@@ -44,22 +42,15 @@ class PdfViewerViewModel @Inject constructor(
     private val _currentPage = MutableStateFlow(0)
     val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
 
-    private val _uiEvent = Channel<UiEvent>()
-    val uiEvent = _uiEvent.receiveAsFlow()
-
     private fun showSnackbar(message: String) {
         viewModelScope.launch {
-            _uiEvent.send(UiEvent.ShowSnackbar(message))
+            UiEventManager.sendEvent(
+                UiEvent.ShowSnackbar(message)
+            )
         }
     }
-    /**
-     * Guards against endSession / endSessionBlocking being called concurrently from
-     * multiple paths (ON_STOP + onDispose + onCleared all within milliseconds of each
-     * other). compareAndSet(false, true) returns true exactly once.
-     */
-    private val isSaving = AtomicBoolean(false)
 
-    // ── Session management ────────────────────────────────────────────────────
+    private val isSaving = AtomicBoolean(false)
 
     fun startSession(bookId: Long, startPage: Int, totalPages: Int) {
         viewModelScope.launch {
@@ -145,14 +136,7 @@ class PdfViewerViewModel @Inject constructor(
             }
         }
     }
-    /**
-     * ASYNC save — call this from onDispose (normal back navigation).
-     *
-     * When the user presses Back, the process stays alive and the coroutine has
-     * time to complete, so async is fine and avoids blocking the main thread
-     * during navigation. Uses NonCancellable so a scope cancellation mid-flight
-     * doesn't leave a partial write.
-     */
+
     fun endSession() {
         if (!isSaving.compareAndSet(false, true)) return
         val state = _sessionState.value ?: run { isSaving.set(false); return }
@@ -202,10 +186,6 @@ class PdfViewerViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Called when midnight is detected mid-session by the timer loop.
-     * Persists the result for the ending day, then resets in-memory counters.
-     */
     fun onMidnightCrossed(prevDayStartMs: Long, minutesReadBeforeMidnight: Long) {
         val state = _sessionState.value ?: return
         val goalMinutes = state.dailyGoalMinutes ?: return
@@ -226,7 +206,6 @@ class PdfViewerViewModel @Inject constructor(
         _sessionState.value = state.copy(todayReadingTimeMs = 0L, sessionTimeSpent = 0L)
     }
 
-    // ── Goal helpers ──────────────────────────────────────────────────────────
 
     fun setReadingGoal(bookId: Long, dailyMinutes: Int) {
         viewModelScope.launch {
@@ -263,8 +242,6 @@ class PdfViewerViewModel @Inject constructor(
         super.onCleared()
         endSession()
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     fun todayStartMs(): Long = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, 0)

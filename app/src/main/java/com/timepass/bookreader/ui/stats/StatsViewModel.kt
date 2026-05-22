@@ -32,7 +32,6 @@ data class BookStatEntry(
         }
 }
 
-// FIX 2: Single data class to hold all three maps from one DB query
 data class MonthlyStats(
     val goalMap: Map<Int, Boolean>,
     val timeReadMap: Map<Int, Long>,

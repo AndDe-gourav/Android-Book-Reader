@@ -18,14 +18,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.timepass.bookreader.R
 import com.timepass.bookreader.data.entity.BookEntity
 
 @Composable
 fun BottomBar(
+    openPdf: (Long) -> Unit,
+    openStats: () -> Unit,
     libraryViewModel: LibraryViewModel,
-    navController: NavController,
     selectedBook: BookEntity?,
     modifier: Modifier = Modifier
 ) {
@@ -44,7 +44,7 @@ fun BottomBar(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.clickable {
-                    navController.navigate("StatsScreen")
+                    openStats()
                 },
             ) {
                 Icon(
@@ -62,7 +62,7 @@ fun BottomBar(
                 modifier = Modifier
                     .clickable {
                         selectedBook?.let { book ->
-                            navController.navigate("pdfReader/${book.bookId}")
+                            openPdf(book.bookId)
                         }
                     }
             ) {
@@ -79,7 +79,7 @@ fun BottomBar(
             }
             PdfSelection(
                 libraryViewModel = libraryViewModel,
-                navController = navController,
+                openPdf = openPdf
             )
         }
     }

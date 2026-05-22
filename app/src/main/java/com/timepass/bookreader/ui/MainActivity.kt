@@ -6,25 +6,26 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
+import androidx.compose.animation.togetherWith
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
+import com.timepass.bookreader.UiEventManager
+import com.timepass.bookreader.navigation.AboutBookScreen
+import com.timepass.bookreader.navigation.EditScreen
+import com.timepass.bookreader.navigation.HomeScreen
+import com.timepass.bookreader.navigation.PdfReader
+import com.timepass.bookreader.navigation.StatsScreen
 import com.timepass.bookreader.theme.BookReaderTheme
 import com.timepass.bookreader.ui.aboutbook.AboutBookScreen
 import com.timepass.bookreader.ui.aboutbook.EditScreen
@@ -56,19 +57,7 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             BookReaderTheme {
-                val snackbarHostState = remember { SnackbarHostState() }
-                Scaffold(
-                    snackbarHost = {
-                        SnackbarHost(
-                            hostState = snackbarHostState,
-                        )
-                    }
-                ) {innerPadding ->
-                    App(
-                        modifier = Modifier.padding(innerPadding),
-                        snackbarHostState = snackbarHostState,
-                    )
-                }
+                App()
             }
         }
     }
@@ -83,105 +72,98 @@ fun App(
     collectionViewModel: CollectionViewModel = hiltViewModel(),
     pdfViewerViewModel: PdfViewerViewModel = hiltViewModel(),
     statsViewModel: StatsViewModel = hiltViewModel(),
-    snackbarHostState: SnackbarHostState,
 ) {
-    val navController = rememberNavController()
+
+    val backStack = rememberNavBackStack(HomeScreen)
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
-        libraryViewModel.uiEvent.collect { event ->
-            if (event is UiEvent.ShowSnackbar) snackbarHostState.showSnackbar(event.message)
+        UiEventManager.events.collect { event ->
+            when (event) {
+                is UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message,
+                        actionLabel = event.actionLabel
+                    )
+                }
+            }
         }
     }
 
-    LaunchedEffect(Unit) {
-        bookStateViewModel.uiEvent.collect { event ->
-            if (event is UiEvent.ShowSnackbar) snackbarHostState.showSnackbar(event.message)
+    NavDisplay(
+        backStack = backStack,
+        transitionSpec = {
+            slideInHorizontally(
+                initialOffsetX = { it }
+            ) + fadeIn() togetherWith
+                    slideOutHorizontally(
+                        targetOffsetX = { -it / 4 }
+                    ) + fadeOut()
+        },
+        popTransitionSpec = {
+            slideInHorizontally(
+                initialOffsetX = { -it / 4 }
+            ) + fadeIn() togetherWith
+                    slideOutHorizontally(
+                        targetOffsetX = { it }
+                    ) + fadeOut()
+        },
+        entryProvider = entryProvider {
+            entry<HomeScreen> {
+                HomeScreen(
+                    snackbarHostState = snackbarHostState,
+                    openPdf = { bookId -> backStack.add(PdfReader(bookId)) },
+                    openStats = { backStack.add(StatsScreen) },
+                    openEdit = { backStack.add(EditScreen) },
+                    openAbout = { backStack.add(AboutBookScreen) },
+                    libraryViewModel = libraryViewModel,
+                    bookStateViewModel = bookStateViewModel,
+                    collectionViewModel = collectionViewModel,
+                    modifier = modifier
+                )
+            }
+
+            entry<StatsScreen> {
+                StatsScreen(
+                    snackbarHostState = snackbarHostState,
+                    onBack = { backStack.removeLastOrNull() },
+                    statsViewModel = statsViewModel,
+                    modifier = modifier
+                )
+            }
+
+            entry<EditScreen> {
+                EditScreen(
+                    snackbarHostState = snackbarHostState,
+                    onBack = { backStack.removeLastOrNull() },
+                    libraryViewModel = libraryViewModel,
+                    modifier = modifier
+                )
+            }
+
+            entry<AboutBookScreen> {
+                AboutBookScreen(
+                    snackbarHostState = snackbarHostState,
+                    onBack = { backStack.removeLastOrNull() },
+                    openPdf = { bookId -> backStack.add(PdfReader(bookId)) },
+                    openEdit = { backStack.add(EditScreen) },
+                    libraryViewModel = libraryViewModel,
+                    bookStateViewModel = bookStateViewModel,
+                    collectionViewModel = collectionViewModel,
+                    modifier = modifier
+                )
+            }
+
+            entry<PdfReader> { pdfReader ->
+                PdfReaderScreen(
+                    onBack = { backStack.removeLastOrNull() },
+                    bookId = pdfReader.bookId,
+                    libraryViewModel = libraryViewModel,
+                    bookStateViewModel = bookStateViewModel,
+                    pdfViewerViewModel = pdfViewerViewModel,
+                    modifier = modifier
+                )
+            }
         }
-    }
-
-    LaunchedEffect(Unit) {
-        collectionViewModel.uiEvent.collect { event ->
-            if (event is UiEvent.ShowSnackbar) snackbarHostState.showSnackbar(event.message)
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        pdfViewerViewModel.uiEvent.collect { event ->
-            if (event is UiEvent.ShowSnackbar) snackbarHostState.showSnackbar(event.message)
-        }
-    }
-
-    NavHost(
-        navController = navController,
-        startDestination = "homeScreen",
-        enterTransition = { slideInHorizontally( animationSpec = tween(300),
-            initialOffsetX = { fullWidth -> fullWidth  } )+ fadeIn(tween(200)) },
-        exitTransition = { slideOutHorizontally( animationSpec = tween(300),
-            targetOffsetX = { fullWidth -> -fullWidth } )+ fadeOut(tween(200)) },
-        popEnterTransition = { slideInHorizontally( animationSpec = tween(300),
-            initialOffsetX = { fullWidth -> -fullWidth  } ) + fadeIn(tween(200)) },
-        popExitTransition = { slideOutHorizontally( animationSpec = tween(300),
-            targetOffsetX = { fullWidth -> fullWidth } ) + fadeOut(tween(200)) },
-    ) {
-
-        composable(
-            route = "homeScreen",
-        ) {
-            HomeScreen(
-                navController = navController,
-                libraryViewModel = libraryViewModel,
-                bookStateViewModel = bookStateViewModel,
-                collectionViewModel = collectionViewModel,
-                modifier = modifier
-            )
-        }
-
-        composable(
-            route = "StatsScreen",
-        ) {
-            StatsScreen(
-                navController = navController,
-                statsViewModel = statsViewModel,
-                modifier = modifier
-            )
-        }
-
-        composable(
-            route = "EditScreen",
-        ) {
-            EditScreen(
-                navController = navController,
-                libraryViewModel = libraryViewModel,
-                modifier = modifier
-            )
-        }
-
-        composable(
-            route = "AboutBookScreen",
-        ) {
-            AboutBookScreen(
-                navController = navController,
-                libraryViewModel = libraryViewModel,
-                bookStateViewModel = bookStateViewModel,
-                collectionViewModel = collectionViewModel,
-                modifier = modifier
-            )
-        }
-
-        composable(
-            route = "pdfReader/{bookId}",
-            arguments = listOf(navArgument("bookId") { type = NavType.LongType }),
-        ) { backStackEntry ->
-            val bookId = backStackEntry.arguments?.getLong("bookId") ?: return@composable
-
-            PdfReaderScreen(
-                bookId = bookId,
-                navController = navController,
-                libraryViewModel = libraryViewModel,
-                bookStateViewModel = bookStateViewModel,
-                pdfViewerViewModel = pdfViewerViewModel,
-                modifier = modifier
-            )
-        }
-    }
+    )
 }

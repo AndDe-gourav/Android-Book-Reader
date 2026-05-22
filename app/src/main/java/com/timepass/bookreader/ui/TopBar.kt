@@ -15,10 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.timepass.bookreader.R
-import com.timepass.bookreader.theme.BookReaderTheme
 
 @Composable
 fun TopBar(
@@ -54,17 +51,5 @@ fun TopBar(
                 modifier = Modifier.fillMaxWidth()
             )
         }
-    }
-}
-
-@Preview
-@Composable
-private fun TopBarPreview() {
-    BookReaderTheme {
-        TopBar(
-            onActionClicked = {},
-            titleText = "Home",
-            icon = R.drawable.arrow_back_24dp_000000_fill0_wght300_grad0_opsz24
-        )
     }
 }

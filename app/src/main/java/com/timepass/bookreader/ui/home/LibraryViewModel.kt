@@ -7,6 +7,7 @@ import android.os.Build
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.timepass.bookreader.UiEventManager
 import com.timepass.bookreader.data.entity.BookEntity
 import com.timepass.bookreader.data.repository.BookRepository
 import com.timepass.bookreader.ui.UiEvent
@@ -38,7 +39,6 @@ class LibraryViewModel @Inject constructor(
     init {
         restoreLastOpenedBook()
     }
-    // All books from the library - automatically updates when books are added/removed
     val allBooks: StateFlow<List<BookEntity>> = repository.getLibrary()
         .stateIn(
             scope = viewModelScope,
@@ -46,29 +46,12 @@ class LibraryViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    // Currently selected book for reading
     private val _selectedBook = MutableStateFlow<BookEntity?>(null)
     val selectedBook: StateFlow<BookEntity?> = _selectedBook.asStateFlow()
 
-    // Current shelf being viewed
     private val _currentBookShelf = MutableStateFlow<BookShelfType>(BookShelfType.Recent)
     val currentBookShelf: StateFlow<BookShelfType> = _currentBookShelf.asStateFlow()
 
-    // UI state for snackbar messages
-    private val _uiEvent = Channel<UiEvent>()
-    val uiEvent = _uiEvent.receiveAsFlow()
-
-    private fun showSnackbar(message: String) {
-        viewModelScope.launch {
-            _uiEvent.send(UiEvent.ShowSnackbar(message))
-        }
-    }
-
-    /**
-     *
-     * Add a new book to the library
-     * UI will automatically update via allBooks Flow
-     */
     suspend fun addBook(
         title: String,
         author: String?,
@@ -96,17 +79,10 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Select a book for reading
-     */
     fun selectBook(book: BookEntity) {
         _selectedBook.value = book
     }
 
-
-    /**
-     * Change the current bookshelf view
-     */
     fun changeBookShelf(shelfType: BookShelfType) {
         _currentBookShelf.value = shelfType
     }
@@ -135,10 +111,6 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Delete a book from library
-     * UI will automatically update via allBooks Flow
-     */
     fun deleteBook(bookId: Long) {
         viewModelScope.launch {
             try {
@@ -151,9 +123,6 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Open PDF input stream
-     */
     fun openPdf(bookId: Long): InputStream? {
         return try {
             repository.openPdf(bookId)
@@ -195,5 +164,13 @@ class LibraryViewModel @Inject constructor(
         }
 
         context.startActivity(Intent.createChooser(intent, "Send Feedback via..."))
+    }
+
+    private fun showSnackbar(message: String) {
+        viewModelScope.launch {
+            UiEventManager.sendEvent(
+                UiEvent.ShowSnackbar(message)
+            )
+        }
     }
 }

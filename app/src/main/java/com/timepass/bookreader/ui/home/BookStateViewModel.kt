@@ -2,17 +2,16 @@ package com.timepass.bookreader.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.timepass.bookreader.UiEventManager
 import com.timepass.bookreader.data.entity.BookEntity
 import com.timepass.bookreader.data.entity.BookStateEntity
 import com.timepass.bookreader.data.entity.ReadingStatus
 import com.timepass.bookreader.data.repository.BookRepository
 import com.timepass.bookreader.ui.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -22,17 +21,13 @@ class BookStateViewModel @Inject constructor(
     private val repository: BookRepository
 ) : ViewModel() {
 
-    // 1. UI Event Channel
-    private val _uiEvent = Channel<UiEvent>()
-    val uiEvent = _uiEvent.receiveAsFlow()
-
-    // 2. Helper function
     private fun showSnackbar(message: String) {
         viewModelScope.launch {
-            _uiEvent.send(UiEvent.ShowSnackbar(message))
+            UiEventManager.sendEvent(
+                UiEvent.ShowSnackbar(message)
+            )
         }
     }
-
     val favoriteBooks: StateFlow<List<BookEntity>> = repository.getFavoriteBooks()
         .stateIn(
             scope = viewModelScope,

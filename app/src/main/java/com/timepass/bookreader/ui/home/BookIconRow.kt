@@ -37,7 +37,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import androidx.navigation.NavController
 import com.timepass.bookreader.R
 import com.timepass.bookreader.data.entity.BookEntity
 import com.timepass.bookreader.data.entity.BookStateEntity
@@ -46,10 +45,10 @@ import com.timepass.bookreader.ui.pdfviewer.DialogBox
 
 @Composable
 fun BookStatusIconRow(
+    openEdit: () -> Unit,
     selectedBook: BookEntity?,
     bookStateViewModel: BookStateViewModel,
     collectionViewModel: CollectionViewModel,
-    navController: NavController,
     modifier: Modifier = Modifier,
     onBookDeleted: () -> Unit = {},
 ) {
@@ -134,8 +133,8 @@ fun BookStatusIconRow(
         )
 
         OptionsDropDownMenu(
+            openEdit = openEdit,
             selectedBook = selectedBook,
-            navController = navController,
             onBookDeleted = onBookDeleted
         )
     }
@@ -286,8 +285,8 @@ fun Button(
 
 @Composable
 fun OptionsDropDownMenu(
+    openEdit: () -> Unit,
     selectedBook: BookEntity?,
-    navController: NavController,
     onBookDeleted: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -312,7 +311,7 @@ fun OptionsDropDownMenu(
             DropdownMenuItem(
                 text = { Text("Edit", style = MaterialTheme.typography.bodyLarge) },
                 onClick = {
-                    navController.navigate("EditScreen")
+                    openEdit()
                     expanded = false
                 },
             )

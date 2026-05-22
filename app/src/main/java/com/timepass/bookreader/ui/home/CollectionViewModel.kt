@@ -2,17 +2,16 @@ package com.timepass.bookreader.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.timepass.bookreader.UiEventManager
 import com.timepass.bookreader.data.entity.CollectionEntity
 import com.timepass.bookreader.data.entity.CollectionWithBooks
 import com.timepass.bookreader.data.repository.BookRepository
 import com.timepass.bookreader.ui.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -22,14 +21,11 @@ class CollectionViewModel @Inject constructor(
     private val repository: BookRepository
 ) : ViewModel() {
 
-    // 1. Define the Channel for UI Events
-    private val _uiEvent = Channel<UiEvent>()
-    val uiEvent = _uiEvent.receiveAsFlow()
-
-    // 2. Helper function to send snackbar messages
     private fun showSnackbar(message: String) {
         viewModelScope.launch {
-            _uiEvent.send(UiEvent.ShowSnackbar(message))
+            UiEventManager.sendEvent(
+                UiEvent.ShowSnackbar(message)
+            )
         }
     }
 
