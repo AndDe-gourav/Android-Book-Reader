@@ -10,9 +10,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,8 +25,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.timepass.bookreader.R
-import com.timepass.bookreader.ui.TopBar
 import com.timepass.bookreader.ui.home.LibraryViewModel
 import com.timepass.bookreader.ui.pdfviewer.DialogBox
 import kotlinx.coroutines.delay
@@ -42,7 +37,6 @@ enum class EditField {
 @Composable
 fun EditScreen(
     onBack: () -> Unit,
-    snackbarHostState: SnackbarHostState,
     libraryViewModel: LibraryViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -52,49 +46,31 @@ fun EditScreen(
     var editingField by remember { mutableStateOf<EditField?>(null) }
     var editValue by remember { mutableStateOf("") }
 
-    Scaffold(
-        topBar = {
-            TopBar(
-                titleText = "Edit Book",
-                onActionClicked = { onBack() },
-                icon = R.drawable.arrow_back_24dp_000000_fill0_wght300_grad0_opsz24
-            )
-        },
-        snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-            )
-        },
+    LazyColumn(
         modifier = modifier
-    ) { paddingValues ->
+            .fillMaxSize()
+    ) {
+        item {
+            selectedBook?.title?.let { title ->
+                EditCell(
+                    titleText = title,
+                    cellName = "Title",
+                    onCellClicked = {
+                        editValue = title
+                        editingField = EditField.TITLE
+                    }
+                )
+            }
 
-        LazyColumn(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize()
-        ) {
-            item {
-                selectedBook?.title?.let { title ->
-                    EditCell(
-                        titleText = title,
-                        cellName = "Title",
-                        onCellClicked = {
-                            editValue = title
-                            editingField = EditField.TITLE
-                        }
-                    )
-                }
-
-                selectedBook?.author?.let { author ->
-                    EditCell(
-                        titleText = author,
-                        cellName = "Author",
-                        onCellClicked = {
-                            editValue = author
-                            editingField = EditField.AUTHOR
-                        }
-                    )
-                }
+            selectedBook?.author?.let { author ->
+                EditCell(
+                    titleText = author,
+                    cellName = "Author",
+                    onCellClicked = {
+                        editValue = author
+                        editingField = EditField.AUTHOR
+                    }
+                )
             }
         }
     }

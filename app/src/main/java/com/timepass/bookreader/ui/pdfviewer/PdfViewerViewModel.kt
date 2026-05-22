@@ -70,7 +70,6 @@ class PdfViewerViewModel @Inject constructor(
                 todayReadingTimeMs = todayTime
             )
             _currentPage.value = startPage
-            // Reset the save guard each time a new session begins.
             isSaving.set(false)
         }
     }

@@ -25,12 +25,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,7 +49,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil.compose.rememberAsyncImagePainter
 import com.timepass.bookreader.R
-import com.timepass.bookreader.ui.TopBar
 import com.timepass.bookreader.ui.home.ProgressBar
 import java.io.File
 import java.time.LocalDate
@@ -62,11 +57,9 @@ import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
     onBack: () -> Unit,
-    snackbarHostState: SnackbarHostState,
     statsViewModel: StatsViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -75,78 +68,60 @@ fun StatsScreen(
     val booksWithStats by statsViewModel.booksWithStats.collectAsState()
     val isLoading by statsViewModel.isLoading.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopBar(
-                titleText = "Stats",
-                onActionClicked = { onBack() },
-                icon = R.drawable.arrow_back_24dp_000000_fill0_wght300_grad0_opsz24
-            )
-        },
-        snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-            )
-        },
-        modifier = modifier
-    ) { innerPadding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .zIndex(0f)
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                item {
-                    if (booksWithStats.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = "No reading goals set yet",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.inverseSurface,
-                                    textAlign = TextAlign.Center
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "Set a daily reading goal while reading a book\nto track your progress here.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 32.dp)
-                                )
-                            }
+    if (isLoading) {
+        Box(
+            modifier = modifier
+                .fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    } else {
+        LazyColumn(
+            contentPadding = PaddingValues(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = modifier
+                .zIndex(0f)
+                .fillMaxSize()
+        ) {
+            item {
+                if (booksWithStats.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "No reading goals set yet",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.inverseSurface,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Set a daily reading goal while reading a book\nto track your progress here.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 32.dp)
+                            )
                         }
                     }
                 }
-
-                itemsIndexed(items = booksWithStats) { index, entry ->
-                    BookStatCard(
-                        entry = entry,
-                        isExpanded = expandedItemIndex == index,
-                        statsViewModel = statsViewModel,
-                        onToggleExpand = {
-                            expandedItemIndex = if (expandedItemIndex == index) null else index
-                        }
-                    )
-                }
-
-                item { Spacer(modifier = Modifier.height(100.dp)) }
             }
+
+            itemsIndexed(items = booksWithStats) { index, entry ->
+                BookStatCard(
+                    entry = entry,
+                    isExpanded = expandedItemIndex == index,
+                    statsViewModel = statsViewModel,
+                    onToggleExpand = {
+                        expandedItemIndex = if (expandedItemIndex == index) null else index
+                    }
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(100.dp)) }
         }
     }
 }

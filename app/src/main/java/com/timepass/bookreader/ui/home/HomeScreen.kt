@@ -27,9 +27,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +47,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
 import com.timepass.bookreader.R
 import com.timepass.bookreader.ui.TopBar
@@ -64,7 +60,6 @@ fun HomeScreen(
     openStats: () -> Unit,
     openAbout: () -> Unit,
     openEdit: () -> Unit,
-    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     libraryViewModel: LibraryViewModel,
     bookStateViewModel: BookStateViewModel,
@@ -99,90 +94,65 @@ fun HomeScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            GeneralDrawerTopBar(
-                text = "Home",
-                libraryViewModel = libraryViewModel,
-                modifier = Modifier.zIndex(1f)
-            )
-        },
-        snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-            )
-        },
-        bottomBar = {
-            BottomBar(
-                openPdf = openPdf,
-                openStats = openStats,
-                libraryViewModel = libraryViewModel,
+    LazyColumn(
+        modifier = modifier.fillMaxSize()
+    ) {
+        item {
+            CurrentlyReadingCard(
                 selectedBook = selectedBook,
+                bookStateViewModel = bookStateViewModel,
+                onBookClick = { book ->
+                    libraryViewModel.selectBook(book)
+                    openAbout()
+                },
             )
-        },
-        modifier = modifier,
-    ) { innerPadding ->
-        LazyColumn(
-            contentPadding = innerPadding,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            item {
-                CurrentlyReadingCard(
-                    selectedBook = selectedBook,
-                    bookStateViewModel = bookStateViewModel,
-                    onBookClick = { book ->
-                        libraryViewModel.selectBook(book)
-                        openAbout()
-                    },
-                )
-                BookStatusIconRow(
-                    openEdit = openEdit,
-                    selectedBook = selectedBook,
-                    bookStateViewModel = bookStateViewModel,
-                    collectionViewModel = collectionViewModel,
-                    onBookDeleted = {
-                        libraryViewModel.deleteBook(selectedBook?.bookId!!)
-                    },
-                )
-                HorizontalDivider(
-                    thickness = 0.5.dp,
-                    color = colorResource(id = R.color.progress_bar_front_color)
-                )
-            }
-
-            item {
-                ShelfNavigationSection(
-                    currentShelf = currentBookShelf,
-                    onShelfSelected = { shelfType ->
-                        libraryViewModel.changeBookShelf(shelfType)
-                    },
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            }
-
-            item {
-                if (currentBookShelf is BookShelfType.Collection) {
-                    CollectionShelfSection(
-                        collectionsWithBooks = collectionsWithBooks,
-                        onBookClick = { book -> libraryViewModel.selectBook(book) }
-                    )
-                } else {
-                    val booksToDisplay = when (currentBookShelf) {
-                        is BookShelfType.Recent -> recentBooks
-                        is BookShelfType.Favorites -> favoriteBooks
-                        is BookShelfType.ToRead -> toReadBooks
-                        is BookShelfType.Completed -> completedBooks
-                        else -> emptyList()
-                    }
-                    BookShelfSection(
-                        books = booksToDisplay,
-                        onBookClick = { book -> libraryViewModel.selectBook(book) },
-                    )
-                }
-            }
-
-            item { Spacer(modifier = Modifier.size(100.dp)) }
+            BookStatusIconRow(
+                openEdit = openEdit,
+                selectedBook = selectedBook,
+                bookStateViewModel = bookStateViewModel,
+                collectionViewModel = collectionViewModel,
+                onBookDeleted = {
+                    libraryViewModel.deleteBook(selectedBook?.bookId!!)
+                },
+            )
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = colorResource(id = R.color.progress_bar_front_color)
+            )
         }
+
+        item {
+            ShelfNavigationSection(
+                currentShelf = currentBookShelf,
+                onShelfSelected = { shelfType ->
+                    libraryViewModel.changeBookShelf(shelfType)
+                },
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
+        item {
+            if (currentBookShelf is BookShelfType.Collection) {
+                CollectionShelfSection(
+                    collectionsWithBooks = collectionsWithBooks,
+                    onBookClick = { book -> libraryViewModel.selectBook(book) }
+                )
+            } else {
+                val booksToDisplay = when (currentBookShelf) {
+                    is BookShelfType.Recent -> recentBooks
+                    is BookShelfType.Favorites -> favoriteBooks
+                    is BookShelfType.ToRead -> toReadBooks
+                    is BookShelfType.Completed -> completedBooks
+                    else -> emptyList()
+                }
+                BookShelfSection(
+                    books = booksToDisplay,
+                    onBookClick = { book -> libraryViewModel.selectBook(book) },
+                )
+            }
+        }
+
+        item { Spacer(modifier = Modifier.size(100.dp)) }
     }
 }
 
