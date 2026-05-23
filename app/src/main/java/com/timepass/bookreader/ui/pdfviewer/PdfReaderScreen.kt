@@ -414,6 +414,7 @@ fun PdfReaderScreen(
                                         icon = R.drawable.search_24dp_000000_fill0_wght300_grad0_opsz24,
                                         contentDescription = "search",
                                     )
+                                    if (outline != null)
                                     Button(
                                         isActive = showTocSheet,
                                         onClick = {
@@ -470,7 +471,6 @@ fun PdfReaderScreen(
                         }
                     }
                 }
-
             }
         }
     }
@@ -479,7 +479,7 @@ fun PdfReaderScreen(
     val goalTextFieldState = rememberTextFieldState()
 
     LaunchedEffect(currentPage) {
-        jumpTextFieldState.setTextAndPlaceCursorAtEnd(currentPage.toString())
+        jumpTextFieldState.setTextAndPlaceCursorAtEnd("")
     }
 
     LaunchedEffect(sessionState?.dailyGoalMinutes) {
@@ -502,7 +502,7 @@ fun PdfReaderScreen(
                     .toIntOrNull()
 
                 if (page != null && page in 1..totalPages) {
-                    jumpToPage = page
+                    jumpToPage = page - 1
                 }
 
                 showPageJumpDialog = false
@@ -864,7 +864,8 @@ fun DialogBox(
                     Box(
                         modifier = Modifier
                             .background(MaterialTheme.colorScheme.surface)
-                            .clickable{ onConfirm() }
+                            .clickable(
+                            ){ onConfirm() }
                     ) {
                         Text( text = confirmText, modifier = Modifier.padding(10.dp) )
                     }

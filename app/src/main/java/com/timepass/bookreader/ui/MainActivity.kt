@@ -192,7 +192,6 @@ fun App(
 
                 entry<StatsScreen> {
                     StatsScreen(
-                        onBack = { backStack.removeLastOrNull() },
                         statsViewModel = statsViewModel,
                         modifier = modifier.padding(innerPadding)
                     )

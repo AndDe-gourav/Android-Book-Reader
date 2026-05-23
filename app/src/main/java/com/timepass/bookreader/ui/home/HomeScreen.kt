@@ -14,18 +14,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -127,7 +122,7 @@ fun HomeScreen(
                 onShelfSelected = { shelfType ->
                     libraryViewModel.changeBookShelf(shelfType)
                 },
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(vertical = 10.dp)
             )
         }
 
@@ -151,8 +146,6 @@ fun HomeScreen(
                 )
             }
         }
-
-        item { Spacer(modifier = Modifier.size(100.dp)) }
     }
 }
 
@@ -334,75 +327,56 @@ fun InfoOptionsDialog(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp,
-            shadowElevation = 8.dp
+            color = MaterialTheme.colorScheme.background,
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                modifier = Modifier.fillMaxWidth().padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
                     text = "Options",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.inverseSurface,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
                 )
-
-                HorizontalDivider(thickness = 0.5.dp)
-
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onFeedbackClick() }
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                        .background(MaterialTheme.colorScheme.surface)
+                        .clickable { onFeedbackClick() },
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.star_24dp_000000_fill0_wght300_grad0_opsz24),
-                        contentDescription = "Feedback",
-                        tint = MaterialTheme.colorScheme.inverseSurface,
-                        modifier = Modifier.size(22.dp)
-                    )
                     Column(
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().padding(10.dp),
                     ) {
                         Text(
                             text = "Give Feedback",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Help us improve the app",
                             style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-
-                HorizontalDivider(thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
-
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onLicenseClick() }
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                        .background(MaterialTheme.colorScheme.surface)
+                        .clickable { onLicenseClick() },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Column {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(10.dp)
+                    ) {
                         Text(
                             text = "Open Source Licenses",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Third-party library notices",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -416,72 +390,23 @@ fun InfoOptionsDialog(
 @Composable
 fun LicenseScreen(onDismiss: () -> Unit) {
     val context = LocalContext.current
-
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(580.dp)
-        ) {
-            Column {
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.onBackground)
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Open Source Licenses",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.inverseSurface
-                    )
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                        Icon(
-                            painter = painterResource(id = android.R.drawable.ic_menu_close_clear_cancel),
-                            contentDescription = "Close",
-                            tint = MaterialTheme.colorScheme.inverseSurface,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                HorizontalDivider(thickness = 0.5.dp)
-
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    contentPadding = PaddingValues(vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
-
-                    item { MuPdfLicenseCard(context) }
-
-                }
-            }
-        }
+        MuPdfLicenseCard(context = context)
     }
 }
-
-
 
 @Composable
 fun MuPdfLicenseCard(context: Context) {
     var expanded by remember { mutableStateOf(false) }
 
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 4.dp,
-        shadowElevation = 2.dp,
+        color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-
+        Column(
+            modifier = Modifier.padding(15.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -491,41 +416,32 @@ fun MuPdfLicenseCard(context: Context) {
                     Text(
                         text = "MuPDF",
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Artifex Software, Inc.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        modifier = Modifier.padding(5.dp)
                     )
                 }
                 Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(20.dp)
+                    color = MaterialTheme.colorScheme.surface,
                 ) {
                     Text(
                         text = "AGPL-3.0",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        modifier = Modifier.padding(5.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
             Text(
                 text = "Used for rendering and displaying PDF documents within the app.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surface,
                     modifier = Modifier.clickable {
                         val intent = Intent(
                             Intent.ACTION_VIEW,
@@ -537,13 +453,11 @@ fun MuPdfLicenseCard(context: Context) {
                     Text(
                         text = "View Source",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        modifier = Modifier.padding(5.dp)
                     )
                 }
                 Surface(
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surface,
                     modifier = Modifier.clickable {
                         val intent = Intent(
                             Intent.ACTION_VIEW,
@@ -555,53 +469,32 @@ fun MuPdfLicenseCard(context: Context) {
                     Text(
                         text = "Artifex Licensing",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        modifier = Modifier.padding(5.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(thickness = 0.5.dp)
-            Spacer(modifier = Modifier.height(4.dp))
-
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = !expanded },
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "License Summary",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Icon(
-                    painter = painterResource(
-                        id = if (expanded) R.drawable.ad_group_24dp_000000_fill0_wght300_grad0_opsz24 else R.drawable.add_40dp_000000_fill0_wght300_grad0_opsz40
-                    ),
-                    contentDescription = if (expanded) "Collapse" else "Expand",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.padding(5.dp)
                 )
             }
-
-            if (expanded) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = MUPDF_LICENSE_SUMMARY,
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(10.dp),
-                        lineHeight = 15.sp
-                    )
-                }
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = MUPDF_LICENSE_SUMMARY,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                    modifier = Modifier.padding(5.dp)
+                )
             }
         }
     }
@@ -610,22 +503,22 @@ fun MuPdfLicenseCard(context: Context) {
 
 
 private val MUPDF_LICENSE_SUMMARY = """
-MuPDF is Copyright (C) 2006-2023 Artifex Software, Inc.
-Licensed under the GNU Affero General Public License, version 3 (AGPL-3.0).
+This application uses MuPDF by Artifex Software, Inc.
 
-This application uses MuPDF to render PDF documents. Under the AGPL-3.0:
+MuPDF is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 
-- You may use, study, share, and modify this software.
-- If you distribute this app (modified or unmodified), you must make the
-  complete corresponding source code available under the AGPL-3.0.
-- If you run a modified version of the software as a network service,
-  you must offer users the ability to receive the source code.
-- This application's source code is available at:
-  https://github.com/<your-repo-here>
+Under the AGPL, if you distribute this application or modified versions of MuPDF,
+you must make the complete corresponding source code available under the same license.
 
-The full AGPL-3.0 license text is available at:
+Source code for this application is available at:
+https://github.com/AndDe-gourav/Android-Book-Reader
+
+MuPDF source code:
+https://git.ghostscript.com/?p=mupdf.git
+
+Full AGPL-3.0 license:
 https://www.gnu.org/licenses/agpl-3.0.html
 
-For a commercial license that does not require open-source disclosure,
-contact Artifex Software at: https://artifex.com/licensing/
+Commercial licensing for MuPDF is available from Artifex Software:
+https://artifex.com/licensing/
 """.trimIndent()

@@ -176,7 +176,7 @@ fun AboutBookScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     val formate = book?.format ?: "not available"
-                    val creator = book?.creator ?: "not available"
+                    val creator = if (book?.creator != "") book?.creator ?: "not available" else "not available"
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

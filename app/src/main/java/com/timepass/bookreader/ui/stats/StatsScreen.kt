@@ -59,7 +59,6 @@ import java.util.Locale
 
 @Composable
 fun StatsScreen(
-    onBack: () -> Unit,
     statsViewModel: StatsViewModel,
     modifier: Modifier = Modifier
 ) {
@@ -93,17 +92,14 @@ fun StatsScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = "No reading goals set yet",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.inverseSurface,
+                                style = MaterialTheme.typography.titleMedium,
                                 textAlign = TextAlign.Center
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
                                 text = "Set a daily reading goal while reading a book\nto track your progress here.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyLarge,
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(horizontal = 32.dp)
                             )
                         }
                     }

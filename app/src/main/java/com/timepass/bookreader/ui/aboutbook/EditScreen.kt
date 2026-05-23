@@ -40,7 +40,6 @@ fun EditScreen(
     libraryViewModel: LibraryViewModel,
     modifier: Modifier = Modifier
 ) {
-
     val selectedBook by libraryViewModel.selectedBook.collectAsState()
 
     var editingField by remember { mutableStateOf<EditField?>(null) }
@@ -61,7 +60,6 @@ fun EditScreen(
                     }
                 )
             }
-
             selectedBook?.author?.let { author ->
                 EditCell(
                     titleText = author,
@@ -77,18 +75,25 @@ fun EditScreen(
 
     editingField?.let { field ->
 
+        val originalValue = when (field) {
+            EditField.TITLE -> selectedBook?.title.orEmpty()
+            EditField.AUTHOR -> selectedBook?.author.orEmpty()
+        }
+
         OnCellClicked(
             cellName = if (field == EditField.AUTHOR) "Author" else "Title",
             value = editValue,
             onValueChange = { editValue = it },
             onDismiss = { editingField = null },
             onSaveClicked = {
-                selectedBook?.let { book ->
-                    when (field) {
-                        EditField.TITLE ->
-                            libraryViewModel.updateBookTitle(book.bookId, editValue)
-                        EditField.AUTHOR ->
-                            libraryViewModel.updateBookAuthor(book.bookId, editValue)
+                if (editValue.trim() != originalValue.trim()) {
+                    selectedBook?.let { book ->
+                        when (field) {
+                            EditField.TITLE ->
+                                libraryViewModel.updateBookTitle(book.bookId, editValue)
+                            EditField.AUTHOR ->
+                                libraryViewModel.updateBookAuthor(book.bookId, editValue)
+                        }
                     }
                 }
                 editingField = null
@@ -164,11 +169,7 @@ fun OnCellClicked(
         confirmText = "Save",
         heading = cellName,
         onConfirm = {
-
-            onValueChange(
-                textFieldState.text.toString()
-            )
-
+            onValueChange( textFieldState.text.toString() )
             onSaveClicked()
         },
         textFieldState = textFieldState,

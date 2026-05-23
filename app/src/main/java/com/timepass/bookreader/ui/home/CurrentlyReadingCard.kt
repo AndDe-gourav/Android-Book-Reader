@@ -43,21 +43,21 @@ fun CurrentlyReadingCard(
     onBookClick: (BookEntity) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var bookState by remember {
-        mutableStateOf<BookStateEntity?>(
-            null
-        )
-    }
+    var bookState by remember { mutableStateOf<BookStateEntity?>( null ) }
 
     LaunchedEffect(selectedBook) {
-        selectedBook?.let {
-            bookState = bookStateViewModel.getBookState(it.bookId)
+        if (selectedBook != null) {
+            bookState = bookStateViewModel.getBookState(selectedBook.bookId)
+        } else {
+            bookState = null
         }
     }
 
     val targetProgress = remember(bookState, selectedBook) {
+        if (selectedBook == null || bookState == null) return@remember 0f
+
         val currentPage = bookState?.currentPage?.toFloat() ?: 0f
-        val totalPages = selectedBook?.totalPages?.toFloat() ?: 1f
+        val totalPages = selectedBook.totalPages.toFloat()
         if (totalPages > 0) (currentPage / totalPages).coerceIn(0f, 1f) else 0f
     }
 
@@ -68,8 +68,10 @@ fun CurrentlyReadingCard(
     )
 
     val percentage = remember(bookState, selectedBook) {
+        if (selectedBook == null || bookState == null) return@remember 0
+
         val currentPage = bookState?.currentPage ?: 0
-        val totalPages = selectedBook?.totalPages ?: 0
+        val totalPages = selectedBook.totalPages
         if (totalPages > 0) ((currentPage.toFloat() / totalPages.toFloat()) * 100).toInt() else 0
     }
 
@@ -142,18 +144,14 @@ fun ProgressBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(16.dp)
-                .background(
-                    color = backColor,
-                ),
+                .background( color = backColor ),
         )
         Box(
             modifier = Modifier
                 .height(16.dp)
                 .fillMaxWidth(value)
                 .padding(3.dp)
-                .background(
-                    color = frontColor,
-                ),
+                .background( color = frontColor ),
         )
     }
 }
