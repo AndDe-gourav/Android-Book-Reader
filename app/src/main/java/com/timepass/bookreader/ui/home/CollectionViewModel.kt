@@ -88,6 +88,17 @@ class CollectionViewModel @Inject constructor(
         }
     }
 
+    fun deleteCollection(collectionId: Long, name: String) {
+        viewModelScope.launch {
+            try {
+                repository.deleteCollection(collectionId)
+                showSnackbar("Collection '$name' deleted")
+            } catch (e: Exception) {
+                showSnackbar("Failed to remove collection")
+            }
+        }
+    }
+
     fun loadCollection(collectionId: Long) {
         viewModelScope.launch {
             try {

@@ -385,8 +385,6 @@ fun InfoOptionsDialog(
     }
 }
 
-
-
 @Composable
 fun LicenseScreen(onDismiss: () -> Unit) {
     val context = LocalContext.current
@@ -493,14 +491,12 @@ fun MuPdfLicenseCard(context: Context) {
                 Text(
                     text = MUPDF_LICENSE_SUMMARY,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                    modifier = Modifier.padding(5.dp)
+                    modifier = Modifier.padding(10.dp)
                 )
             }
         }
     }
 }
-
-
 
 private val MUPDF_LICENSE_SUMMARY = """
 This application uses MuPDF by Artifex Software, Inc.

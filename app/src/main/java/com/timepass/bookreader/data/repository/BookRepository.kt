@@ -129,6 +129,8 @@ class BookRepository @Inject constructor(
     suspend fun addBookToCollection(bookId: Long, collectionId: Long) = bookCollectionDao.addBookToCollection(BookCollectionCrossRef(bookId, collectionId))
     suspend fun removeBookFromCollection(bookId: Long, collectionId: Long) = bookCollectionDao.removeBookFromCollection(bookId, collectionId)
 
+    suspend fun deleteCollection(collectionId: Long) = collectionDao.deleteCollection(collectionId)
+
     // ==================== READING SESSION OPERATIONS ====================
 
     suspend fun saveSession(

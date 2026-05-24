@@ -111,21 +111,25 @@ class PdfViewerViewModel @Inject constructor(
                     val todayStart = todayStartMs()
                     val totalMsRead = repository.getReadingTimeBetween(
                         bookId = state.bookId,
-                        from   = todayStart,
-                        to     = todayStart + 86_400_000L
+                        from = todayStart,
+                        to = todayStart + 86_400_000L
                     )
                     val minutesReadToday = totalMsRead / 60_000L
 
-                    // ✅ ADD THIS — was missing, causing daily_goal_results to stay empty
                     repository.saveDailyGoalResult(
-                        bookId      = state.bookId,
-                        dayStartMs  = todayStart,
+                        bookId = state.bookId,
+                        dayStartMs = todayStart,
                         goalMinutes = goalMinutes,
                         minutesRead = minutesReadToday
                     )
 
-                    if (minutesReadToday >= goalMinutes) {
-                        showSnackbar("Daily reading goal achieved! 🎉")
+                    val previousMinutesRead = (totalMsRead - state.sessionTimeSpent) / 60_000L
+
+                    val wasGoalAlreadyMet = previousMinutesRead >= goalMinutes
+                    val isGoalNowMet = minutesReadToday >= goalMinutes
+
+                    if (!wasGoalAlreadyMet && isGoalNowMet) {
+                        showSnackbar("Daily reading goal achieved!")
                     }
                 }
             } catch (e: Exception) {
@@ -147,16 +151,16 @@ class PdfViewerViewModel @Inject constructor(
                     val endTime = System.currentTimeMillis()
 
                     repository.saveSession(
-                        bookId    = state.bookId,
+                        bookId = state.bookId,
                         startTime = state.startTime,
-                        endTime   = endTime,
+                        endTime = endTime,
                         startPage = state.startPage,
-                        endPage   = state.currentPage
+                        endPage = state.currentPage
                     )
 
                     repository.updateProgress(
-                        bookId     = state.bookId,
-                        page       = state.currentPage,
+                        bookId = state.bookId,
+                        page = state.currentPage,
                         totalPages = state.totalPages
                     )
 
@@ -165,13 +169,13 @@ class PdfViewerViewModel @Inject constructor(
                         val todayStart = todayStartMs()
                         val minutesReadToday = repository.getReadingTimeBetween(
                             bookId = state.bookId,
-                            from   = todayStart,
-                            to     = todayStart + 86_400_000L
+                            from = todayStart,
+                            to = todayStart + 86_400_000L
                         ) / 60_000L
 
                         repository.saveDailyGoalResult(
-                            bookId      = state.bookId,
-                            dayStartMs  = todayStart,
+                            bookId = state.bookId,
+                            dayStartMs = todayStart,
                             goalMinutes = goalMinutes,
                             minutesRead = minutesReadToday
                         )

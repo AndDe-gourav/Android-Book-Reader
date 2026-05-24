@@ -20,6 +20,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -40,6 +42,7 @@ import androidx.core.net.toUri
 import com.timepass.bookreader.R
 import com.timepass.bookreader.data.entity.BookEntity
 import com.timepass.bookreader.data.entity.BookStateEntity
+import com.timepass.bookreader.data.entity.CollectionWithBooks
 import com.timepass.bookreader.data.entity.ReadingStatus
 import com.timepass.bookreader.ui.pdfviewer.DialogBox
 
@@ -162,20 +165,19 @@ fun OnCollectionDialog(
 
     val collectionNameState = rememberTextFieldState()
 
+    var collectionToDelete by remember { mutableStateOf<CollectionWithBooks?>(null) }
+
     DialogBox(
         onDismiss = onDismiss,
         dismissText = "Done",
         confirmText = "Create",
         heading = "Collections",
         onConfirm = {
-
             val trimmed = collectionNameState.text
                 .toString()
                 .trim()
-
             if (trimmed.isNotBlank()) {
                 collectionViewModel.createCollection(trimmed)
-
                 collectionNameState.setTextAndPlaceCursorAtEnd("")
             }
         },
@@ -186,11 +188,8 @@ fun OnCollectionDialog(
             LazyColumn(
                 modifier = Modifier.heightIn(max = 300.dp)
             ) {
-
                 if (collectionsWithBooks.isEmpty()) {
-
                     item {
-
                         Text(
                             text = "No collections yet.",
                             style = MaterialTheme.typography.bodyMedium,
@@ -200,9 +199,7 @@ fun OnCollectionDialog(
                 }
 
                 else {
-
                     items(collectionsWithBooks) { cwb ->
-
                         val isInCollection =
                             selectedBook != null &&
                                     cwb.books.any {
@@ -213,9 +210,7 @@ fun OnCollectionDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-
                                     selectedBook?.let {
-
                                         collectionViewModel
                                             .toggleBookInCollection(
                                                 bookId = it.bookId,
@@ -225,7 +220,6 @@ fun OnCollectionDialog(
                                     }
                                 }
                                 .padding(vertical = 8.dp),
-
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -238,9 +232,7 @@ fun OnCollectionDialog(
                             Checkbox(
                                 checked = isInCollection,
                                 onCheckedChange = {
-
                                     selectedBook?.let { book ->
-
                                         collectionViewModel
                                             .toggleBookInCollection(
                                                 bookId = book.bookId,
@@ -250,6 +242,15 @@ fun OnCollectionDialog(
                                     }
                                 }
                             )
+                            IconButton(
+                                onClick = { collectionToDelete = cwb },
+                                shape = RectangleShape,
+                            ) {
+                                Icon(
+                                    painterResource(R.drawable.close_24dp_000000_fill0_wght300_grad0_opsz24),
+                                    "delete collection"
+                                )
+                            }
                         }
 
                         HorizontalDivider()
@@ -258,6 +259,41 @@ fun OnCollectionDialog(
             }
         }
     )
+
+    collectionToDelete?.let { targetCollection ->
+        DialogBox(
+            onDismiss = { collectionToDelete = null },
+            onConfirm = {
+                collectionViewModel.deleteCollection(
+                    collectionId = targetCollection.collection.collectionId,
+                    name = targetCollection.collection.name
+                )
+                collectionToDelete = null
+            },
+            heading = "Remove Collection",
+            dismissText = "Cancel",
+            confirmText = "Remove",
+            content = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        painter = painterResource(
+                            R.drawable.remove_selection_24dp_000000_fill0_wght300_grad0_opsz24
+                        ),
+                        contentDescription = "remove",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        text = "Are you sure you want to delete \"${targetCollection.collection.name}\" collection?",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        )
+    }
 }
 
 
