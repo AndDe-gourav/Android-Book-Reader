@@ -11,6 +11,7 @@ import com.timepass.bookreader.UiEventManager
 import com.timepass.bookreader.data.entity.BookEntity
 import com.timepass.bookreader.data.repository.BookRepository
 import com.timepass.bookreader.ui.UiEvent
+import com.timepass.bookreader.ui.pdfviewer.PdfUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,7 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.io.InputStream
 import javax.inject.Inject
 
 sealed class BookShelfType {
@@ -51,6 +51,39 @@ class LibraryViewModel @Inject constructor(
     private val _currentBookShelf = MutableStateFlow<BookShelfType>(BookShelfType.Recent)
     val currentBookShelf: StateFlow<BookShelfType> = _currentBookShelf.asStateFlow()
 
+    private val _pendingOpenBookId = MutableStateFlow<Long?>(null)
+    val pendingOpenBookId = _pendingOpenBookId
+
+    fun requestOpenBook(bookId: Long) {
+        _pendingOpenBookId.value = bookId
+    }
+
+    fun clearPendingOpenBook() {
+        _pendingOpenBookId.value = null
+    }
+
+    suspend fun importPdf( context: Context, uri: Uri ): Long {
+        try {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        } catch (_: Exception) {
+        }
+        val metadata = PdfUtil.extractPdfMetadata(context, uri)
+        return metadata?.let { meta ->
+            addBook(
+                title = meta.title,
+                author = meta.author,
+                uri = uri,
+                coverImagePath = meta.coverImagePath,
+                totalPages = meta.totalPages,
+                creator = meta.creator,
+                format = meta.format
+            )
+        } ?: -1L
+    }
+
     suspend fun addBook(
         title: String,
         author: String?,
@@ -70,11 +103,20 @@ class LibraryViewModel @Inject constructor(
                 coverImagePath,
                 totalPages,
             )
+            selectBookById(bookId)
             showSnackbar("Book added to library")
             bookId
         } catch (e: Exception) {
             showSnackbar("Failed to add book: ${e.message}")
             -1L
+        }
+    }
+
+    fun selectBookById(bookId: Long) {
+        viewModelScope.launch {
+            val book = allBooks.value.find { it.bookId == bookId }
+                ?: repository.getBookById(bookId)
+            _selectedBook.value = book
         }
     }
 
@@ -115,7 +157,6 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repository.updateBookTitle(bookId, newTitle)
-                restoreLastOpenedBook()
                 showSnackbar("Title updated")
             } catch (e: Exception) {
                 showSnackbar("Failed to update title")
@@ -127,7 +168,6 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repository.updateBookAuthor(bookId, newAuthor)
-                restoreLastOpenedBook()
                 showSnackbar("Author updated")
             } catch (e: Exception) {
                 showSnackbar("Failed to update author")
@@ -147,17 +187,6 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun openPdf(bookId: Long): InputStream? {
-        return try {
-            repository.openPdf(bookId)
-        } catch (e: Exception) {
-            showSnackbar("Failed to open PDF: ${e.message}")
-            null
-        }
-    }
-
-
-
     fun restoreLastOpenedBook() {
         viewModelScope.launch {
             val lastBook = repository.getLastOpenedBook()
@@ -165,6 +194,14 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    fun updateLastOpened(bookId: Long) {
+        viewModelScope.launch {
+            repository.updateLastOpened(
+                bookId,
+                System.currentTimeMillis()
+            )
+        }
+    }
 
     fun onFeedBackIconClicked(context: Context) {
         val deviceModel = Build.MODEL

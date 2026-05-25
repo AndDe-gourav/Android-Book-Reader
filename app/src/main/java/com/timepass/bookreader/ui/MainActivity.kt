@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -29,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
@@ -53,12 +55,17 @@ import com.timepass.bookreader.ui.pdfviewer.PdfViewerViewModel
 import com.timepass.bookreader.ui.stats.StatsScreen
 import com.timepass.bookreader.ui.stats.StatsViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    private val libraryViewModel: LibraryViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        handleIntent(intent)
 
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.light(
@@ -72,7 +79,31 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             BookReaderTheme {
-                App()
+                App(
+                    libraryViewModel = libraryViewModel,
+                )
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: android.content.Intent?) {
+
+        if (intent?.action == android.content.Intent.ACTION_VIEW) {
+            val uri = intent.data ?: return
+
+            lifecycleScope.launch {
+                val bookId = libraryViewModel.importPdf(
+                    this@MainActivity,
+                    uri
+                )
+                if (bookId != -1L) {
+                    libraryViewModel.requestOpenBook(bookId)
+                }
             }
         }
     }
@@ -82,7 +113,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun App(
     modifier: Modifier = Modifier,
-    libraryViewModel: LibraryViewModel = hiltViewModel(),
+    libraryViewModel: LibraryViewModel,
     bookStateViewModel: BookStateViewModel = hiltViewModel(),
     collectionViewModel: CollectionViewModel = hiltViewModel(),
     pdfViewerViewModel: PdfViewerViewModel = hiltViewModel(),
@@ -92,6 +123,8 @@ fun App(
     val backStack = rememberNavBackStack(HomeScreen)
     val snackbarHostState = remember { SnackbarHostState() }
     val selectedBook by libraryViewModel.selectedBook.collectAsState()
+
+    val pendingBookId by libraryViewModel.pendingOpenBookId.collectAsState()
 
     LaunchedEffect(Unit) {
         UiEventManager.events.collect { event ->
@@ -103,6 +136,14 @@ fun App(
                     )
                 }
             }
+        }
+    }
+
+    LaunchedEffect(pendingBookId) {
+        pendingBookId?.let { bookId ->
+            libraryViewModel.updateLastOpened(bookId)
+            backStack.add(PdfReader(bookId))
+            libraryViewModel.clearPendingOpenBook()
         }
     }
 
@@ -149,7 +190,9 @@ fun App(
         bottomBar = {
             if (backStack.lastOrNull() == HomeScreen)
             BottomBar(
-                openPdf = { bookId -> backStack.add(PdfReader(bookId)) },
+                openPdf = { bookId ->
+                    libraryViewModel.updateLastOpened(bookId)
+                    backStack.add(PdfReader(bookId)) },
                 openStats = { backStack.add(StatsScreen) },
                 libraryViewModel = libraryViewModel,
                 selectedBook = selectedBook,
@@ -179,7 +222,9 @@ fun App(
             entryProvider = entryProvider {
                 entry<HomeScreen> {
                     HomeScreen(
-                        openPdf = { bookId -> backStack.add(PdfReader(bookId)) },
+                        openPdf = { bookId ->
+                            libraryViewModel.updateLastOpened(bookId)
+                            backStack.add(PdfReader(bookId)) },
                         openStats = { backStack.add(StatsScreen) },
                         openEdit = { backStack.add(EditScreen) },
                         openAbout = { backStack.add(AboutBookScreen) },
@@ -208,7 +253,9 @@ fun App(
                 entry<AboutBookScreen> {
                     AboutBookScreen(
                         onBack = { backStack.removeLastOrNull() },
-                        openPdf = { bookId -> backStack.add(PdfReader(bookId)) },
+                        openPdf = { bookId ->
+                            libraryViewModel.updateLastOpened(bookId)
+                            backStack.add(PdfReader(bookId)) },
                         openEdit = { backStack.add(EditScreen) },
                         libraryViewModel = libraryViewModel,
                         bookStateViewModel = bookStateViewModel,

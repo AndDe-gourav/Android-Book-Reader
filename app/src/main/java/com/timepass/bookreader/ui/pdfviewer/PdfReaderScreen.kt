@@ -117,10 +117,10 @@ private fun buildTocTree(outline: List<OutlineActivity.Item>): List<TocNode> {
 private val ThemeList = PdfTheme.entries
 
 private fun PdfTheme.scaffoldBg(): Color = when (this) {
-    PdfTheme.NORMAL    -> Color(0xFFF5F5F5)
-    PdfTheme.SEPIA     -> Color(0xFFF4ECD8)
+    PdfTheme.NORMAL -> Color(0xFFF5F5F5)
+    PdfTheme.SEPIA -> Color(0xFFF4ECD8)
     PdfTheme.DARK_SEPIA -> Color(0xFF2B2016)
-    PdfTheme.NIGHT     -> Color(0xFF1A1A1A)
+    PdfTheme.NIGHT -> Color(0xFF1A1A1A)
 }
 
 
@@ -197,6 +197,8 @@ fun PdfReaderScreen(
                     if (savedPage > 0) jumpToPage = savedPage
                 }
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+
         } catch (e: Exception) {
             errorMessage = "Error loading PDF: ${e.message}"
         } finally {

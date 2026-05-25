@@ -2,7 +2,6 @@ package com.timepass.bookreader.ui.stats
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -12,10 +11,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -47,10 +48,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.AsyncImage
 import com.timepass.bookreader.R
 import com.timepass.bookreader.ui.home.ProgressBar
-import java.io.File
 import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
@@ -158,15 +158,14 @@ fun BookStatCard(
                 Surface(
                     color = MaterialTheme.colorScheme.surface,
                     modifier = Modifier
-                        .height(100.dp)
-                        .fillMaxWidth(0.2f)
+                        .width(70.dp)
+                        .aspectRatio(2f / 3f)
                 ) {
-                    Image(
-                        painter = rememberAsyncImagePainter(
-                            model = entry.book.coverImagePath?.let { File(it) }
-                        ),
-                        contentDescription = entry.book.title,
-                        contentScale = ContentScale.FillBounds
+                    AsyncImage(
+                        model = entry.book.coverImagePath,
+                        contentDescription = "Book Cover",
+                        contentScale = ContentScale.FillBounds,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
 

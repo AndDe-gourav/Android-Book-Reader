@@ -42,6 +42,7 @@ class PdfViewerViewModel @Inject constructor(
     private val _currentPage = MutableStateFlow(0)
     val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
 
+
     private fun showSnackbar(message: String) {
         viewModelScope.launch {
             UiEventManager.sendEvent(

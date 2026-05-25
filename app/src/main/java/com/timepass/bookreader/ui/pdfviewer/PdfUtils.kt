@@ -2,12 +2,10 @@ package com.timepass.bookreader.ui.pdfviewer
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.net.Uri
 import android.provider.OpenableColumns
 import com.artifex.mupdf.fitz.Document
 import com.artifex.mupdf.fitz.Matrix
-import com.artifex.mupdf.fitz.android.AndroidDrawDevice
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -17,147 +15,216 @@ object PdfUtil {
 
     private const val COVER_IMAGES_DIR = "book_covers"
 
-    suspend fun extractPdfMetadata(context: Context, uri: Uri): PdfMetadata? =
-        withContext(Dispatchers.IO) {
-            try {
-                context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    // Read the PDF into a byte array
-                    val bytes = inputStream.readBytes()
-                    // Open document from byte array
-                    val document = Document.openDocument(bytes, "application/pdf")
+    // Final saved cover width
+    private const val COVER_WIDTH = 500
 
-                    val title = document.getMetaData(Document.META_INFO_TITLE)
-                        ?.takeIf { it.isNotBlank() }
-                        ?: getFileNameFromUri(context, uri)
+    // Render at higher resolution for sharper quality
+    private const val RENDER_MULTIPLIER = 2f
 
-                    val author = document.getMetaData(Document.META_INFO_AUTHOR)
-                        ?.takeIf { it.isNotBlank() }
+    private const val JPEG_QUALITY = 90
 
-                    val creator = document.getMetaData(Document.META_INFO_CREATOR)
-                    val formate = document.getMetaData(Document.META_FORMAT)
-                    val pageCount = document.countPages()
-
-
-                    val coverPath = extractAndSaveCover(context, document, uri)
-
-                    document.destroy()
-
-                    PdfMetadata(
-                        title = title,
-                        author = author,
-                        creator = creator,
-                        format = formate,
-                        totalPages = pageCount,
-                        coverImagePath = coverPath
-                    )
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                PdfMetadata(
-                    title = getFileNameFromUri(context, uri),
-                    author = null,
-                    creator = null,
-                    format = null,
-                    totalPages = 0,
-                    coverImagePath = null
-                )
-            }
-        }
-
-    /**
-     * Extract cover and save to internal storage
-     */
-    /**
-     * Extract cover and save to internal storage
-     */
-    private suspend fun extractAndSaveCover(
+    suspend fun extractPdfMetadata(
         context: Context,
-        document: Document,
-        uri: Uri,
-        width: Int = 300
-    ): String? = withContext(Dispatchers.IO) {
+        uri: Uri
+    ): PdfMetadata? = withContext(Dispatchers.IO) {
+
         try {
-            if (document.countPages() == 0) return@withContext null
 
-            val page = document.loadPage(0)
-            val bounds = page.bounds
+            // Copy PDF to temp file instead of readBytes()
+            val tempFile = File.createTempFile(
+                "temp_pdf",
+                ".pdf",
+                context.cacheDir
+            )
 
-            // Calculate scale to fit desired width while maintaining aspect ratio
-            val scale = width / bounds.x1
-            val height = (bounds.y1 * scale).toInt()
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                tempFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
 
-            // Create bitmap with white background
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            bitmap.eraseColor(Color.WHITE) // Fill white BEFORE AndroidDrawDevice
+            val document = Document.openDocument(tempFile.absolutePath)
 
-            // Create matrix for scaling
-            val matrix = Matrix(scale)
+            val title = document.getMetaData(Document.META_INFO_TITLE)
+                ?.takeIf { it.isNotBlank() }
+                ?: getFileNameFromUri(context, uri)
 
-            // Render page to bitmap using AndroidDrawDevice
-            val device = AndroidDrawDevice(bitmap)
-            page.run(device, matrix, null)
-            device.close()
-            device.destroy()
-            page.destroy()
+            val author = document.getMetaData(Document.META_INFO_AUTHOR)
+                ?.takeIf { it.isNotBlank() }
 
-            // Save bitmap to file
-            val savedPath = saveCoverToFile(context, bitmap, uri)
-            bitmap.recycle() // Free memory
+            val creator = document.getMetaData(Document.META_INFO_CREATOR)
 
-            savedPath
+            val format = document.getMetaData(Document.META_FORMAT)
+
+            val pageCount = document.countPages()
+
+            val coverPath = extractAndSaveCover(
+                context = context,
+                document = document,
+                uri = uri
+            )
+
+            document.destroy()
+
+            tempFile.delete()
+
+            PdfMetadata(
+                title = title,
+                author = author,
+                creator = creator,
+                format = format,
+                totalPages = pageCount,
+                coverImagePath = coverPath
+            )
+
         } catch (e: Exception) {
             e.printStackTrace()
-            null
+
+            PdfMetadata(
+                title = getFileNameFromUri(context, uri),
+                author = null,
+                creator = null,
+                format = null,
+                totalPages = 0,
+                coverImagePath = null
+            )
         }
     }
 
-    /**
-     * Save cover bitmap to internal storage
-     */
-    private fun saveCoverToFile(context: Context, bitmap: Bitmap, uri: Uri): String? {
-        return try {
-            // Create covers directory if it doesn't exist
+    private suspend fun extractAndSaveCover(
+        context: Context,
+        document: Document,
+        uri: Uri
+    ): String? = withContext(Dispatchers.IO) {
+
+        try {
+
+            if (document.countPages() == 0) {
+                return@withContext null
+            }
+
             val coversDir = File(context.filesDir, COVER_IMAGES_DIR)
+
             if (!coversDir.exists()) {
                 coversDir.mkdirs()
             }
 
-            // Create unique filename based on URI
             val fileName = "cover_${uri.hashCode()}.jpg"
-            val file = File(coversDir, fileName)
 
-            // Save bitmap as JPEG
-            FileOutputStream(file).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+            val outputFile = File(coversDir, fileName)
+
+            // Return cached cover
+            if (outputFile.exists()) {
+                return@withContext outputFile.absolutePath
             }
 
-            file.absolutePath
+            val page = document.loadPage(0)
+
+            val bounds = page.bounds
+
+            // Final display width
+            val targetWidth = COVER_WIDTH
+
+            // Render larger internally for sharper result
+            val renderWidth = (targetWidth * RENDER_MULTIPLIER).toInt()
+
+            val scale = renderWidth / bounds.x1
+
+            val renderHeight = (bounds.y1 * scale).toInt()
+
+            // High-resolution render bitmap
+            val renderBitmap = Bitmap.createBitmap(
+                renderWidth,
+                renderHeight,
+                Bitmap.Config.ARGB_8888
+            )
+
+            // White background
+            renderBitmap.eraseColor(android.graphics.Color.WHITE)
+
+            val matrix = Matrix(scale)
+
+            val device = com.artifex.mupdf.fitz.android.AndroidDrawDevice(
+                renderBitmap
+            )
+
+            page.run(device, matrix, null)
+
+            device.close()
+            device.destroy()
+
+            page.destroy()
+
+            // Final downscaled bitmap
+            val finalHeight = (
+                    renderBitmap.height *
+                            (targetWidth.toFloat() / renderBitmap.width)
+                    ).toInt()
+
+            val finalBitmap = Bitmap.createScaledBitmap(
+                renderBitmap,
+                targetWidth,
+                finalHeight,
+                true
+            )
+
+            renderBitmap.recycle()
+
+            // Save JPEG
+            FileOutputStream(outputFile).use { out ->
+                finalBitmap.compress(
+                    Bitmap.CompressFormat.JPEG,
+                    JPEG_QUALITY,
+                    out
+                )
+            }
+
+            finalBitmap.recycle()
+
+            outputFile.absolutePath
+
         } catch (e: Exception) {
             e.printStackTrace()
             null
         }
     }
 
-
     /**
      * Get file name from URI
      */
-    private fun getFileNameFromUri(context: Context, uri: Uri): String {
+    private fun getFileNameFromUri(
+        context: Context,
+        uri: Uri
+    ): String {
+
         return try {
-            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+
+            context.contentResolver.query(
+                uri,
+                null,
+                null,
+                null,
+                null
+            )?.use { cursor ->
+
+                val nameIndex =
+                    cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+
                 cursor.moveToFirst()
+
                 cursor.getString(nameIndex)
+
             } ?: uri.lastPathSegment ?: "Unknown"
+
         } catch (e: Exception) {
+
             e.printStackTrace()
+
             uri.lastPathSegment ?: "Unknown"
         }
     }
 }
-/**
- * Data class to hold PDF metadata
- */
+
 data class PdfMetadata(
     val title: String,
     val author: String?,

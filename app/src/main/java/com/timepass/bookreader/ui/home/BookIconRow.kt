@@ -151,7 +151,6 @@ fun BookStatusIconRow(
     }
 }
 
-
 @Composable
 fun OnCollectionDialog(
     selectedBook: BookEntity?,

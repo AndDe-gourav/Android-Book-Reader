@@ -1,8 +1,6 @@
 package com.timepass.bookreader.data.repository
 
-import android.content.Context
 import android.net.Uri
-import androidx.core.net.toUri
 import com.timepass.bookreader.data.dao.BookCollectionDao
 import com.timepass.bookreader.data.dao.BookDao
 import com.timepass.bookreader.data.dao.BookStateDao
@@ -19,11 +17,7 @@ import com.timepass.bookreader.data.entity.DailyGoalResultEntity
 import com.timepass.bookreader.data.entity.ReadingGoalEntity
 import com.timepass.bookreader.data.entity.ReadingSessionEntity
 import com.timepass.bookreader.data.entity.ReadingStatus
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.runBlocking
-import java.io.FileNotFoundException
-import java.io.InputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -36,7 +30,6 @@ class BookRepository @Inject constructor(
     private val sessionDao: ReadingSessionDao,
     private val goalDao: ReadingGoalDao,
     private val dailyGoalResultDao: DailyGoalResultDao,
-    @ApplicationContext private val context: Context
 ) {
     fun getLibrary(): Flow<List<BookEntity>> = bookDao.getAllBooks()
     suspend fun addBook(
@@ -63,22 +56,13 @@ class BookRepository @Inject constructor(
         return bookId
     }
 
-    suspend fun getBookById(bookId: Long): BookEntity? = bookDao.getBookById(bookId)
-
     suspend fun deleteBook(bookId: Long) = bookDao.deleteBook(bookId)
 
-    fun openPdf(bookId: Long): InputStream {
-        val book = runBlocking { bookDao.getBookById(bookId) }
-            ?: throw IllegalStateException("Book not found")
-        return context.contentResolver.openInputStream(book.uri.toUri())
-            ?: throw FileNotFoundException()
-    }
+    suspend fun getBookById(bookId: Long): BookEntity? { return bookDao.getBookById(bookId) }
 
     suspend fun getLastOpenedBook(): BookEntity? = bookDao.getLastOpenedBook()
     suspend fun updateBookTitle(bookId: Long, title: String) = bookDao.updateBookTitle(bookId, title)
     suspend fun updateBookAuthor(bookId: Long, author: String) = bookDao.updateBookAuthor(bookId, author)
-
-    // ==================== BOOK STATE OPERATIONS ====================
 
     suspend fun getBookState(bookId: Long): BookStateEntity? = bookStateDao.getState(bookId)
     fun observeBookState(bookId: Long): Flow<BookStateEntity?> = bookStateDao.observeState(bookId)
@@ -86,6 +70,10 @@ class BookRepository @Inject constructor(
     suspend fun updateProgress(bookId: Long, page: Int, totalPages: Int) {
         val status = if (page >= totalPages - 1) ReadingStatus.COMPLETED else ReadingStatus.READING
         bookStateDao.updateProgress(bookId, page, status)
+    }
+
+    suspend fun updateLastOpened( bookId: Long, time: Long ) {
+        bookDao.updateLastOpened(bookId, time)
     }
 
     suspend fun updateBookState(

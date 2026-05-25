@@ -6,7 +6,6 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.timepass.bookreader.data.entity.BookEntity
-import com.timepass.bookreader.data.entity.BookWithState
 import com.timepass.bookreader.data.entity.ReadingStatus
 import kotlinx.coroutines.flow.Flow
 
@@ -16,21 +15,15 @@ interface BookDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertBook(book: BookEntity): Long
 
-    @Query("SELECT * FROM books ORDER BY addedAt DESC")
+    @Query("SELECT * FROM books ORDER BY lastOpenedAt DESC")
     fun getAllBooks(): Flow<List<BookEntity>>
 
-    @Query("SELECT * FROM books WHERE bookId = :bookId")
+    @Query("SELECT * FROM books WHERE bookId = :bookId LIMIT 1")
     suspend fun getBookById(bookId: Long): BookEntity?
 
     @Query("DELETE FROM books WHERE bookId = :bookId")
     suspend fun deleteBook(bookId: Long)
 
-    // NEW: Get all books with their states as Flow
-    @Transaction
-    @Query("SELECT * FROM books ORDER BY addedAt DESC")
-    fun getAllBooksWithState(): Flow<List<BookWithState>>
-
-    // NEW: Get books by status with reactive Flow
     @Transaction
     @Query("""
         SELECT * FROM books 
@@ -41,7 +34,6 @@ interface BookDao {
     """)
     fun getBooksByStatus(status: ReadingStatus): Flow<List<BookEntity>>
 
-    // NEW: Get favorite books with reactive Flow
     @Transaction
     @Query("""
         SELECT * FROM books 
@@ -52,7 +44,6 @@ interface BookDao {
     """)
     fun getFavoriteBooks(): Flow<List<BookEntity>>
 
-    // NEW: Get recent books with reactive Flow
     @Query("SELECT * FROM books ORDER BY lastOpenedAt DESC LIMIT :limit")
     fun getRecentBooks(limit: Int): Flow<List<BookEntity>>
 
@@ -62,6 +53,16 @@ interface BookDao {
     LIMIT 1
 """)
     suspend fun getLastOpenedBook(): BookEntity?
+
+    @Query("""
+    UPDATE books
+    SET lastOpenedAt = :time
+    WHERE bookId = :bookId
+""")
+    suspend fun updateLastOpened(
+        bookId: Long,
+        time: Long
+    )
 
     @Query("""
         UPDATE books

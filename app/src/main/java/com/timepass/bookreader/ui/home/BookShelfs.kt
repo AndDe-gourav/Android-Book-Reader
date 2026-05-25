@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.timepass.bookreader.R
 import com.timepass.bookreader.data.entity.BookEntity
@@ -64,15 +66,13 @@ fun BookShelfSection(
                         Surface(
                             color = MaterialTheme.colorScheme.surface,
                             modifier = Modifier
-                                .height(110.dp)
                                 .width(70.dp)
+                                .aspectRatio(2f / 3f)
                                 .clickable { onBookClick(book) }
                         ) {
-                            Image(
-                                painter = rememberAsyncImagePainter(
-                                    model = book.coverImagePath?.let { File(it) }
-                                ),
-                                contentDescription = "Shelf Book",
+                            AsyncImage(
+                                model = book.coverImagePath,
+                                contentDescription = "Book Cover",
                                 contentScale = ContentScale.FillBounds,
                                 modifier = Modifier.fillMaxSize()
                             )
