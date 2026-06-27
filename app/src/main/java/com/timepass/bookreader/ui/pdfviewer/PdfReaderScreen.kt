@@ -186,10 +186,10 @@ fun PdfReaderScreen(
                 val fileSize: Long = try {
                     context.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: -1L
                 } catch (_: Exception) { -1L }
-                val stream     = ContentInputStream(context.contentResolver, uri, fileSize)
-                val mupdfCore  = MuPDFCore(stream, "application/pdf")
-                val pages      = mupdfCore.countPages()
-                val toc        = if (mupdfCore.hasOutline()) mupdfCore.getOutline() else null
+                val stream = ContentInputStream(context.contentResolver, uri, fileSize)
+                val mupdfCore = MuPDFCore(stream, "application/pdf")
+                val pages = mupdfCore.countPages()
+                val toc = if (mupdfCore.hasOutline()) mupdfCore.getOutline() else null
                 withContext(Dispatchers.Main) {
                     core = mupdfCore; totalPages = pages; outline = toc
                     val savedPage = bookStateViewModel.getBookState(bookId)?.currentPage ?: 0
@@ -566,9 +566,7 @@ fun ThemeSelector(
             Surface(
                 border = BorderStroke(2.dp, Color.White),
                 onClick = {  onThemeSelected(theme)  },
-                shape = RoundedCornerShape(8.dp),
                 color = bgColor,
-                shadowElevation = 4.dp,
                 modifier = Modifier
                     .padding(5.dp)
                     .size(50.dp)
