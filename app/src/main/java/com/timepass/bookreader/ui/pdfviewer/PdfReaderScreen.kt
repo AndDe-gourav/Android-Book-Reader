@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -78,6 +77,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.artifex.mupdf.fitz.PDFAnnotation.TYPE_SQUARE
 import com.artifex.mupdf.viewer.ContentInputStream
 import com.artifex.mupdf.viewer.MuPDFCore
 import com.artifex.mupdf.viewer.OutlineActivity
@@ -196,6 +196,8 @@ fun PdfReaderScreen(
                     pdfViewerViewModel.startSession(bookId, savedPage, pages)
                     if (savedPage > 0) jumpToPage = savedPage
                 }
+                val pdfPage = mupdfCore.getPage(1)
+                val annotation = pdfPage?.createAnnotation(TYPE_SQUARE)
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
 

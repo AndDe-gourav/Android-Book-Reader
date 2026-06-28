@@ -5,6 +5,7 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.view.MotionEvent
+import com.artifex.mupdf.fitz.Page
 import com.artifex.mupdf.viewer.MuPDFCore
 import com.artifex.mupdf.viewer.PageAdapter
 import com.artifex.mupdf.viewer.ReaderView
@@ -51,22 +52,6 @@ enum class PdfTheme(val label: String) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Reader view
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Bridges MuPDF's View-based rendering into Compose-friendly callbacks.
- *
- * Responsibilities:
- *  • Page rendering + HQ zoom (via PageAdapter / ReaderView)
- *  • Chrome-toggle on centre-tap
- *  • Live colour-theme switching (hardware-layer ColorMatrix)
- *  • PDF link enable/disable toggle
- *  • Horizontal ↔ vertical scroll-direction toggle
- *  • In-document search (forward & backward)
- *  • Region-based text extraction for drag-to-select copy
- */
 class MuPdfReaderView(
     context: Context,
     val core: MuPDFCore,
@@ -93,12 +78,6 @@ class MuPdfReaderView(
     /** Long-press is handled by the Compose selection overlay, not here. */
     override fun onLongPress(e: MotionEvent) { /* no-op */ }
 
-    // ── Theme ─────────────────────────────────────────────────────────────────
-
-    /**
-     * Apply a colour theme using a hardware-layer [ColorMatrix].
-     * NORMAL removes any existing layer so there is zero rendering overhead.
-     */
     fun applyTheme(theme: PdfTheme) {
         val matrix = theme.toColorMatrix()
         if (matrix == null) {
@@ -108,6 +87,9 @@ class MuPdfReaderView(
             setLayerType(LAYER_TYPE_HARDWARE, paint)
         }
         invalidate()
+    }
+
+    fun annotate() {
     }
 
     // ── Scroll direction ──────────────────────────────────────────────────────
@@ -143,23 +125,12 @@ class MuPdfReaderView(
         resetupChildren()
     }
 
-    // ── Text extraction ───────────────────────────────────────────────────────
+    fun page (page: Int) : Page {
+        return core.getPage(page)
+    }
 
-    /** Full plain-text of the currently visible page. Run on a background thread. */
     fun getCurrentPageText(): String = core.getPageText(displayedViewIndex)
 
-    /**
-     * Extract text that falls within a rectangle defined in **screen pixels**.
-     *
-     * The method converts the screen rect to PDF-point coordinates using the
-     * current page view's layout transform, then delegates to
-     * [MuPDFCore.getTextInPageRegion].  Call from a background thread.
-     *
-     * @param sx0  screen-x of the selection start (from long-press origin)
-     * @param sy0  screen-y of the selection start
-     * @param sx1  screen-x of the selection end (from drag position)
-     * @param sy1  screen-y of the selection end
-     */
     fun getTextInScreenRect(sx0: Float, sy0: Float, sx1: Float, sy1: Float): String {
         val t = getCurrentPageTransform() ?: return ""
         val viewLeft = t[0]; val viewTop  = t[1]

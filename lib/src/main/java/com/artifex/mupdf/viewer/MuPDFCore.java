@@ -6,6 +6,7 @@ import com.artifex.mupdf.fitz.Document;
 import com.artifex.mupdf.fitz.Link;
 import com.artifex.mupdf.fitz.Matrix;
 import com.artifex.mupdf.fitz.Outline;
+import com.artifex.mupdf.fitz.PDFPage;
 import com.artifex.mupdf.fitz.Page;
 import com.artifex.mupdf.fitz.Quad;
 import com.artifex.mupdf.fitz.Rect;
@@ -257,8 +258,7 @@ public class MuPDFCore
      * x0,y0 = one corner; x1,y1 = the opposite corner of the selection.
      * The method normalises the rectangle so corner order does not matter.
      */
-    public synchronized String getTextInPageRegion(int pageNum,
-                                                   float x0, float y0, float x1, float y1) {
+    public synchronized String getTextInPageRegion(int pageNum, float x0, float y0, float x1, float y1) {
         gotoPage(pageNum);
         if (page == null) return "";
         try {
@@ -285,5 +285,9 @@ public class MuPDFCore
         pageCount = doc.countPages();
         reflowable = doc.isReflowable();
         return authenticated;
+    }
+
+    public synchronized PDFPage getPage (int page) {
+        return (PDFPage) doc.loadPage(page);
     }
 }
