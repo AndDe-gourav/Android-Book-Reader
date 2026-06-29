@@ -1,5 +1,7 @@
 package com.timepass.bookreader.ui.pdfviewer
 
+import android.util.Log
+import android.util.Log.e
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -11,6 +13,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,7 +65,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -77,11 +83,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.artifex.mupdf.fitz.PDFAnnotation.TYPE_SQUARE
 import com.artifex.mupdf.fitz.Point
-import com.artifex.mupdf.fitz.Quad
-import com.artifex.mupdf.fitz.Rect
-import com.artifex.mupdf.fitz.StructuredText
 import com.artifex.mupdf.viewer.ContentInputStream
 import com.artifex.mupdf.viewer.MuPDFCore
 import com.artifex.mupdf.viewer.OutlineActivity
@@ -91,6 +93,7 @@ import com.timepass.bookreader.ui.home.BookStateViewModel
 import com.timepass.bookreader.ui.home.Button
 import com.timepass.bookreader.ui.home.LibraryViewModel
 import com.timepass.bookreader.ui.home.ProgressBar
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -177,6 +180,12 @@ fun PdfReaderScreen(
     val correctedPadding = (imeBottom - bottomBarHeight).coerceAtLeast(0.dp)
     val snackbarHostState = remember { SnackbarHostState() }
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
+
+    var startX by remember { mutableStateOf(0f) }
+    var startY by remember { mutableStateOf(0f) }
+    var endX by remember { mutableStateOf(0f) }
+    var endY by remember { mutableStateOf(0f) }
+
     LaunchedEffect(snackbarMessage) {
         snackbarMessage?.let { snackbarHostState.showSnackbar(it); snackbarMessage = null }
     }
@@ -200,15 +209,8 @@ fun PdfReaderScreen(
                     pdfViewerViewModel.startSession(bookId, savedPage, pages)
                     if (savedPage > 0) jumpToPage = savedPage
                 }
-                val pdfPage = mupdfCore.getPage(5)
-                val structuredText = pdfPage.toStructuredText()
-                val quards = structuredText.highlight(Point(100f,100f), Point(200f, 200f))
-                val annotation = pdfPage?.createAnnotation(8)
-                quards.forEach { qd ->
-                    annotation?.addQuadPoint(qd)
-                }
             }
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
 
         } catch (e: Exception) {
             errorMessage = "Error loading PDF: ${e.message}"
@@ -227,6 +229,9 @@ fun PdfReaderScreen(
                 pdfViewerViewModel.updateSessionTime(
                     accumulatedSessionTime + (System.currentTimeMillis() - sessionPeriodStart)
                 )
+                Log.d("cordsx", startX.toString())
+                Log.d("cordsy", startY.toString())
+                Log.d("cordex", endX.toString())
             }
         }
     }
@@ -284,34 +289,64 @@ fun PdfReaderScreen(
                         modifier = Modifier.align(Alignment.Center))
 
                 core != null -> {
-                    AndroidView(
-                        factory = { ctx ->
-                            MuPdfReaderView(
-                                context = ctx,
-                                core = core!!,
-                                onPageChanged = { page ->
-                                    pdfViewerViewModel.updatePage(page)
-                                },
-                                onChromeTap = {
-                                    isChromeVisible = !isChromeVisible
-                                    showThemes = false
-                                    showSearchBar = false
-                                }
-                            ).also { v ->
-                                v.layoutParams = FrameLayout.LayoutParams(
-                                    FrameLayout.LayoutParams.MATCH_PARENT,
-                                    FrameLayout.LayoutParams.MATCH_PARENT)
-                                v.setLinksEnabled(linksEnabled)
-                                v.setScrollHorizontal(horizontalScrolling)
-                                v.applyTheme(currentTheme)
-                                readerViewRef = v
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput( Unit ) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = { offset ->
+                                        startX = offset.x
+                                        startY = offset.y
+                                    },
+                                    onDragEnd = {
+
+                                    },
+                                    onDrag = { offset, _ ->
+                                        endX = offset.position.x
+                                    }
+                                )
                             }
-                        },
-                        update = { view ->
-                            jumpToPage?.let { page -> view.setDisplayedViewIndex(page); jumpToPage = null }
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    ) {
+                        AndroidView(
+                            factory = { ctx ->
+                                MuPdfReaderView(
+                                    context = ctx,
+                                    core = core!!,
+                                    onPageChanged = { page ->
+                                        pdfViewerViewModel.updatePage(page)
+                                    },
+                                    onChromeTap = {
+                                        isChromeVisible = !isChromeVisible
+                                        showThemes = false
+                                        showSearchBar = false
+                                    }
+                                ).also { v ->
+                                    v.layoutParams = FrameLayout.LayoutParams(
+                                        FrameLayout.LayoutParams.MATCH_PARENT,
+                                        FrameLayout.LayoutParams.MATCH_PARENT
+                                    )
+                                    v.setLinksEnabled(linksEnabled)
+                                    v.setScrollHorizontal(horizontalScrolling)
+                                    v.applyTheme(currentTheme)
+                                    readerViewRef = v
+                                }
+                            },
+                            update = { view ->
+                                jumpToPage?.let { page ->
+                                    view.setDisplayedViewIndex(page); jumpToPage = null
+                                }
+                                val pdfPage = view.core.getPage(5)
+                                val structuredText = pdfPage.toStructuredText()
+                                val quards = structuredText.highlight(Point(startX,startY), Point(endX, endY))
+                                val annotation = pdfPage?.createAnnotation(8)
+                                quards.forEach { qd ->
+                                    annotation?.addQuadPoint(qd)
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxSize()
+                        )
+                    }
                 }
             }
         }
@@ -578,6 +613,7 @@ fun ThemeSelector(
                 border = BorderStroke(2.dp, Color.White),
                 onClick = {  onThemeSelected(theme)  },
                 color = bgColor,
+                shadowElevation = 2.dp,
                 modifier = Modifier
                     .padding(5.dp)
                     .size(50.dp)
