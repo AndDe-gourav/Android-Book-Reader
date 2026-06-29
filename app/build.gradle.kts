@@ -45,8 +45,9 @@ android {
 
 
 dependencies {
+    implementation("com.artifex.mupdf:fitz:1.28.0")
+    implementation("com.artifex.mupdf:viewer:1.28.0a")
     implementation("io.coil-kt:coil-compose:2.5.0")
-    implementation(project(":lib"))
     implementation(libs.androidx.material3.window.size.class1.android)
     implementation("com.google.accompanist:accompanist-permissions:0.37.3")
     implementation(libs.androidx.runtime.livedata)

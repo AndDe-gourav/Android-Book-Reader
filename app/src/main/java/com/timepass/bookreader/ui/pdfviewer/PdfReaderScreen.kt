@@ -77,11 +77,6 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.artifex.mupdf.fitz.PDFAnnotation.TYPE_SQUARE
-import com.artifex.mupdf.fitz.Point
-import com.artifex.mupdf.fitz.Quad
-import com.artifex.mupdf.fitz.Rect
-import com.artifex.mupdf.fitz.StructuredText
 import com.artifex.mupdf.viewer.ContentInputStream
 import com.artifex.mupdf.viewer.MuPDFCore
 import com.artifex.mupdf.viewer.OutlineActivity
@@ -199,13 +194,6 @@ fun PdfReaderScreen(
                     val savedPage = bookStateViewModel.getBookState(bookId)?.currentPage ?: 0
                     pdfViewerViewModel.startSession(bookId, savedPage, pages)
                     if (savedPage > 0) jumpToPage = savedPage
-                }
-                val pdfPage = mupdfCore.getPage(5)
-                val structuredText = pdfPage.toStructuredText()
-                val quards = structuredText.highlight(Point(100f,100f), Point(200f, 200f))
-                val annotation = pdfPage?.createAnnotation(8)
-                quards.forEach { qd ->
-                    annotation?.addQuadPoint(qd)
                 }
             }
         } catch (e: kotlinx.coroutines.CancellationException) {

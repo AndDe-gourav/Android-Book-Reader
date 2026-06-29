@@ -5,7 +5,6 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.view.MotionEvent
-import com.artifex.mupdf.fitz.Page
 import com.artifex.mupdf.viewer.MuPDFCore
 import com.artifex.mupdf.viewer.PageAdapter
 import com.artifex.mupdf.viewer.ReaderView
@@ -89,16 +88,6 @@ class MuPdfReaderView(
         invalidate()
     }
 
-    fun annotate() {
-    }
-
-    // ── Scroll direction ──────────────────────────────────────────────────────
-
-    /** true = swipe left/right between pages; false = scroll up/down continuously. */
-    fun setScrollHorizontal(horizontal: Boolean) = setHorizontalScrolling(horizontal)
-
-    // ── Search ────────────────────────────────────────────────────────────────
-
     private var activeSearchTask: SearchTask? = null
 
     fun search(text: String, direction: Int = +1, onFound: (page: Int) -> Unit = {}) {
@@ -125,30 +114,4 @@ class MuPdfReaderView(
         resetupChildren()
     }
 
-    fun page (page: Int) : Page {
-        return core.getPage(page)
-    }
-
-    fun getCurrentPageText(): String = core.getPageText(displayedViewIndex)
-
-    fun getTextInScreenRect(sx0: Float, sy0: Float, sx1: Float, sy1: Float): String {
-        val t = getCurrentPageTransform() ?: return ""
-        val viewLeft = t[0]; val viewTop  = t[1]
-        val viewW    = t[2]; val viewH    = t[3]
-        if (viewW <= 0f || viewH <= 0f) return ""
-
-        val pageSize = core.getPageSize(displayedViewIndex)
-        if (pageSize.x <= 0f || pageSize.y <= 0f) return ""
-
-        val scaleX = viewW / pageSize.x
-        val scaleY = viewH / pageSize.y
-
-        // screen → PDF point
-        val px0 = (sx0 - viewLeft) / scaleX
-        val py0 = (sy0 - viewTop)  / scaleY
-        val px1 = (sx1 - viewLeft) / scaleX
-        val py1 = (sy1 - viewTop)  / scaleY
-
-        return core.getTextInPageRegion(displayedViewIndex, px0, py0, px1, py1)
-    }
 }
