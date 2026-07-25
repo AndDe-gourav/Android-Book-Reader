@@ -232,6 +232,7 @@ fun PdfReaderScreen(
                 Log.d("cordsx", startX.toString())
                 Log.d("cordsy", startY.toString())
                 Log.d("cordex", endX.toString())
+                Log.d("cordey", endY.toString())
             }
         }
     }
@@ -303,6 +304,7 @@ fun PdfReaderScreen(
                                     },
                                     onDrag = { offset, _ ->
                                         endX = offset.position.x
+                                        endY = offset.position.y
                                     }
                                 )
                             }
@@ -742,9 +744,14 @@ private fun TocBottomSheet(
 
 @Composable
 private fun TocRow(
-    title: String, page: Int, depth: Int,
-    isCurrent: Boolean, hasChildren: Boolean, isExpanded: Boolean,
-    onToggle: () -> Unit, onSelect: (Int) -> Unit
+    title: String,
+    page: Int,
+    depth: Int,
+    isCurrent: Boolean,
+    hasChildren: Boolean,
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    onSelect: (Int) -> Unit
 ) {
     Row(
         modifier = Modifier
