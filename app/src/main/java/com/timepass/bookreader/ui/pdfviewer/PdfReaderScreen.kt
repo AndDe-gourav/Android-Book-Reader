@@ -1,5 +1,8 @@
 package com.timepass.bookreader.ui.pdfviewer
 
+import android.os.SystemClock
+import android.util.Log
+import android.view.MotionEvent
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -28,7 +31,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -56,6 +58,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -173,6 +176,8 @@ fun PdfReaderScreen(
     val correctedPadding = (imeBottom - bottomBarHeight).coerceAtLeast(0.dp)
     val snackbarHostState = remember { SnackbarHostState() }
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
+
+    var sliderPosition by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(snackbarMessage) {
         snackbarMessage?.let { snackbarHostState.showSnackbar(it); snackbarMessage = null }
     }
@@ -257,6 +262,7 @@ fun PdfReaderScreen(
         }
     }
 
+
     Box(
         modifier = Modifier.fillMaxSize()
     ){
@@ -297,7 +303,7 @@ fun PdfReaderScreen(
                             }
                         },
                         update = { view ->
-                            jumpToPage?.let { page -> view.setDisplayedViewIndex(page); jumpToPage = null }
+                            jumpToPage?.let { page -> view.displayedViewIndex = page; jumpToPage = null }
                         },
                         modifier = Modifier.fillMaxSize()
                     )
@@ -335,6 +341,23 @@ fun PdfReaderScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         ){
             Column {
+                PageSlider(
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(20.dp),
+                    offset = { offsetX ->
+                        readerViewRef?.let { view ->
+                            val now = SystemClock.uptimeMillis()
+                            val dummyE1 =
+                                MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, 0f, 0f, 0)
+                            val dummyE2 =
+                                MotionEvent.obtain(now, now, MotionEvent.ACTION_MOVE, 0f, 0f, 0)
+
+                            view.onScroll(dummyE1, dummyE2, offsetX * 10f, 0f)
+
+                            dummyE1.recycle()
+                            dummyE2.recycle()
+                        }
+                    }
+                )
                 if(showThemes) {
                     ThemeSelector(
                         onThemeSelected = { theme ->
@@ -566,6 +589,7 @@ fun ThemeSelector(
             Surface(
                 border = BorderStroke(2.dp, Color.White),
                 onClick = {  onThemeSelected(theme)  },
+                shadowElevation = 1.dp,
                 color = bgColor,
                 modifier = Modifier
                     .padding(5.dp)
