@@ -1,8 +1,5 @@
 package com.timepass.bookreader.ui.pdfviewer
 
-import android.os.SystemClock
-import android.util.Log
-import android.view.MotionEvent
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -94,6 +91,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
+private class ViewRef<T> {
+    var value: T? = null
+}
+
 private data class TocNode(
     val item: OutlineActivity.Item,
     val depth: Int,
@@ -161,7 +162,7 @@ fun PdfReaderScreen(
     var showSearchBar by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var jumpToPage by remember { mutableStateOf<Int?>(null) }
-    var readerViewRef by remember { mutableStateOf<MuPdfReaderView?>(null) }
+    val readerViewRef = remember { ViewRef<MuPdfReaderView>() }
 
     var linksEnabled by remember { mutableStateOf(false) }
     var horizontalScrolling by remember { mutableStateOf(true) }
@@ -178,6 +179,7 @@ fun PdfReaderScreen(
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
 
     var sliderPosition by remember { mutableFloatStateOf(0f) }
+    var isPageZoomed by remember { mutableStateOf(false) }
     LaunchedEffect(snackbarMessage) {
         snackbarMessage?.let { snackbarHostState.showSnackbar(it); snackbarMessage = null }
     }
@@ -250,12 +252,12 @@ fun PdfReaderScreen(
     }
 
     DisposableEffect(bookId) {
-        onDispose { core?.onDestroy(); pdfViewerViewModel.endSession() }
+        onDispose { pdfViewerViewModel.endSession() }
     }
 
     BackHandler {
         when {
-            showSearchBar -> { showSearchBar = false; searchQuery = ""; readerViewRef?.clearSearch() }
+            showSearchBar -> { showSearchBar = false; searchQuery = ""; readerViewRef.value?.clearSearch() }
             showTocSheet  -> showTocSheet = false
             showThemeSheet -> showThemeSheet = false
             else -> onBack()
@@ -281,29 +283,40 @@ fun PdfReaderScreen(
                 core != null -> {
                     AndroidView(
                         factory = { ctx ->
-                            MuPdfReaderView(
-                                context = ctx,
-                                core = core!!,
-                                onPageChanged = { page ->
-                                    pdfViewerViewModel.updatePage(page)
-                                },
-                                onChromeTap = {
-                                    isChromeVisible = !isChromeVisible
-                                    showThemes = false
-                                    showSearchBar = false
-                                }
-                            ).also { v ->
+                            MuPdfReaderView(context = ctx, core = core!!).also { v ->
                                 v.layoutParams = FrameLayout.LayoutParams(
                                     FrameLayout.LayoutParams.MATCH_PARENT,
-                                    FrameLayout.LayoutParams.MATCH_PARENT)
-                                v.setLinksEnabled(linksEnabled)
-                                v.setScrollHorizontal(horizontalScrolling)
-                                v.applyTheme(currentTheme)
-                                readerViewRef = v
+                                    FrameLayout.LayoutParams.MATCH_PARENT
+                                )
+                                readerViewRef.value = v
                             }
                         },
                         update = { view ->
+                            view.onPageChanged = { page -> pdfViewerViewModel.updatePage(page) }
+                            view.onChromeTap = {
+                                isChromeVisible = !isChromeVisible
+                                showThemes = false
+                                showSearchBar = false
+                            }
+                            view.onPanStateChanged = { fraction ->
+                                if (fraction != null) {
+                                    isPageZoomed = true
+                                    sliderPosition = fraction
+                                } else {
+                                    isPageZoomed = false
+                                }
+                            }
+                            view.setLinksEnabled(linksEnabled)
+                            view.setScrollHorizontal(horizontalScrolling)
+                            view.applyTheme(currentTheme)
                             jumpToPage?.let { page -> view.displayedViewIndex = page; jumpToPage = null }
+                        },
+                        onRelease = { view ->
+                            view.onPageChanged = {}
+                            view.onChromeTap = {}
+                            view.onPanStateChanged = {}
+                            core?.onDestroy()
+                            if (readerViewRef.value === view) readerViewRef.value = null
                         },
                         modifier = Modifier.fillMaxSize()
                     )
@@ -341,28 +354,27 @@ fun PdfReaderScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         ){
             Column {
-                PageSlider(
-                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(20.dp),
-                    offset = { offsetX ->
-                        readerViewRef?.let { view ->
-                            val now = SystemClock.uptimeMillis()
-                            val dummyE1 =
-                                MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, 0f, 0f, 0)
-                            val dummyE2 =
-                                MotionEvent.obtain(now, now, MotionEvent.ACTION_MOVE, 0f, 0f, 0)
-
-                            view.onScroll(dummyE1, dummyE2, offsetX * 10f, 0f)
-
-                            dummyE1.recycle()
-                            dummyE2.recycle()
+                AnimatedVisibility(
+                    visible = isPageZoomed,
+                    enter = fadeIn(animationSpec = tween(120)),
+                    exit = fadeOut(animationSpec = tween(120))
+                ) {
+                    PageSlider(
+                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(20.dp),
+                        position = sliderPosition,
+                        onPositionChange = { fraction ->
+                            sliderPosition = fraction
+                            readerViewRef.value?.panToFraction(fraction)
+                        },
+                        onDragFinished = {
+                            readerViewRef.value?.settle()
                         }
-                    }
-                )
+                    )
+                }
                 if(showThemes) {
                     ThemeSelector(
                         onThemeSelected = { theme ->
                             currentTheme = theme
-                            readerViewRef?.applyTheme(theme)
                             showThemes = false
                         },
                     )
@@ -373,19 +385,19 @@ fun PdfReaderScreen(
                         onQueryChange = { searchQuery = it },
                         onSearchForward = {
                             if (searchQuery.isNotBlank())
-                                readerViewRef?.search(searchQuery, +1) { page ->
+                                readerViewRef.value?.search(searchQuery, +1) { page ->
                                     jumpToPage = page
                                 }
                         },
                         onSearchBackward = {
                             if (searchQuery.isNotBlank())
-                                readerViewRef?.search(searchQuery, -1) { page ->
+                                readerViewRef.value?.search(searchQuery, -1) { page ->
                                     jumpToPage = page
                                 }
                         },
                         onClose = {
                             showSearchBar = false; searchQuery =
-                            ""; readerViewRef?.clearSearch()
+                            ""; readerViewRef.value?.clearSearch()
                         },
                         modifier = Modifier.padding(bottom = correctedPadding)
                     )
@@ -433,36 +445,30 @@ fun PdfReaderScreen(
                                             if (showThemes) showThemes = false
                                             showSearchBar = !showSearchBar
                                             if (!showSearchBar) {
-                                                searchQuery = ""; readerViewRef?.clearSearch()
+                                                searchQuery = ""; readerViewRef.value?.clearSearch()
                                             }
                                         },
                                         icon = R.drawable.search_24dp_000000_fill0_wght300_grad0_opsz24,
                                         contentDescription = "search",
                                     )
                                     if (outline != null)
-                                    Button(
-                                        isActive = showTocSheet,
-                                        onClick = {
-                                            showTocSheet = true
-                                        },
-                                        icon = R.drawable.sort_24dp_000000_fill0_wght300_grad0_opsz24,
-                                        contentDescription = "toc",
-                                    )
+                                        Button(
+                                            isActive = showTocSheet,
+                                            onClick = {
+                                                showTocSheet = true
+                                            },
+                                            icon = R.drawable.sort_24dp_000000_fill0_wght300_grad0_opsz24,
+                                            contentDescription = "toc",
+                                        )
                                     Button(
                                         isActive = linksEnabled,
-                                        onClick = {
-                                            linksEnabled = !linksEnabled
-                                            readerViewRef?.setLinksEnabled(linksEnabled)
-                                        },
+                                        onClick = { linksEnabled = !linksEnabled },
                                         icon = R.drawable.link_24dp_000000_fill0_wght300_grad0_opsz24,
                                         contentDescription = "link",
                                     )
                                     Button(
                                         isActive = horizontalScrolling,
-                                        onClick = {
-                                            horizontalScrolling = !horizontalScrolling
-                                            readerViewRef?.setScrollHorizontal(horizontalScrolling)
-                                        },
+                                        onClick = { horizontalScrolling = !horizontalScrolling },
                                         icon = R.drawable.horizontal_align_right_24dp_000000_fill0_wght300_grad0_opsz24,
                                         contentDescription = "horizontal scroll",
                                     )
@@ -763,7 +769,7 @@ private fun TocRow(
     HorizontalDivider(
         thickness = 0.5.dp,
         color = MaterialTheme.colorScheme.tertiary
-        )
+    )
 }
 
 @Composable

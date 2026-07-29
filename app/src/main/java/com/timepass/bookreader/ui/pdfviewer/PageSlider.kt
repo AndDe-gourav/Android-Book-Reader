@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -23,16 +24,22 @@ import kotlin.math.roundToInt
 @Composable
 fun PageSlider(
     modifier: Modifier = Modifier,
-    offset: (Float) -> Unit,
+    position: Float,
+    onPositionChange: (Float) -> Unit,
+    onDragFinished: () -> Unit = {},
 ) {
-    var offsetX by remember { mutableFloatStateOf(0f) }
-
     val trackWidthDp = 120.dp
     val handleWidthDp = 20.dp
 
     val density = LocalDensity.current
     val maxOffsetPx = with(density) { (trackWidthDp - handleWidthDp).toPx() }
-    val minOffsetPx = 0f
+
+    var isDragging by remember { mutableStateOf(false) }
+    var dragOffsetPx by remember { mutableFloatStateOf(0f) }
+
+    val externalOffsetPx = position.coerceIn(0f, 1f) * maxOffsetPx
+    val offsetX = if (isDragging) dragOffsetPx else externalOffsetPx
+
     Box(
         modifier = modifier,
     ) {
@@ -46,15 +53,20 @@ fun PageSlider(
             modifier = Modifier
                 .offset { IntOffset(offsetX.roundToInt(), 0) }
                 .background(color = MaterialTheme.colorScheme.primary)
-                .size(width = 20.dp, height = 40.dp)
+                .size(width = handleWidthDp, height = 40.dp)
                 .draggable(
                     orientation = Orientation.Horizontal,
                     state = rememberDraggableState { delta ->
-                        val previousOffset = offsetX
-                        offsetX = (offsetX + delta).coerceIn(minOffsetPx, maxOffsetPx)
-
-                        val effectiveDelta = offsetX - previousOffset
-                        offset(effectiveDelta)
+                        dragOffsetPx = (dragOffsetPx + delta).coerceIn(0f, maxOffsetPx)
+                        onPositionChange(dragOffsetPx / maxOffsetPx)
+                    },
+                    onDragStarted = {
+                        dragOffsetPx = externalOffsetPx
+                        isDragging = true
+                    },
+                    onDragStopped = {
+                        isDragging = false
+                        onDragFinished()
                     }
                 ),
         )
