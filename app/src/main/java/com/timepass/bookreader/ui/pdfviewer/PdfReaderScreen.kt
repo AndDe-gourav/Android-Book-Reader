@@ -354,23 +354,23 @@ fun PdfReaderScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         ){
             Column {
-                AnimatedVisibility(
-                    visible = isPageZoomed,
-                    enter = fadeIn(animationSpec = tween(120)),
-                    exit = fadeOut(animationSpec = tween(120))
-                ) {
-                    PageSlider(
-                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(20.dp),
-                        position = sliderPosition,
-                        onPositionChange = { fraction ->
-                            sliderPosition = fraction
-                            readerViewRef.value?.panToFraction(fraction)
-                        },
-                        onDragFinished = {
-                            readerViewRef.value?.settle()
-                        }
-                    )
-                }
+//                AnimatedVisibility(
+//                    visible = isPageZoomed,
+//                    enter = fadeIn(animationSpec = tween(120)),
+//                    exit = fadeOut(animationSpec = tween(120))
+//                ) {
+//                    PageSlider(
+//                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(20.dp),
+//                        position = sliderPosition,
+//                        onPositionChange = { fraction ->
+//                            sliderPosition = fraction
+//                            readerViewRef.value?.panToFraction(fraction)
+//                        },
+//                        onDragFinished = {
+//                            readerViewRef.value?.settle()
+//                        }
+//                    )
+//                }
                 if(showThemes) {
                     ThemeSelector(
                         onThemeSelected = { theme ->
