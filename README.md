@@ -17,8 +17,8 @@
 ---
 
 ### Installation
-* ** Direct Install **: [Download Latest APK](https://github.com/AndDe-gourav/Android-Book-Reader/releases/download/v1.0/app-release.apk)
-* ** Releases **: [GitHub Releases Page](https://github.com/AndDe-gourav/Android-Book-Reader/releases)
+* **Direct Install**: [Download Latest APK](https://github.com/AndDe-gourav/Android-Book-Reader/releases/download/v1.0/app-release.apk)
+* **Releases**: [GitHub Releases Page](https://github.com/AndDe-gourav/Android-Book-Reader/releases)
 
 ---
 
