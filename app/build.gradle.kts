@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -6,26 +9,39 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.serialization)
 }
 
-android {
-    signingConfigs {
-        create("release") {
-            storeFile = file("/home/gourav/Documents/bookreader-release-key.jks")
-            keyAlias = "bookreader"
-            storePassword = "20 Years of mind"
-            keyPassword = "20 Years of mind"
-        }
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        load(FileInputStream(localPropertiesFile))
     }
+}
+
+android {
     namespace = "com.timepass.bookreader"
     compileSdk = 36
+
+    signingConfigs {
+        create("release") {
+            val filePath = localProperties.getProperty("RELEASE_STORE_FILE") ?: ""
+            storeFile = if (filePath.isNotEmpty()) file(filePath) else null
+            storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD") ?: ""
+            keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS") ?: ""
+            keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD") ?: ""
+        }
+    }
 
     defaultConfig {
         applicationId = "com.timepass.bookreader"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters.addAll(setOf("arm64-v8a", "armeabi-v7a"))
+        }
     }
 
     compileOptions {
@@ -38,6 +54,12 @@ android {
     }
     buildTypes {
         getByName("release") {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             signingConfig = signingConfigs.getByName("release")
         }
     }
@@ -45,19 +67,20 @@ android {
 
 
 dependencies {
-    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation(libs.coil.compose)
+    implementation(libs.accompanist.permissions)
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(project(":lib"))
     implementation(libs.androidx.material3.window.size.class1.android)
-    implementation("com.google.accompanist:accompanist-permissions:0.37.3")
     implementation(libs.androidx.runtime.livedata)
     ksp (libs.androidx.room.compiler)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
-    implementation("com.google.dagger:hilt-android:2.59.1")
-    ksp("com.google.dagger:hilt-android-compiler:2.59.1")
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation(libs.androidx.room.ktx)
     implementation (libs.androidx.room.runtime)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -69,7 +92,6 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation("androidx.compose.material:material-icons-extended-android:1.6.8")
     implementation(libs.common)
     implementation(libs.androidx.navigation.compose)
     testImplementation(libs.junit)
