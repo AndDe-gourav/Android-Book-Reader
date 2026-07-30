@@ -19,3 +19,11 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+-keep class com.artifex.mupdf.** { *; }
+-dontwarn com.artifex.mupdf.**
+
+-dontwarn io.ktor.client.engine.mock.**
+
+-keep class * extends androidx.room.RoomDatabase
+-dontwarn androidx.room.**

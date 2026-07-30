@@ -1,7 +1,5 @@
 package com.timepass.bookreader.ui.pdfviewer
 
-import android.util.Log
-import android.util.Log.e
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -13,7 +11,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,6 +55,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -65,10 +63,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -83,7 +78,6 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.artifex.mupdf.fitz.Point
 import com.artifex.mupdf.viewer.ContentInputStream
 import com.artifex.mupdf.viewer.MuPDFCore
 import com.artifex.mupdf.viewer.OutlineActivity
@@ -93,10 +87,13 @@ import com.timepass.bookreader.ui.home.BookStateViewModel
 import com.timepass.bookreader.ui.home.Button
 import com.timepass.bookreader.ui.home.LibraryViewModel
 import com.timepass.bookreader.ui.home.ProgressBar
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+
+private class ViewRef<T> {
+    var value: T? = null
+}
 
 private data class TocNode(
     val item: OutlineActivity.Item,
@@ -165,7 +162,7 @@ fun PdfReaderScreen(
     var showSearchBar by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var jumpToPage by remember { mutableStateOf<Int?>(null) }
-    var readerViewRef by remember { mutableStateOf<MuPdfReaderView?>(null) }
+    val readerViewRef = remember { ViewRef<MuPdfReaderView>() }
 
     var linksEnabled by remember { mutableStateOf(false) }
     var horizontalScrolling by remember { mutableStateOf(true) }
@@ -181,11 +178,8 @@ fun PdfReaderScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
 
-    var startX by remember { mutableStateOf(0f) }
-    var startY by remember { mutableStateOf(0f) }
-    var endX by remember { mutableStateOf(0f) }
-    var endY by remember { mutableStateOf(0f) }
-
+    var sliderPosition by remember { mutableFloatStateOf(0f) }
+    var isPageZoomed by remember { mutableStateOf(false) }
     LaunchedEffect(snackbarMessage) {
         snackbarMessage?.let { snackbarHostState.showSnackbar(it); snackbarMessage = null }
     }
@@ -210,7 +204,7 @@ fun PdfReaderScreen(
                     if (savedPage > 0) jumpToPage = savedPage
                 }
             }
-        } catch (e: CancellationException) {
+        } catch (e: kotlinx.coroutines.CancellationException) {
 
         } catch (e: Exception) {
             errorMessage = "Error loading PDF: ${e.message}"
@@ -229,10 +223,6 @@ fun PdfReaderScreen(
                 pdfViewerViewModel.updateSessionTime(
                     accumulatedSessionTime + (System.currentTimeMillis() - sessionPeriodStart)
                 )
-                Log.d("cordsx", startX.toString())
-                Log.d("cordsy", startY.toString())
-                Log.d("cordex", endX.toString())
-                Log.d("cordey", endY.toString())
             }
         }
     }
@@ -262,17 +252,18 @@ fun PdfReaderScreen(
     }
 
     DisposableEffect(bookId) {
-        onDispose { core?.onDestroy(); pdfViewerViewModel.endSession() }
+        onDispose { pdfViewerViewModel.endSession() }
     }
 
     BackHandler {
         when {
-            showSearchBar -> { showSearchBar = false; searchQuery = ""; readerViewRef?.clearSearch() }
+            showSearchBar -> { showSearchBar = false; searchQuery = ""; readerViewRef.value?.clearSearch() }
             showTocSheet  -> showTocSheet = false
             showThemeSheet -> showThemeSheet = false
             else -> onBack()
         }
     }
+
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -290,65 +281,45 @@ fun PdfReaderScreen(
                         modifier = Modifier.align(Alignment.Center))
 
                 core != null -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .pointerInput( Unit ) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = { offset ->
-                                        startX = offset.x
-                                        startY = offset.y
-                                    },
-                                    onDragEnd = {
-
-                                    },
-                                    onDrag = { offset, _ ->
-                                        endX = offset.position.x
-                                        endY = offset.position.y
-                                    }
+                    AndroidView(
+                        factory = { ctx ->
+                            MuPdfReaderView(context = ctx, core = core!!).also { v ->
+                                v.layoutParams = FrameLayout.LayoutParams(
+                                    FrameLayout.LayoutParams.MATCH_PARENT,
+                                    FrameLayout.LayoutParams.MATCH_PARENT
                                 )
+                                readerViewRef.value = v
                             }
-                    ) {
-                        AndroidView(
-                            factory = { ctx ->
-                                MuPdfReaderView(
-                                    context = ctx,
-                                    core = core!!,
-                                    onPageChanged = { page ->
-                                        pdfViewerViewModel.updatePage(page)
-                                    },
-                                    onChromeTap = {
-                                        isChromeVisible = !isChromeVisible
-                                        showThemes = false
-                                        showSearchBar = false
-                                    }
-                                ).also { v ->
-                                    v.layoutParams = FrameLayout.LayoutParams(
-                                        FrameLayout.LayoutParams.MATCH_PARENT,
-                                        FrameLayout.LayoutParams.MATCH_PARENT
-                                    )
-                                    v.setLinksEnabled(linksEnabled)
-                                    v.setScrollHorizontal(horizontalScrolling)
-                                    v.applyTheme(currentTheme)
-                                    readerViewRef = v
+                        },
+                        update = { view ->
+                            view.onPageChanged = { page -> pdfViewerViewModel.updatePage(page) }
+                            view.onChromeTap = {
+                                isChromeVisible = !isChromeVisible
+                                showThemes = false
+                                showSearchBar = false
+                            }
+                            view.onPanStateChanged = { fraction ->
+                                if (fraction != null) {
+                                    isPageZoomed = true
+                                    sliderPosition = fraction
+                                } else {
+                                    isPageZoomed = false
                                 }
-                            },
-                            update = { view ->
-                                jumpToPage?.let { page ->
-                                    view.setDisplayedViewIndex(page); jumpToPage = null
-                                }
-                                val pdfPage = view.core.getPage(5)
-                                val structuredText = pdfPage.toStructuredText()
-                                val quards = structuredText.highlight(Point(startX,startY), Point(endX, endY))
-                                val annotation = pdfPage?.createAnnotation(8)
-                                quards.forEach { qd ->
-                                    annotation?.addQuadPoint(qd)
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxSize()
-                        )
-                    }
+                            }
+                            view.setLinksEnabled(linksEnabled)
+                            view.setScrollHorizontal(horizontalScrolling)
+                            view.applyTheme(currentTheme)
+                            jumpToPage?.let { page -> view.displayedViewIndex = page; jumpToPage = null }
+                        },
+                        onRelease = { view ->
+                            view.onPageChanged = {}
+                            view.onChromeTap = {}
+                            view.onPanStateChanged = {}
+                            core?.onDestroy()
+                            if (readerViewRef.value === view) readerViewRef.value = null
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }
@@ -383,11 +354,27 @@ fun PdfReaderScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         ){
             Column {
+//                AnimatedVisibility(
+//                    visible = isPageZoomed,
+//                    enter = fadeIn(animationSpec = tween(120)),
+//                    exit = fadeOut(animationSpec = tween(120))
+//                ) {
+//                    PageSlider(
+//                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(20.dp),
+//                        position = sliderPosition,
+//                        onPositionChange = { fraction ->
+//                            sliderPosition = fraction
+//                            readerViewRef.value?.panToFraction(fraction)
+//                        },
+//                        onDragFinished = {
+//                            readerViewRef.value?.settle()
+//                        }
+//                    )
+//                }
                 if(showThemes) {
                     ThemeSelector(
                         onThemeSelected = { theme ->
                             currentTheme = theme
-                            readerViewRef?.applyTheme(theme)
                             showThemes = false
                         },
                     )
@@ -398,19 +385,19 @@ fun PdfReaderScreen(
                         onQueryChange = { searchQuery = it },
                         onSearchForward = {
                             if (searchQuery.isNotBlank())
-                                readerViewRef?.search(searchQuery, +1) { page ->
+                                readerViewRef.value?.search(searchQuery, +1) { page ->
                                     jumpToPage = page
                                 }
                         },
                         onSearchBackward = {
                             if (searchQuery.isNotBlank())
-                                readerViewRef?.search(searchQuery, -1) { page ->
+                                readerViewRef.value?.search(searchQuery, -1) { page ->
                                     jumpToPage = page
                                 }
                         },
                         onClose = {
                             showSearchBar = false; searchQuery =
-                            ""; readerViewRef?.clearSearch()
+                            ""; readerViewRef.value?.clearSearch()
                         },
                         modifier = Modifier.padding(bottom = correctedPadding)
                     )
@@ -458,36 +445,30 @@ fun PdfReaderScreen(
                                             if (showThemes) showThemes = false
                                             showSearchBar = !showSearchBar
                                             if (!showSearchBar) {
-                                                searchQuery = ""; readerViewRef?.clearSearch()
+                                                searchQuery = ""; readerViewRef.value?.clearSearch()
                                             }
                                         },
                                         icon = R.drawable.search_24dp_000000_fill0_wght300_grad0_opsz24,
                                         contentDescription = "search",
                                     )
                                     if (outline != null)
-                                    Button(
-                                        isActive = showTocSheet,
-                                        onClick = {
-                                            showTocSheet = true
-                                        },
-                                        icon = R.drawable.sort_24dp_000000_fill0_wght300_grad0_opsz24,
-                                        contentDescription = "toc",
-                                    )
+                                        Button(
+                                            isActive = showTocSheet,
+                                            onClick = {
+                                                showTocSheet = true
+                                            },
+                                            icon = R.drawable.sort_24dp_000000_fill0_wght300_grad0_opsz24,
+                                            contentDescription = "toc",
+                                        )
                                     Button(
                                         isActive = linksEnabled,
-                                        onClick = {
-                                            linksEnabled = !linksEnabled
-                                            readerViewRef?.setLinksEnabled(linksEnabled)
-                                        },
+                                        onClick = { linksEnabled = !linksEnabled },
                                         icon = R.drawable.link_24dp_000000_fill0_wght300_grad0_opsz24,
                                         contentDescription = "link",
                                     )
                                     Button(
                                         isActive = horizontalScrolling,
-                                        onClick = {
-                                            horizontalScrolling = !horizontalScrolling
-                                            readerViewRef?.setScrollHorizontal(horizontalScrolling)
-                                        },
+                                        onClick = { horizontalScrolling = !horizontalScrolling },
                                         icon = R.drawable.horizontal_align_right_24dp_000000_fill0_wght300_grad0_opsz24,
                                         contentDescription = "horizontal scroll",
                                     )
@@ -614,8 +595,8 @@ fun ThemeSelector(
             Surface(
                 border = BorderStroke(2.dp, Color.White),
                 onClick = {  onThemeSelected(theme)  },
+                shadowElevation = 1.dp,
                 color = bgColor,
-                shadowElevation = 2.dp,
                 modifier = Modifier
                     .padding(5.dp)
                     .size(50.dp)
@@ -744,14 +725,9 @@ private fun TocBottomSheet(
 
 @Composable
 private fun TocRow(
-    title: String,
-    page: Int,
-    depth: Int,
-    isCurrent: Boolean,
-    hasChildren: Boolean,
-    isExpanded: Boolean,
-    onToggle: () -> Unit,
-    onSelect: (Int) -> Unit
+    title: String, page: Int, depth: Int,
+    isCurrent: Boolean, hasChildren: Boolean, isExpanded: Boolean,
+    onToggle: () -> Unit, onSelect: (Int) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -793,7 +769,7 @@ private fun TocRow(
     HorizontalDivider(
         thickness = 0.5.dp,
         color = MaterialTheme.colorScheme.tertiary
-        )
+    )
 }
 
 @Composable
