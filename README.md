@@ -2,7 +2,8 @@
 ### Making Reading endurance and consistent
 
 ---
-<img width="180" height="400" alt="Frame 1(1)" src="https://github.com/user-attachments/assets/7f0322b8-239a-44e9-a001-5c858e247b65" /> <img width="180" height="400" alt="Frame 3(1)" src="https://github.com/user-attachments/assets/b73187e1-d1f1-483a-a695-5bc1195f883c" /> <img width="180" height="400" alt="Frame 2(1)" src="https://github.com/user-attachments/assets/ea13a235-c553-4b01-95b4-e7be8fec960f" /> <img width="180" height="400" alt="Frame 4(1)" src="https://github.com/user-attachments/assets/41be0f34-f773-41f7-9f24-3d7c0ea26885" />
+
+<img width="180" height="400" alt="Frame 1" src="https://github.com/user-attachments/assets/0cde4d91-a58c-4850-b827-f286a32edd3d" /> <img width="180" height="400" alt="Frame 3" src="https://github.com/user-attachments/assets/7d3da7ba-9bca-4063-a61b-abc2daec1774" /> <img width="180" height="400" alt="Frame 2" src="https://github.com/user-attachments/assets/d742e759-a5c3-45c9-a19a-f5f48a1bb119" /> <img width="180" height="400" alt="Frame 4" src="https://github.com/user-attachments/assets/1d2b57fd-08af-4bb5-9a35-29ecfc513f7b" />
 
 ---
 
