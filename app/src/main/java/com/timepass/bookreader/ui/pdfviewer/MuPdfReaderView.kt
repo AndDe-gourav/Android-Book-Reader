@@ -125,12 +125,14 @@ class MuPdfReaderView(
     }
 
     fun settle() {
-        val view = getDisplayedView() ?: return
+        val view = displayedView ?: return
         onUnsettle(view)
         onSettle(view)
     }
 
-    fun setScrollHorizontal(horizontal: Boolean) = setHorizontalScrolling(horizontal)
+    fun setScrollHorizontal(horizontal: Boolean) {
+        isHorizontalScrolling = horizontal
+    }
 
     private var activeSearchTask: SearchTask? = null
 
