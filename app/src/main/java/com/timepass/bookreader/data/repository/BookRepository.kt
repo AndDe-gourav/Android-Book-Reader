@@ -68,7 +68,7 @@ class BookRepository @Inject constructor(
     fun observeBookState(bookId: Long): Flow<BookStateEntity?> = bookStateDao.observeState(bookId)
 
     suspend fun updateProgress(bookId: Long, page: Int, totalPages: Int) {
-        val status = if (page >= totalPages - 1) ReadingStatus.COMPLETED else ReadingStatus.TO_READ
+        val status = if (page >= totalPages - 1) ReadingStatus.COMPLETED else if (getBookState(bookId)?.status == ReadingStatus.TO_READ) ReadingStatus.TO_READ else ReadingStatus.None
         bookStateDao.updateProgress(bookId, page, status)
     }
 

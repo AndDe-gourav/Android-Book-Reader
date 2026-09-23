@@ -42,13 +42,6 @@ class BookStateViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    val readingBooks: StateFlow<List<BookEntity>> = repository.getBooksByStatus(ReadingStatus.READING)
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-
     val completedBooks: StateFlow<List<BookEntity>> = repository.getBooksByStatus(ReadingStatus.COMPLETED)
         .stateIn(
             scope = viewModelScope,

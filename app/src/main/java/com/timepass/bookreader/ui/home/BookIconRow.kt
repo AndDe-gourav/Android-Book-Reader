@@ -103,7 +103,7 @@ fun BookStatusIconRow(
             onClick = {
                 selectedBook?.let {
                     val newStatus = if (bookState?.status == ReadingStatus.TO_READ) {
-                        ReadingStatus.READING
+                        ReadingStatus.None
                     } else {
                         ReadingStatus.TO_READ
                     }
@@ -126,7 +126,7 @@ fun BookStatusIconRow(
             onClick = {
                 selectedBook?.let {
                     val newStatus = if (bookState?.status == ReadingStatus.COMPLETED) {
-                        ReadingStatus.READING
+                        ReadingStatus.None
                     } else {
                         ReadingStatus.COMPLETED
                     }

@@ -30,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
@@ -55,7 +54,6 @@ import com.timepass.bookreader.ui.pdfviewer.PdfViewerViewModel
 import com.timepass.bookreader.ui.stats.StatsScreen
 import com.timepass.bookreader.ui.stats.StatsViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -64,8 +62,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        handleIntent(intent)
 
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.light(
@@ -82,28 +78,6 @@ class MainActivity : ComponentActivity() {
                 App(
                     libraryViewModel = libraryViewModel,
                 )
-            }
-        }
-    }
-
-    override fun onNewIntent(intent: android.content.Intent) {
-        super.onNewIntent(intent)
-        handleIntent(intent)
-    }
-
-    private fun handleIntent(intent: android.content.Intent?) {
-
-        if (intent?.action == android.content.Intent.ACTION_VIEW) {
-            val uri = intent.data ?: return
-
-            lifecycleScope.launch {
-                val bookId = libraryViewModel.importPdf(
-                    this@MainActivity,
-                    uri
-                )
-                if (bookId != -1L) {
-                    libraryViewModel.requestOpenBook(bookId)
-                }
             }
         }
     }

@@ -28,6 +28,6 @@ data class BookStateEntity(
 
 enum class ReadingStatus {
     TO_READ,
-    READING,
-    COMPLETED
+    COMPLETED,
+    None
 }

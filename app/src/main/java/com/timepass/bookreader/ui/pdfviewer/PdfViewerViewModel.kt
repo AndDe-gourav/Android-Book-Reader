@@ -94,16 +94,16 @@ class PdfViewerViewModel @Inject constructor(
                 val endTime = System.currentTimeMillis()
 
                 repository.saveSession(
-                    bookId    = state.bookId,
+                    bookId = state.bookId,
                     startTime = state.startTime,
-                    endTime   = endTime,
+                    endTime = endTime,
                     startPage = state.startPage,
-                    endPage   = state.currentPage
+                    endPage = state.currentPage
                 )
 
                 repository.updateProgress(
-                    bookId     = state.bookId,
-                    page       = state.currentPage,
+                    bookId = state.bookId,
+                    page = state.currentPage,
                     totalPages = state.totalPages
                 )
 
@@ -198,8 +198,8 @@ class PdfViewerViewModel @Inject constructor(
             withContext(NonCancellable) {
                 runCatching {
                     repository.saveDailyGoalResult(
-                        bookId      = state.bookId,
-                        dayStartMs  = prevDayStartMs,
+                        bookId = state.bookId,
+                        dayStartMs = prevDayStartMs,
                         goalMinutes = goalMinutes,
                         minutesRead = minutesReadBeforeMidnight
                     )
